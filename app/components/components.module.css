@@ -3,8 +3,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  background-color: var(--primary);
-  color: white;
+  background-color: var(--dark);
+  color: var(--white);
 }
 
 .logo {
@@ -19,7 +19,7 @@
 }
 
 .links a {
-  color: white;
+  color: var(--white);
   text-decoration: none;
 }
 
@@ -29,7 +29,7 @@
 
 .logout {
   background: none;
-  color: white;
+  color: var(--white);
   border: none;
   cursor: pointer;
   font: inherit;

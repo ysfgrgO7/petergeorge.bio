@@ -3,11 +3,10 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f5f5f5;
 }
 
 .card {
-  background: white;
+  background: var(--light);
   padding: 2rem;
   border-radius: 8px;
   width: 100%;
@@ -29,7 +28,7 @@
 }
 
 .card button {
-  background-color: #2e7d32;
+  background-color: var(--green);
   color: white;
   padding: 0.75rem;
   font-size: 1rem;
@@ -39,10 +38,11 @@
 }
 
 .card button:hover {
-  background-color: #1b5e20;
+  background-color: var(--green);
 }
 
 .error {
-  color: red;
-  font-size: 0.9rem;
+  color: var(--red);
+  font-weight: bold;
+  font-size: 1rem;
 }

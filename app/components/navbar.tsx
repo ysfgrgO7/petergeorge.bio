@@ -31,8 +31,8 @@ export default function Navbar() {
       <ul className={styles.links}>
         {isLoggedIn ? (
           <>
-            <li className={pathname === "/home" ? styles.active : ""}>
-              <Link href="/home">Home</Link>
+            <li className={pathname === "/" ? styles.active : ""}>
+              <Link href="/">Home</Link>
             </li>
             <li>
               <button onClick={handleLogout} className={styles.logout}>
