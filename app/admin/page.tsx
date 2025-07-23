@@ -1,124 +1,167 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { db } from "@/lib/firebase";
 import {
-  updateDoc,
-  getDoc,
   collection,
+  getDocs,
   addDoc,
   deleteDoc,
+  updateDoc,
   doc,
-  onSnapshot,
 } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import styles from "./admin.module.css";
 
-export default function AdminPage() {
+export default function AdminDashboard() {
   const [courses, setCourses] = useState<any[]>([]);
-  const [newCourse, setNewCourse] = useState({ title: "", year: "Year 1" });
-  const [selectedCourse, setSelectedCourse] = useState<string | null>(null);
-  const [newLecture, setNewLecture] = useState({ title: "", videoUrl: "" });
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [year, setYear] = useState("year1");
+  const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
+  const [lectureTitle, setLectureTitle] = useState("");
+  const [youtubeLink, setYoutubeLink] = useState("");
 
-  // Load courses
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "courses"), (snapshot) => {
-      setCourses(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    return () => unsubscribe();
-  }, []);
+  const fetchCourses = async () => {
+    const snapshot = await getDocs(collection(db, "courses"));
+    const fetched = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    setCourses(fetched);
+  };
 
-  const handleAddCourse = async () => {
-    if (!newCourse.title) return alert("Title is required");
+  const handleCreate = async () => {
+    if (!title || !description) return;
     await addDoc(collection(db, "courses"), {
-      ...newCourse,
+      title,
+      description,
+      year,
+      thumbnailUrl: "", // optional
       lectures: [],
-      createdAt: new Date(),
     });
-    setNewCourse({ title: "", year: "Year 1" });
+    setTitle("");
+    setDescription("");
+    fetchCourses();
   };
 
-  const handleDeleteCourse = async (id: string) => {
+  const handleDelete = async (id: string) => {
     await deleteDoc(doc(db, "courses", id));
+    fetchCourses();
   };
+
+  const extractYouTubeId = (url: string): string | null => {
+    const regex =
+      /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
+
   const handleAddLecture = async () => {
+    if (!selectedCourse || !lectureTitle || !youtubeLink) return;
+
+    const youtubeId = extractYouTubeId(youtubeLink);
+    if (!youtubeId) {
+      alert("Invalid YouTube link");
+      return;
+    }
+
+    const updatedLectures = [
+      ...(selectedCourse.lectures || []),
+      { title: lectureTitle, youtubeId },
+    ];
+
+    await updateDoc(doc(db, "courses", selectedCourse.id), {
+      lectures: updatedLectures,
+    });
+
+    setLectureTitle("");
+    setYoutubeLink("");
+    fetchCourses();
+  };
+
+  const handleDeleteLecture = async (lectureIndex: number) => {
     if (!selectedCourse) return;
 
-    const courseDocRef = doc(db, "courses", selectedCourse);
-    const courseSnapshot = await getDoc(courseDocRef);
-    const courseData = courseSnapshot.data();
+    const updatedLectures = [...(selectedCourse.lectures || [])];
+    updatedLectures.splice(lectureIndex, 1);
 
-    const lectures = courseData?.lectures || [];
-    lectures.push({ ...newLecture, createdAt: new Date() });
+    await updateDoc(doc(db, "courses", selectedCourse.id), {
+      lectures: updatedLectures,
+    });
 
-    await updateDoc(courseDocRef, { lectures });
-    setNewLecture({ title: "", videoUrl: "" });
+    fetchCourses();
   };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
 
   return (
     <div className={styles.wrapper}>
-      <h1>Admin Dashboard</h1>
+      <h1>Admin Dashboard - Manage Courses</h1>
 
-      <div className={styles.section}>
-        <h2>Create New Course</h2>
+      <div className={styles.form}>
         <input
           type="text"
-          placeholder="Course Title"
-          value={newCourse.title}
-          onChange={(e) =>
-            setNewCourse((prev) => ({ ...prev, title: e.target.value }))
-          }
+          placeholder="Course title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
         />
-        <select
-          value={newCourse.year}
-          onChange={(e) =>
-            setNewCourse((prev) => ({ ...prev, year: e.target.value }))
-          }
-        >
-          <option value="Year 1">Year 1</option>
-          <option value="Year 3">Year 3</option>
+        <textarea
+          placeholder="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+        <select value={year} onChange={(e) => setYear(e.target.value)}>
+          <option value="year1">Year 1</option>
+          <option value="year3">Year 3</option>
         </select>
-        <button onClick={handleAddCourse}>Add Course</button>
+        <button onClick={handleCreate}>Create Course</button>
       </div>
 
-      <div className={styles.section}>
-        <h2>Existing Courses</h2>
+      <div className={styles.cards}>
         {courses.map((course) => (
-          <div key={course.id} className={styles.course}>
-            <h3>
-              {course.title} ({course.year})
-            </h3>
-            <button onClick={() => handleDeleteCourse(course.id)}>
-              Delete
-            </button>
-            <button onClick={() => setSelectedCourse(course.id)}>
+          <div key={course.id} className={styles.card}>
+            <h2>{course.title}</h2>
+            <p>{course.description}</p>
+            <p>
+              <strong>Year:</strong> {course.year.toUpperCase()}
+            </p>
+            <button onClick={() => handleDelete(course.id)}>Delete</button>
+            <button onClick={() => setSelectedCourse(course)}>
               Manage Lectures
             </button>
+            {selectedCourse && (
+              <div className={styles.lecturePanel}>
+                <h2>Manage Lectures for {selectedCourse.title}</h2>
+                <input
+                  type="text"
+                  placeholder="Lecture title"
+                  value={lectureTitle}
+                  onChange={(e) => setLectureTitle(e.target.value)}
+                />
+                <input
+                  type="text"
+                  placeholder="YouTube link"
+                  value={youtubeLink}
+                  onChange={(e) => setYoutubeLink(e.target.value)}
+                />
+                <button onClick={handleAddLecture}>Add Lecture</button>
+
+                <ul className={styles.lectureList}>
+                  {selectedCourse.lectures?.map(
+                    (lecture: any, index: number) => (
+                      <li key={index}>
+                        {lecture.title} ({lecture.youtubeId})
+                        <button onClick={() => handleDeleteLecture(index)}>
+                          ❌
+                        </button>
+                      </li>
+                    )
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         ))}
       </div>
-
-      {selectedCourse && (
-        <div className={styles.section}>
-          <h2>Add Lecture to Selected Course</h2>
-          <input
-            type="text"
-            placeholder="Lecture Title"
-            value={newLecture.title}
-            onChange={(e) =>
-              setNewLecture((prev) => ({ ...prev, title: e.target.value }))
-            }
-          />
-          <input
-            type="text"
-            placeholder="Odysee Video URL"
-            value={newLecture.videoUrl}
-            onChange={(e) =>
-              setNewLecture((prev) => ({ ...prev, videoUrl: e.target.value }))
-            }
-          />
-          <button onClick={handleAddLecture}>Add Lecture</button>
-        </div>
-      )}
     </div>
   );
 }
