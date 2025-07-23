@@ -1,10 +1,14 @@
 "use client";
 import React, { useState } from "react";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import styles from "./register.module.css";
 
 export default function Register() {
+  const auth = getAuth();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     firstName: "",
     secondName: "",
@@ -37,19 +41,26 @@ export default function Register() {
       alert("Passwords do not match!");
       return;
     }
-
     const studentCode = generateStudentCode();
-
     try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      const user = userCredential.user;
+
       await addDoc(collection(db, "students"), {
+        uid: user.uid,
         ...formData,
         studentCode,
         createdAt: new Date(),
       });
-      alert("Registration successful!");
+
+      router.push("/home");
     } catch (error) {
-      console.error("Error saving data:", error);
-      alert("Failed to register.");
+      console.error("Error:", error);
+      alert("Registration failed. " + error.message);
     }
   };
 
