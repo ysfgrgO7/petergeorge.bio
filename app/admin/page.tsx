@@ -20,6 +20,9 @@ export default function AdminDashboard() {
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
   const [lectureTitle, setLectureTitle] = useState("");
   const [odyseeLink, setOdyseeLink] = useState("");
+  const [activeYearTab, setActiveYearTab] = useState<"year1" | "year3">(
+    "year1"
+  );
 
   const fetchCourses = async () => {
     const snapshot = await getDocs(collection(db, "courses"));
@@ -122,50 +125,67 @@ export default function AdminDashboard() {
         <button onClick={handleCreate}>Create Course</button>
       </div>
 
+      <div className={styles.tabs}>
+        <button
+          className={activeYearTab === "year1" ? styles.activeTab : ""}
+          onClick={() => setActiveYearTab("year1")}
+        >
+          Year 1
+        </button>
+        <button
+          className={activeYearTab === "year3" ? styles.activeTab : ""}
+          onClick={() => setActiveYearTab("year3")}
+        >
+          Year 3
+        </button>
+      </div>
+
       <div className={styles.cards}>
-        {courses.map((course) => (
-          <div key={course.id} className={styles.card}>
-            <h2>{course.title}</h2>
-            <p>{course.description}</p>
-            <p>
-              <strong>Year:</strong> {course.year.toUpperCase()}
-            </p>
-            <button onClick={() => handleDelete(course.id)}>Delete</button>
-            <button onClick={() => setSelectedCourse(course)}>
-              Manage Lectures
-            </button>
-            {selectedCourse && (
-              <div className={styles.lecturePanel}>
-                <h2>Manage Lectures for {selectedCourse.title}</h2>
-                <input
-                  type="text"
-                  placeholder="Lecture title"
-                  value={lectureTitle}
-                  onChange={(e) => setLectureTitle(e.target.value)}
-                />
-                <input
-                  type="text"
-                  placeholder="Odysee link"
-                  value={odyseeLink}
-                  onChange={(e) => setOdyseeLink(e.target.value)}
-                />
-                <button onClick={handleAddLecture}>Add Lecture</button>
-                <ul className={styles.lectureList}>
-                  {selectedCourse.lectures?.map(
-                    (lecture: any, index: number) => (
-                      <li key={index}>
-                        {lecture.title} ({lecture.odyseeId})
-                        <button onClick={() => handleDeleteLecture(index)}>
-                          ❌
-                        </button>
-                      </li>
-                    )
-                  )}
-                </ul>
-              </div>
-            )}
-          </div>
-        ))}
+        {courses
+          .filter((course) => course.year === activeYearTab)
+          .map((course) => (
+            <div key={course.id} className={styles.card}>
+              <h2>{course.title}</h2>
+              <p>{course.description}</p>
+              <p>
+                <strong>Year:</strong> {course.year.toUpperCase()}
+              </p>
+              <button onClick={() => handleDelete(course.id)}>Delete</button>
+              <button onClick={() => setSelectedCourse(course)}>
+                Manage Lectures
+              </button>
+              {selectedCourse && (
+                <div className={styles.lecturePanel}>
+                  <h2>Manage Lectures for {selectedCourse.title}</h2>
+                  <input
+                    type="text"
+                    placeholder="Lecture title"
+                    value={lectureTitle}
+                    onChange={(e) => setLectureTitle(e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Odysee link"
+                    value={odyseeLink}
+                    onChange={(e) => setOdyseeLink(e.target.value)}
+                  />
+                  <button onClick={handleAddLecture}>Add Lecture</button>
+                  <ul className={styles.lectureList}>
+                    {selectedCourse.lectures?.map(
+                      (lecture: any, index: number) => (
+                        <li key={index}>
+                          {lecture.title} ({lecture.odyseeId})
+                          <button onClick={() => handleDeleteLecture(index)}>
+                            ❌
+                          </button>
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
       </div>
     </div>
   );

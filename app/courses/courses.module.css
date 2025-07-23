@@ -1,0 +1,32 @@
+.wrapper {
+  padding: 2rem;
+  max-width: 900px;
+  margin: auto;
+}
+
+.courseList {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.courseCard {
+  border: 1px solid #ccc;
+  padding: 1rem;
+  border-radius: 0.5rem;
+}
+
+.courseCard button {
+  margin-top: 1rem;
+}
+
+.courseDetail {
+  padding-top: 1rem;
+}
+
+.lecture {
+  margin-top: 2rem;
+}
+
+.file-viewer__overlay-logo .icon {
+  visibility: hidden !important;
+}
