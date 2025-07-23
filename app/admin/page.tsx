@@ -19,7 +19,7 @@ export default function AdminDashboard() {
   const [year, setYear] = useState("year1");
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
   const [lectureTitle, setLectureTitle] = useState("");
-  const [youtubeLink, setYoutubeLink] = useState("");
+  const [odyseeLink, setOdyseeLink] = useState("");
 
   const fetchCourses = async () => {
     const snapshot = await getDocs(collection(db, "courses"));
@@ -46,25 +46,31 @@ export default function AdminDashboard() {
     fetchCourses();
   };
 
-  const extractYouTubeId = (url: string): string | null => {
-    const regex =
-      /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/;
+  const extractOdyseeInfo = (
+    url: string
+  ): { name: string; id: string } | null => {
+    const regex = /odysee\.com\/[^/]+\/([^:]+):([a-zA-Z0-9]+)/;
     const match = url.match(regex);
-    return match ? match[1] : null;
+    if (!match) return null;
+    return { name: match[1], id: match[2] };
   };
 
   const handleAddLecture = async () => {
-    if (!selectedCourse || !lectureTitle || !youtubeLink) return;
+    if (!selectedCourse || !lectureTitle || !odyseeLink) return;
 
-    const youtubeId = extractYouTubeId(youtubeLink);
-    if (!youtubeId) {
-      alert("Invalid YouTube link");
+    const info = extractOdyseeInfo(odyseeLink);
+    if (!info) {
+      alert("Invalid Odysee link");
       return;
     }
 
     const updatedLectures = [
       ...(selectedCourse.lectures || []),
-      { title: lectureTitle, youtubeId },
+      {
+        title: lectureTitle,
+        odyseeName: info.name,
+        odyseeId: info.id,
+      },
     ];
 
     await updateDoc(doc(db, "courses", selectedCourse.id), {
@@ -72,7 +78,7 @@ export default function AdminDashboard() {
     });
 
     setLectureTitle("");
-    setYoutubeLink("");
+    setOdyseeLink("");
     fetchCourses();
   };
 
@@ -139,17 +145,16 @@ export default function AdminDashboard() {
                 />
                 <input
                   type="text"
-                  placeholder="YouTube link"
-                  value={youtubeLink}
-                  onChange={(e) => setYoutubeLink(e.target.value)}
+                  placeholder="Odysee link"
+                  value={odyseeLink}
+                  onChange={(e) => setOdyseeLink(e.target.value)}
                 />
                 <button onClick={handleAddLecture}>Add Lecture</button>
-
                 <ul className={styles.lectureList}>
                   {selectedCourse.lectures?.map(
                     (lecture: any, index: number) => (
                       <li key={index}>
-                        {lecture.title} ({lecture.youtubeId})
+                        {lecture.title} ({lecture.odyseeId})
                         <button onClick={() => handleDeleteLecture(index)}>
                           ❌
                         </button>
