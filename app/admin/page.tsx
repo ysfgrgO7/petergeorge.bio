@@ -18,11 +18,27 @@ export default function AdminDashboard() {
   const [description, setDescription] = useState("");
   const [year, setYear] = useState("year1");
   const [selectedCourse, setSelectedCourse] = useState<any | null>(null);
+  const [openLecturePanels, setOpenLecturePanels] = useState<Set<string>>(
+    new Set()
+  );
+
   const [lectureTitle, setLectureTitle] = useState("");
   const [odyseeLink, setOdyseeLink] = useState("");
   const [activeYearTab, setActiveYearTab] = useState<"year1" | "year3">(
     "year1"
   );
+
+  const toggleLecturePanel = (courseId: string) => {
+    setOpenLecturePanels((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(courseId)) {
+        newSet.delete(courseId);
+      } else {
+        newSet.add(courseId);
+      }
+      return newSet;
+    });
+  };
 
   const fetchCourses = async () => {
     const snapshot = await getDocs(collection(db, "courses"));
@@ -46,6 +62,7 @@ export default function AdminDashboard() {
 
   const handleDelete = async (id: string) => {
     await deleteDoc(doc(db, "courses", id));
+    if (selectedCourse?.id === id) setSelectedCourse(null);
     fetchCourses();
   };
 
@@ -58,8 +75,8 @@ export default function AdminDashboard() {
     return { name: match[1], id: match[2] };
   };
 
-  const handleAddLecture = async () => {
-    if (!selectedCourse || !lectureTitle || !odyseeLink) return;
+  const handleAddLecture = async (courseId: string) => {
+    if (!lectureTitle || !odyseeLink) return;
 
     const info = extractOdyseeInfo(odyseeLink);
     if (!info) {
@@ -67,8 +84,11 @@ export default function AdminDashboard() {
       return;
     }
 
+    const course = courses.find((c) => c.id === courseId);
+    if (!course) return;
+
     const updatedLectures = [
-      ...(selectedCourse.lectures || []),
+      ...(course.lectures || []),
       {
         title: lectureTitle,
         odyseeName: info.name,
@@ -76,31 +96,38 @@ export default function AdminDashboard() {
       },
     ];
 
-    await updateDoc(doc(db, "courses", selectedCourse.id), {
+    await updateDoc(doc(db, "courses", courseId), {
       lectures: updatedLectures,
     });
 
     setLectureTitle("");
     setOdyseeLink("");
-    fetchCourses();
+    await fetchCourses();
   };
 
-  const handleDeleteLecture = async (lectureIndex: number) => {
-    if (!selectedCourse) return;
+  const handleDeleteLecture = async (
+    courseId: string,
+    lectureIndex: number
+  ) => {
+    const course = courses.find((c) => c.id === courseId);
+    if (!course) return;
 
-    const updatedLectures = [...(selectedCourse.lectures || [])];
+    const updatedLectures = [...(course.lectures || [])];
     updatedLectures.splice(lectureIndex, 1);
 
-    await updateDoc(doc(db, "courses", selectedCourse.id), {
+    await updateDoc(doc(db, "courses", courseId), {
       lectures: updatedLectures,
     });
 
-    fetchCourses();
+    await fetchCourses();
   };
 
   useEffect(() => {
     fetchCourses();
   }, []);
+  useEffect(() => {
+    setYear(activeYearTab);
+  }, [activeYearTab]);
 
   return (
     <div className={styles.wrapper}>
@@ -151,12 +178,14 @@ export default function AdminDashboard() {
                 <strong>Year:</strong> {course.year.toUpperCase()}
               </p>
               <button onClick={() => handleDelete(course.id)}>Delete</button>
-              <button onClick={() => setSelectedCourse(course)}>
-                Manage Lectures
+              <button onClick={() => toggleLecturePanel(course.id)}>
+                {openLecturePanels.has(course.id)
+                  ? "Hide Lectures"
+                  : "Manage Lectures"}
               </button>
-              {selectedCourse && (
+
+              {openLecturePanels.has(course.id) && (
                 <div className={styles.lecturePanel}>
-                  <h2>Manage Lectures for {selectedCourse.title}</h2>
                   <input
                     type="text"
                     placeholder="Lecture title"
@@ -169,18 +198,21 @@ export default function AdminDashboard() {
                     value={odyseeLink}
                     onChange={(e) => setOdyseeLink(e.target.value)}
                   />
-                  <button onClick={handleAddLecture}>Add Lecture</button>
+                  <button onClick={() => handleAddLecture(course.id)}>
+                    Add Lecture
+                  </button>
+
                   <ul className={styles.lectureList}>
-                    {selectedCourse.lectures?.map(
-                      (lecture: any, index: number) => (
-                        <li key={index}>
-                          {lecture.title} ({lecture.odyseeId})
-                          <button onClick={() => handleDeleteLecture(index)}>
-                            ❌
-                          </button>
-                        </li>
-                      )
-                    )}
+                    {course.lectures?.map((lecture: any, index: number) => (
+                      <li key={index}>
+                        {lecture.title} ({lecture.odyseeId})
+                        <button
+                          onClick={() => handleDeleteLecture(course.id, index)}
+                        >
+                          ❌
+                        </button>
+                      </li>
+                    ))}
                   </ul>
                 </div>
               )}

@@ -15,13 +15,13 @@
 .form select {
   padding: 0.5rem;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--white);
 }
 
 .form button {
   padding: 0.5rem;
-  background-color: #000;
-  color: #fff;
+  background-color: var(--green);
+  color: var(--white);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -37,7 +37,7 @@
   padding: 1rem;
   border-radius: 8px;
   box-shadow: 0px 0px 9px 1px var(--black);
-  background-color: #fff;
+  background-color: var(--white);
   color: var(--black);
 }
 
@@ -75,4 +75,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tabs button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--light);
+  background: var(--dark);
+  color: var(--white);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tabs .activeTab,
+.tabs button.activeTab {
+  background-color: var(--green);
+  color: var(--white);
+  font-weight: bold;
+  border-color: var(--green);
 }

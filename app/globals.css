@@ -1,22 +1,24 @@
 :root {
   /* dark */
-  --black: #202A30;
-  --dark: #2F3843;
+  --black: #202a30;
+  --dark: #2f3843;
   /* lights */
-  --white: #D4D9D5;
-  --light: #748C92;
+  --white: #d4d9d5;
+  --light: #748c92;
   /* colors */
-  --blue: #124E65;
-  --green: #749F6E;
+  --blue: #124e65;
+  --green: #749f6e;
   --red: #976061;
-  --magenta: #836E9F;
+  --magenta: #836e9f;
 }
 
 html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  padding-left: 100px; /* Same as the sidebar's width */
 }
+
 
 body {
   color: var(--black);
@@ -35,4 +37,15 @@ body {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+
+@media (max-width: 768px) {
+  html,
+  body {
+    max-width: 100vw;
+    overflow-x: hidden;
+    padding-left: 0px;
+    padding-top: 30px;
+  }
 }
