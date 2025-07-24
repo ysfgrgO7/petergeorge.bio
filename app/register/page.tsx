@@ -10,8 +10,7 @@ export default function Register() {
   const auth = getAuth();
   const router = useRouter();
   const [formData, setFormData] = useState({
-    firstName: "",
-    secondName: "",
+    fullName: "",
     gender: "",
     email: "",
     password: "",
@@ -66,90 +65,100 @@ export default function Register() {
 
   return (
     <div className={styles.container}>
-      <h1>Student Registration</h1>
       <form onSubmit={handleSubmit} className={styles.form}>
-        <input
-          type="text"
-          name="firstName"
-          placeholder="First Name"
-          onChange={handleChange}
-          required
-        />
+        {/* Split Student and Parent Info */}
+        <div className={styles.splitContainer}>
+          {/* Student Info Section */}
+          <div className={styles.section}>
+            <h3>Student Info</h3>
+            <input
+              type="text"
+              name="fullName"
+              placeholder="Full Name"
+              onChange={handleChange}
+              required
+            />
 
-        <input
-          type="text"
-          name="secondName"
-          placeholder="Second Name"
-          onChange={handleChange}
-          required
-        />
+            <select name="gender" onChange={handleChange} required>
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
 
-        <select name="gender" onChange={handleChange} required>
-          <option value="">Select Gender</option>
-          <option value="male">Male</option>
-          <option value="female">Female</option>
-        </select>
+            <input
+              type="tel"
+              name="studentPhone"
+              placeholder="Student Phone Number"
+              onChange={handleChange}
+              required
+            />
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          onChange={handleChange}
-          required
-        />
+            <input
+              type="text"
+              name="schoolName"
+              placeholder="School Name"
+              onChange={handleChange}
+              required
+            />
+            <select name="year" onChange={handleChange} required>
+              <option value="">Select School Year</option>
+              <option value="Year 1">
+                1st Secondary (Integrated Sciences)
+              </option>
+              <option value="Year 3">3rd Secondary (Biology)</option>
+            </select>
+          </div>
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="password"
-          name="confirmPassword"
-          placeholder="Confirm Password"
-          onChange={handleChange}
-          required
-        />
+          {/* Parent Info Section */}
+          <div className={styles.section}>
+            <h3>Parent Info</h3>
+            <input
+              type="tel"
+              name="parentPhone1"
+              placeholder="Parent 1 Phone Number"
+              onChange={handleChange}
+              required
+            />
 
-        <input
-          type="tel"
-          name="studentPhone"
-          placeholder="Student Phone Number"
-          onChange={handleChange}
-          required
-        />
+            <input
+              type="tel"
+              name="parentPhone2"
+              placeholder="Parent 2 Phone Number"
+              onChange={handleChange}
+            />
+          </div>
+        </div>
 
-        <input
-          type="text"
-          name="schoolName"
-          placeholder="School Name"
-          onChange={handleChange}
-          required
-        />
+        {/* Sign-in Credentials Section */}
+        <div className={styles.credentials}>
+          <h3>Sign-in Credentials</h3>
 
-        <input
-          type="tel"
-          name="parentPhone1"
-          placeholder="Parent 1 Phone Number"
-          onChange={handleChange}
-          required
-        />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            onChange={handleChange}
+            required
+          />
 
-        <input
-          type="tel"
-          name="parentPhone2"
-          placeholder="Parent 2 Phone Number"
-          onChange={handleChange}
-        />
+          <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            onChange={handleChange}
+            required
+          />
 
-        <select name="year" onChange={handleChange} required>
-          <option value="">Select School Year</option>
-          <option value="Year 1">1st Secondary (Integrated Scinces)</option>
-          <option value="Year 3">3rd Secondary (Biology)</option>
-        </select>
-        <button type="submit"> Register </button>
+          <input
+            type="password"
+            name="confirmPassword"
+            placeholder="Confirm Password"
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <button type="submit">Register</button>
       </form>
     </div>
   );
