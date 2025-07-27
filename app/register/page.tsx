@@ -10,7 +10,10 @@ export default function Register() {
   const auth = getAuth();
   const router = useRouter();
   const [formData, setFormData] = useState({
-    fullName: "",
+    firstName: "",
+    secondName: "",
+    thirdName: "",
+    forthName: "",
     gender: "",
     email: "",
     password: "",
@@ -34,13 +37,39 @@ export default function Register() {
   };
 
   const handleSubmit = async (e) => {
+    const isValidPhone = (phone) => /^01[0-9]{9}$/.test(phone);
+
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
+    const {
+      password,
+      confirmPassword,
+      studentPhone,
+      parentPhone1,
+      parentPhone2,
+    } = formData;
+
+    if (password !== confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
+
+    if (![studentPhone, parentPhone1].every(isValidPhone)) {
+      alert("Please enter valid Egyptian phone numbers.");
+      return;
+    }
+
+    // Ensure phone numbers don't match
+    const phones = [studentPhone, parentPhone1, parentPhone2].filter(Boolean);
+    const uniquePhones = new Set(phones);
+
+    if (uniquePhones.size !== phones.length) {
+      alert("Phone numbers must be different from each other.");
+      return;
+    }
+
     const studentCode = generateStudentCode();
+
     try {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
@@ -65,6 +94,7 @@ export default function Register() {
 
   return (
     <div className={styles.container}>
+      <h1>Register</h1>
       <form onSubmit={handleSubmit} className={styles.form}>
         {/* Split Student and Parent Info */}
         <div className={styles.splitContainer}>
@@ -73,8 +103,32 @@ export default function Register() {
             <h3>Student Info</h3>
             <input
               type="text"
-              name="fullName"
-              placeholder="Full Name"
+              name="firstName"
+              placeholder="First Name"
+              onChange={handleChange}
+              required
+            />
+
+            <input
+              type="text"
+              name="secondName"
+              placeholder="Second Name"
+              onChange={handleChange}
+              required
+            />
+
+            <input
+              type="text"
+              name="thirdName"
+              placeholder="Third Name"
+              onChange={handleChange}
+              required
+            />
+
+            <input
+              type="text"
+              name="forthName"
+              placeholder="Fourth Name"
               onChange={handleChange}
               required
             />
@@ -95,7 +149,7 @@ export default function Register() {
 
             <input
               type="text"
-              name="schoolName"
+              name="school"
               placeholder="School Name"
               onChange={handleChange}
               required
