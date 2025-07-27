@@ -206,11 +206,22 @@ export default function AdminDashboard() {
                     {course.lectures?.map((lecture: any, index: number) => (
                       <li key={index}>
                         {lecture.title} ({lecture.odyseeId})
-                        <button
-                          onClick={() => handleDeleteLecture(course.id, index)}
-                        >
-                          ❌
-                        </button>
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button
+                            onClick={() =>
+                              handleDeleteLecture(course.id, index)
+                            }
+                          >
+                            ❌
+                          </button>
+                          <button
+                            onClick={() =>
+                              (window.location.href = `/admin/quiz?courseId=${course.id}&lectureIndex=${index}`)
+                            }
+                          >
+                            ➕ Add Quiz
+                          </button>
+                        </div>
                       </li>
                     ))}
                   </ul>
