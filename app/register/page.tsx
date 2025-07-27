@@ -4,11 +4,13 @@ import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, addDoc } from "firebase/firestore";
-import styles from "./register.module.css";
+import styles from "../styles.module.css";
 
 export default function Register() {
   const auth = getAuth();
   const router = useRouter();
+  const [errors, setErrors] = useState({});
+
   const [formData, setFormData] = useState({
     firstName: "",
     secondName: "",
@@ -37,9 +39,8 @@ export default function Register() {
   };
 
   const handleSubmit = async (e) => {
-    const isValidPhone = (phone) => /^01[0-9]{9}$/.test(phone);
-
     e.preventDefault();
+    const newErrors = {};
 
     const {
       password,
@@ -50,24 +51,38 @@ export default function Register() {
     } = formData;
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match!");
-      return;
+      newErrors.confirmPassword = "Passwords do not match.";
     }
 
-    if (![studentPhone, parentPhone1].every(isValidPhone)) {
-      alert("Please enter valid Egyptian phone numbers.");
-      return;
-    }
-
-    // Ensure phone numbers don't match
+    // Phone uniqueness
     const phones = [studentPhone, parentPhone1, parentPhone2].filter(Boolean);
     const uniquePhones = new Set(phones);
-
     if (uniquePhones.size !== phones.length) {
-      alert("Phone numbers must be different from each other.");
+      if (studentPhone === parentPhone1 || studentPhone === parentPhone2)
+        newErrors.studentPhone = "Student phone must be unique.";
+
+      if (parentPhone1 === parentPhone2 || parentPhone1 === studentPhone)
+        newErrors.parentPhone1 = "Parent 1 phone must be unique.";
+
+      if (parentPhone2 === parentPhone1 || parentPhone2 === studentPhone)
+        newErrors.parentPhone2 = "Parent 2 phone must be unique.";
+    }
+
+    // OPTIONAL: Validate phone format (Egyptian)
+    const isValidPhone = (phone) => /^01[0-9]{9}$/.test(phone);
+    ["studentPhone", "parentPhone1", "parentPhone2"].forEach((field) => {
+      const phone = formData[field];
+      if (phone && !isValidPhone(phone)) {
+        newErrors[field] = "Enter a valid 11-digit Egyptian number.";
+      }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
+    setErrors({});
     const studentCode = generateStudentCode();
 
     try {
@@ -96,9 +111,7 @@ export default function Register() {
     <div className={styles.container}>
       <h1>Register</h1>
       <form onSubmit={handleSubmit} className={styles.form}>
-        {/* Split Student and Parent Info */}
         <div className={styles.splitContainer}>
-          {/* Student Info Section */}
           <div className={styles.section}>
             <h3>Student Info</h3>
             <input
@@ -108,7 +121,6 @@ export default function Register() {
               onChange={handleChange}
               required
             />
-
             <input
               type="text"
               name="secondName"
@@ -116,7 +128,6 @@ export default function Register() {
               onChange={handleChange}
               required
             />
-
             <input
               type="text"
               name="thirdName"
@@ -124,7 +135,6 @@ export default function Register() {
               onChange={handleChange}
               required
             />
-
             <input
               type="text"
               name="forthName"
@@ -132,13 +142,14 @@ export default function Register() {
               onChange={handleChange}
               required
             />
-
             <select name="gender" onChange={handleChange} required>
               <option value="">Select Gender</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
-
+            {errors.studentPhone && (
+              <p className={styles.errorText}>{errors.studentPhone}</p>
+            )}
             <input
               type="tel"
               name="studentPhone"
@@ -146,7 +157,6 @@ export default function Register() {
               onChange={handleChange}
               required
             />
-
             <input
               type="text"
               name="school"
@@ -162,10 +172,11 @@ export default function Register() {
               <option value="Year 3">3rd Secondary (Biology)</option>
             </select>
           </div>
-
-          {/* Parent Info Section */}
           <div className={styles.section}>
             <h3>Parent Info</h3>
+            {errors.parentPhone1 && (
+              <p className={styles.errorText}>{errors.parentPhone1}</p>
+            )}
             <input
               type="tel"
               name="parentPhone1"
@@ -173,7 +184,9 @@ export default function Register() {
               onChange={handleChange}
               required
             />
-
+            {errors.parentPhone2 && (
+              <p className={styles.errorText}>{errors.parentPhone2}</p>
+            )}
             <input
               type="tel"
               name="parentPhone2"
@@ -186,7 +199,7 @@ export default function Register() {
         {/* Sign-in Credentials Section */}
         <div className={styles.credentials}>
           <h3>Sign-in Credentials</h3>
-
+          {errors.email && <p className={styles.errorText}>{errors.email}</p>}
           <input
             type="email"
             name="email"
@@ -194,7 +207,6 @@ export default function Register() {
             onChange={handleChange}
             required
           />
-
           <input
             type="password"
             name="password"
@@ -202,7 +214,9 @@ export default function Register() {
             onChange={handleChange}
             required
           />
-
+          {errors.confirmPassword && (
+            <p className={styles.errorText}>{errors.confirmPassword}</p>
+          )}
           <input
             type="password"
             name="confirmPassword"
@@ -211,7 +225,6 @@ export default function Register() {
             required
           />
         </div>
-
         <button type="submit">Register</button>
       </form>
     </div>

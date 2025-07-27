@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
-import styles from "./login.module.css";
+import styles from "../styles.module.css";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,10 +23,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className={styles.wrapper}>
-      <form onSubmit={handleLogin} className={styles.card}>
+    <div className={styles.container}>
+      <form onSubmit={handleLogin} className={styles.form}>
         <h1>Login</h1>
-        {error && <p className={styles.error}>{error}</p>}
+        {error && <p className={styles.errorText}>{error}</p>}
         <input
           type="email"
           placeholder="Email"

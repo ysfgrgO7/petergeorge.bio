@@ -66,6 +66,14 @@
   margin-top: 20px;
 }
 
+.errorText {
+  background-color: var(--red);
+  color: var(--black);
+  text-align: center;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
 /* Mobile responsiveness */
 @media (max-width: 768px) {
   .container {
