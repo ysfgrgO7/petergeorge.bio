@@ -86,7 +86,7 @@ export default function QuizBuilder() {
       <h1>Add Quiz Question</h1>
       <p>
         <strong>Course ID:</strong> {courseId} | <strong>Lecture:</strong> #
-        {lectureIndex + 1} 
+        {lectureIndex} 
       </p>
 
       <div className={styles.form}>
