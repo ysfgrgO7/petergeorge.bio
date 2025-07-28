@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getLectureProgress } from "@/lib/studentProgress";
 import styles from "./courses.module.css";
 
 interface Lecture {
@@ -22,19 +23,41 @@ interface Course {
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-
-  const fetchCourses = async () => {
-    const snapshot = await getDocs(collection(db, "courses"));
-    const fetched = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Course[];
-    setCourses(fetched);
-  };
+  const [studentCode, setStudentCode] = useState<string | null>(null);
+  const [progressMap, setProgressMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
+    const fetchCourses = async () => {
+      const snapshot = await getDocs(collection(db, "courses"));
+      const fetched = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Course[];
+      setCourses(fetched);
+    };
+
     fetchCourses();
   }, []);
+
+  useEffect(() => {
+    const code = localStorage.getItem("studentCode");
+    setStudentCode(code);
+
+    if (!code || courses.length === 0) return;
+
+    const loadProgress = async () => {
+      const map: Record<string, any> = {};
+      for (const course of courses) {
+        for (let i = 0; i < (course.lectures?.length || 0); i++) {
+          const progress = await getLectureProgress(code, course.id, i);
+          map[`${course.id}_${i}`] = progress;
+        }
+      }
+      setProgressMap(map);
+    };
+
+    loadProgress();
+  }, [courses]);
 
   return (
     <div className={styles.wrapper}>
@@ -61,22 +84,35 @@ export default function CoursesPage() {
             ← Back to Courses
           </button>
           <h2>{selectedCourse.title} - Lectures</h2>
-          {selectedCourse.lectures?.length > 0 ? (
-            selectedCourse.lectures.map((lecture, index) => (
+
+          {selectedCourse.lectures?.map((lecture, index) => {
+            const key = `${selectedCourse.id}_${index}`;
+            const progress = progressMap[key];
+
+            return (
               <div key={index} className={styles.lecture}>
                 <h3>{lecture.title}</h3>
-                <iframe
-                  src={`https://odysee.com/$/embed/${lecture.odyseeName}/${lecture.odyseeId}`}
-                  width="100%"
-                  height="315"
-                  allowFullScreen
-                  frameBorder="0"
-                />
+
+                {!progress?.quizCompleted ? (
+                  <button
+                    onClick={() =>
+                      (window.location.href = `/courses/quiz?courseId=${selectedCourse.id}&lectureIndex=${index}`)
+                    }
+                  >
+                    📝 Take Quiz to Unlock Video
+                  </button>
+                ) : (
+                  <iframe
+                    src={`https://odysee.com/$/embed/${lecture.odyseeName}/${lecture.odyseeId}`}
+                    width="100%"
+                    height="315"
+                    allowFullScreen
+                    frameBorder="0"
+                  />
+                )}
               </div>
-            ))
-          ) : (
-            <p>No lectures added yet.</p>
-          )}
+            );
+          })}
         </div>
       )}
     </div>

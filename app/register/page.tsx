@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, setDoc, doc } from "firebase/firestore";
 import styles from "../styles.module.css";
 
 export default function Register() {
@@ -93,12 +93,15 @@ export default function Register() {
       );
       const user = userCredential.user;
 
-      await addDoc(collection(db, "students"), {
+      await setDoc(doc(db, "students", studentCode), {
         uid: user.uid,
         ...formData,
         studentCode,
         createdAt: new Date(),
       });
+
+      // save the code in localstorage
+      localStorage.setItem("studentCode", studentCode);
 
       router.push("/home");
     } catch (error) {
