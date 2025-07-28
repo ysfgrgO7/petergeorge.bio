@@ -18,15 +18,6 @@
   border: 1px solid var(--white);
 }
 
-.form button {
-  padding: 0.5rem;
-  background-color: var(--green);
-  color: var(--white);
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -55,16 +46,6 @@
   border: 1px solid #ccc;
 }
 
-.lecturePanel button {
-  padding: 0.4rem 1rem;
-  margin-bottom: 1rem;
-  background-color: #000;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
 .lectureList {
   list-style: none;
   padding: 0;
@@ -83,6 +64,27 @@
   margin-bottom: 1rem;
 }
 
+/* Buttons */
+.form button {
+  padding: 0.5rem;
+  background-color: var(--green);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.card button,
+.lecturePanel button {
+  padding: 0.4rem 1rem;
+  margin-bottom: 1rem;
+  background-color: var(--green);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
 .tabs button {
   padding: 0.5rem 1rem;
   border: 1px solid var(--light);
@@ -98,4 +100,11 @@
   color: var(--white);
   font-weight: bold;
   border-color: var(--green);
+}
+
+.form button:hover,
+.card button:hover,
+.lecturePanel button:hover,
+.tabs button:hover {
+  filter: brightness(1.2);
 }

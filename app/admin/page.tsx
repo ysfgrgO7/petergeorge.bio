@@ -177,12 +177,14 @@ export default function AdminDashboard() {
               <p>
                 <strong>Year:</strong> {course.year.toUpperCase()}
               </p>
-              <button onClick={() => handleDelete(course.id)}>Delete</button>
-              <button onClick={() => toggleLecturePanel(course.id)}>
-                {openLecturePanels.has(course.id)
-                  ? "Hide Lectures"
-                  : "Manage Lectures"}
-              </button>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button onClick={() => handleDelete(course.id)}>Delete</button>
+                <button onClick={() => toggleLecturePanel(course.id)}>
+                  {openLecturePanels.has(course.id)
+                    ? "Hide Lectures"
+                    : "Manage Lectures"}
+                </button>
+              </div>
 
               {openLecturePanels.has(course.id) && (
                 <div className={styles.lecturePanel}>
@@ -219,7 +221,7 @@ export default function AdminDashboard() {
                               (window.location.href = `/admin/quiz?courseId=${course.id}&lectureIndex=${index}`)
                             }
                           >
-                            ➕ Add Quiz
+                            ➕ Quiz
                           </button>
                         </div>
                       </li>

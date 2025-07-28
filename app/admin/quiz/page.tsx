@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import styles from "../admin.module.css";
 
 export default function QuizBuilder() {
   const searchParams = useSearchParams();
@@ -81,21 +82,14 @@ export default function QuizBuilder() {
   }
 
   return (
-    <div style={{ padding: "2rem" }}>
+    <div className={styles.wrapper}>
       <h1>Add Quiz Question</h1>
       <p>
         <strong>Course ID:</strong> {courseId} | <strong>Lecture:</strong> #
-        {lectureIndex}
+        {lectureIndex + 1} 
       </p>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-          marginTop: "1rem",
-        }}
-      >
+      <div className={styles.form}>
         <input
           type="text"
           placeholder="Question"
@@ -104,7 +98,7 @@ export default function QuizBuilder() {
         />
 
         {options.map((option, index) => (
-          <div key={index} style={{ display: "flex", gap: "0.5rem" }}>
+          <div key={index} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <input
               type="text"
               placeholder={`Option ${index + 1}`}
