@@ -1,7 +1,11 @@
 .wrapper {
   padding: 2rem;
-  max-width: 900px;
-  margin: auto;
+  width: calc(100% - 200px); /* Adjust based on sidebar width */
+  position: relative; /* Needed for z-index context if using */
+}
+
+.wrapper h1 {
+  margin-bottom: 2rem;
 }
 
 .courseList {
@@ -10,13 +14,9 @@
 }
 
 .courseCard {
-  border: 1px solid #ccc;
+  border: 1px solid var(--dark);
   padding: 1rem;
   border-radius: 0.5rem;
-}
-
-.courseCard button {
-  margin-top: 1rem;
 }
 
 .courseDetail {
@@ -29,4 +29,78 @@
 
 .file-viewer__overlay-logo .icon {
   visibility: hidden !important;
+}
+
+.courseDetail button,
+.wrapper button,
+.courseCard button {
+  padding: 0.4rem 1rem;
+  margin-bottom: 1rem;
+  background-color: var(--green);
+  color: var(--white);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.courseDetail button:hover,
+.wrapper button:hover,
+.courseCard button:hover {
+  filter: brightness(1.2);
+}
+
+.question {
+  font-size: 1.3rem;
+  border-bottom: 5px solid var(--dark);
+  margin: 2rem 0rem;
+  padding-bottom: 1rem; /* Add padding to separate from border */
+}
+
+.choices {
+  display: flex;
+  align-items: center; /* Align items vertically in the center */
+  padding: 1.2rem;
+  margin-left: 1rem;
+  margin-bottom: 5px;
+  font-size: 1.2rem;
+  border: 3px solid var(--dark);
+  background-color: var(--white); /* Light background */
+  filter: brightness(0.95);
+  border-radius: 20px;
+  transition: background-color 0.2s ease, color 0.2s ease,
+    border-color 0.2s ease;
+  cursor: pointer;
+}
+
+.choices input {
+  margin-right: 0.2rem;
+  visibility: hidden;
+}
+
+.choices input:hover {
+  margin-right: 0.2rem;
+}
+
+.choices:hover,
+.selectedChoice {
+  background-color: var(--green); /* Highlight background */
+  color: var(--white); /* Highlight text color */
+}
+
+.quizSummaryFloating {
+  position: fixed; /* Keep it in place while scrolling */
+  height: 75%;
+  width: 200px; /* Width of the floating window */
+  top: 100px; /* Adjust as needed */
+  right: 10px; /* Distance from the right edge */
+  background-color: var(--white); /* Light background */
+  filter: brightness(0.95);
+  padding: 1.5rem;
+  border-radius: 10px;
+  z-index: 1000; /* Ensure it stays on top */
+  border: 1px solid var(--dark); /* Subtle border */
+  font-size: 1rem;
+  color: var(--black);
 }

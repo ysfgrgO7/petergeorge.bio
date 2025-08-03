@@ -1,17 +1,51 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, ChangeEvent, FormEvent } from "react";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, setDoc, doc } from "firebase/firestore";
+import { setDoc, doc } from "firebase/firestore"; // Removed unused imports: collection, addDoc
 import styles from "../styles.module.css";
+
+// Define interfaces for form data and errors to provide strong typing
+interface FormData {
+  firstName: string;
+  secondName: string;
+  thirdName: string;
+  forthName: string;
+  gender: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  studentPhone: string;
+  school: string;
+  parentPhone1: string;
+  parentPhone2: string;
+  year: string;
+}
+
+interface FormErrors {
+  firstName?: string;
+  secondName?: string;
+  thirdName?: string;
+  forthName?: string;
+  gender?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  studentPhone?: string;
+  school?: string;
+  parentPhone1?: string;
+  parentPhone2?: string;
+  year?: string;
+}
 
 export default function Register() {
   const auth = getAuth();
   const router = useRouter();
-  const [errors, setErrors] = useState({});
+  // Initialize errors state with the defined FormErrors interface
+  const [errors, setErrors] = useState<FormErrors>({});
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     firstName: "",
     secondName: "",
     thirdName: "",
@@ -27,7 +61,10 @@ export default function Register() {
     year: "",
   });
 
-  const handleChange = (e) => {
+  // Explicitly type the event parameter 'e'
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData((prev) => ({
       ...prev,
       [e.target.name]: e.target.value,
@@ -38,9 +75,11 @@ export default function Register() {
     return Math.floor(100000 + Math.random() * 900000).toString();
   };
 
-  const handleSubmit = async (e) => {
+  // Explicitly type the event parameter 'e'
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const newErrors = {};
+    // Initialize newErrors with the defined FormErrors interface
+    const newErrors: FormErrors = {};
 
     const {
       password,
@@ -54,25 +93,36 @@ export default function Register() {
       newErrors.confirmPassword = "Passwords do not match.";
     }
 
-    // Phone uniqueness
+    // Phone uniqueness validation
     const phones = [studentPhone, parentPhone1, parentPhone2].filter(Boolean);
     const uniquePhones = new Set(phones);
     if (uniquePhones.size !== phones.length) {
-      if (studentPhone === parentPhone1 || studentPhone === parentPhone2)
+      if (
+        studentPhone &&
+        (studentPhone === parentPhone1 || studentPhone === parentPhone2)
+      )
         newErrors.studentPhone = "Student phone must be unique.";
 
-      if (parentPhone1 === parentPhone2 || parentPhone1 === studentPhone)
+      if (
+        parentPhone1 &&
+        (parentPhone1 === parentPhone2 || parentPhone1 === studentPhone)
+      )
         newErrors.parentPhone1 = "Parent 1 phone must be unique.";
 
-      if (parentPhone2 === parentPhone1 || parentPhone2 === studentPhone)
+      if (
+        parentPhone2 &&
+        (parentPhone2 === parentPhone1 || parentPhone2 === studentPhone)
+      )
         newErrors.parentPhone2 = "Parent 2 phone must be unique.";
     }
 
-    // OPTIONAL: Validate phone format (Egyptian)
-    const isValidPhone = (phone) => /^01[0-9]{9}$/.test(phone);
-    ["studentPhone", "parentPhone1", "parentPhone2"].forEach((field) => {
+    // Validate phone format (Egyptian)
+    const isValidPhone = (phone: string) => /^01[0-9]{9}$/.test(phone);
+    (
+      ["studentPhone", "parentPhone1", "parentPhone2"] as Array<keyof FormData>
+    ).forEach((field) => {
       const phone = formData[field];
-      if (phone && !isValidPhone(phone)) {
+      if (typeof phone === "string" && phone && !isValidPhone(phone)) {
         newErrors[field] = "Enter a valid 11-digit Egyptian number.";
       }
     });
@@ -82,7 +132,7 @@ export default function Register() {
       return;
     }
 
-    setErrors({});
+    setErrors({}); // Clear errors if validation passes
     const studentCode = generateStudentCode();
 
     try {
@@ -104,9 +154,11 @@ export default function Register() {
       localStorage.setItem("studentCode", studentCode);
 
       router.push("/home");
-    } catch (error) {
+    } catch (error: unknown) {
+      // Explicitly type error as unknown
       console.error("Error:", error);
-      alert("Registration failed. " + error.message);
+      // Safely access error message by asserting its type
+      alert("Registration failed. " + (error as Error).message);
     }
   };
 

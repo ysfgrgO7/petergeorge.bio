@@ -17,7 +17,7 @@ export async function getLectureProgress(
     `${courseId}_${lectureIndex}`
   );
   const snap = await getDoc(docRef);
-  return snap.exists() ? snap.data() : { quizCompleted: false, watched: false };
+  return snap.exists() ? snap.data() : { quizCompleted: false };
 }
 
 export async function markQuizComplete(
@@ -32,9 +32,5 @@ export async function markQuizComplete(
     "progress",
     `${courseId}_${lectureIndex}`
   );
-  await setDoc(
-    docRef,
-    { quizCompleted: true, watched: false },
-    { merge: true }
-  );
+  await setDoc(docRef, { quizCompleted: true }, { merge: true });
 }

@@ -4,7 +4,9 @@
   padding: 30px;
   border: 1px solid var(--white);
   border-radius: 8px;
-  background: var(--light);
+  background: var(--white);
+  filter: brightness(0.95);
+  box-shadow: 0px 0px 7px 1px var(--dark);
 }
 
 .container h1 {
@@ -29,15 +31,16 @@
 }
 
 .form button {
-  background-color: var(--green);
   padding: 10px;
+  background-color: var(--green);
   color: var(--white);
   border: none;
+  border-radius: 6px;
   cursor: pointer;
 }
 
 .form button:hover {
-  background-color: var(--green);
+  filter: brightness(1.2);
 }
 
 /* Sections */
@@ -80,7 +83,10 @@
     margin: 20px auto;
     padding: 10px;
     background: var(--white);
+    box-shadow: none;
+    filter: none;
   }
+
   .splitContainer {
     flex-direction: column;
   }
