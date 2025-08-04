@@ -76,9 +76,9 @@
 }
 
 .card button,
+.wrapper button,
 .lecturePanel button {
   padding: 0.4rem 1rem;
-  margin-bottom: 1rem;
   background-color: var(--green);
   color: var(--white);
   border: none;

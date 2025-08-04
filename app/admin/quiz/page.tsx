@@ -307,7 +307,11 @@ export default function QuizBuilder() {
                 }
                 min="1"
               />
-              <button type="button" onClick={saveQuizDuration}>
+              <button
+                type="button"
+                onClick={saveQuizDuration}
+                // className={styles.saveButton}
+              >
                 Save New Duration
               </button>
             </div>

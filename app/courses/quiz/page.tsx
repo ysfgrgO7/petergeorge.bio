@@ -202,10 +202,40 @@ export default function QuizPage() {
   return (
     <div className={styles.wrapper}>
       <h1>Lecture Quiz</h1>
+      <hr className={styles.titleHr} />
 
       {questions.length === 0 && (
         <p>No quiz questions found for this lecture.</p>
       )}
+
+      {/* Floating Quiz Summary Window */}
+      {questions.length > 0 && (
+        <div className={styles.quizSummaryFloating}>
+          <h2>Quiz Summary</h2>
+          <p>
+            Time Left: <strong>{formatTime(timeLeft)}</strong>
+          </p>
+          <p>
+            Total Questions: <strong>{totalQuestions}</strong>
+          </p>
+          <p>
+            Solved: <strong>{solvedQuestions}</strong>
+          </p>
+          <p>
+            Unsolved: <strong>{unsolvedQuestions}</strong>
+          </p>
+          <hr />
+          <button
+            onClick={handleSubmit}
+            className="mt-8 px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out"
+            disabled={quizSubmitted} // Disable button after submission
+          >
+            {quizSubmitted ? "Submitting..." : "Submit Quiz"}
+          </button>
+        </div>
+      )}
+      <hr className={styles.summaryHr} />
+
       {questions.map((q, i) => (
         <div key={i} className={styles.question}>
           <p>
@@ -227,36 +257,9 @@ export default function QuizPage() {
               {opt}
             </label>
           ))}
+          <hr />
         </div>
       ))}
-      {questions.length > 0 && (
-        <button
-          onClick={handleSubmit}
-          className="mt-8 px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out"
-          disabled={quizSubmitted} // Disable button after submission
-        >
-          {quizSubmitted ? "Submitting..." : "Submit Quiz"}
-        </button>
-      )}
-
-      {/* Floating Quiz Summary Window */}
-      {questions.length > 0 && (
-        <div className={styles.quizSummaryFloating}>
-          <h2>Quiz Summary</h2>
-          <p>
-            Time Left: <strong>{formatTime(timeLeft)}</strong>
-          </p>
-          <p>
-            Total Questions: <strong>{totalQuestions}</strong>
-          </p>
-          <p>
-            Solved: <strong>{solvedQuestions}</strong>
-          </p>
-          <p>
-            Unsolved: <strong>{unsolvedQuestions}</strong>
-          </p>
-        </div>
-      )}
 
       {showModal && (
         <MessageModal
