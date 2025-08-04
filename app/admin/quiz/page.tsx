@@ -47,8 +47,9 @@ interface ExistingQuiz extends DocumentData {
 
 export default function QuizBuilder() {
   const searchParams = useSearchParams();
+  const year = searchParams.get("year"); // New: Get year from URL params
   const courseId = searchParams.get("courseId");
-  const lectureIndex = searchParams.get("lectureIndex");
+  const lectureId = searchParams.get("lectureId"); // Changed from lectureIndex to lectureId
 
   const [question, setQuestion] = useState("");
   const [quizDurationInput, setQuizDurationInput] = useState<number | "">(""); // For the input field
@@ -67,15 +68,17 @@ export default function QuizBuilder() {
 
   // --- Quiz Duration Management ---
   const fetchQuizDuration = async () => {
-    if (!courseId || lectureIndex === null) {
+    // Ensure all necessary params are present
+    if (!year || !courseId || !lectureId) {
       setIsDurationLoading(false);
       return;
     }
     setIsDurationLoading(true);
     try {
+      // Updated Firestore path to include 'year' and use 'lectureId'
       const settingsDocRef = doc(
         db,
-        `courses/${courseId}/lectures/${lectureIndex}/quizSettings/duration`
+        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
       );
       const docSnap = await getDoc(settingsDocRef);
       if (docSnap.exists()) {
@@ -108,18 +111,20 @@ export default function QuizBuilder() {
       return;
     }
 
-    if (!courseId || lectureIndex === null) {
+    // Ensure all necessary params are present
+    if (!year || !courseId || !lectureId) {
       setModalMessage(
-        "Missing course or lecture information to save duration."
+        "Missing course, lecture, or year information to save duration."
       );
       setShowModal(true);
       return;
     }
 
     try {
+      // Updated Firestore path to include 'year' and use 'lectureId'
       const settingsDocRef = doc(
         db,
-        `courses/${courseId}/lectures/${lectureIndex}/quizSettings/duration`
+        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
       );
       await setDoc(settingsDocRef, { duration: durationValue });
       setCurrentQuizDuration(durationValue);
@@ -138,7 +143,7 @@ export default function QuizBuilder() {
   useEffect(() => {
     fetchQuizDuration();
     fetchQuizzes(); // Also fetch questions when course/lecture changes
-  }, [courseId, lectureIndex]);
+  }, [year, courseId, lectureId]); // Updated dependencies
 
   // --- Question Management ---
   const addOption = () => {
@@ -181,18 +186,20 @@ export default function QuizBuilder() {
       return;
     }
 
-    if (!courseId || lectureIndex === null) {
+    // Ensure all necessary params are present
+    if (!year || !courseId || !lectureId) {
       setModalMessage(
-        "Missing course or lecture information. Please ensure you navigate from the correct admin page."
+        "Missing course, lecture, or year information. Please ensure you navigate from the correct admin page."
       );
       setShowModal(true);
       return;
     }
 
     try {
+      // Updated Firestore path to include 'year' and use 'lectureId'
       const quizQuestionsRef = collection(
         db,
-        `courses/${courseId}/lectures/${lectureIndex}/quizzes`
+        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
       );
 
       await addDoc(quizQuestionsRef, {
@@ -220,11 +227,13 @@ export default function QuizBuilder() {
   };
 
   const fetchQuizzes = async () => {
-    if (!courseId || lectureIndex === null) return;
+    // Ensure all necessary params are present
+    if (!year || !courseId || !lectureId) return;
     try {
+      // Updated Firestore path to include 'year' and use 'lectureId'
       const quizQuestionsRef = collection(
         db,
-        `courses/${courseId}/lectures/${lectureIndex}/quizzes`
+        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
       );
       const snapshot = await getDocs(quizQuestionsRef);
       const quizzes = snapshot.docs.map((doc) => ({
@@ -239,12 +248,13 @@ export default function QuizBuilder() {
     }
   };
 
-  if (!courseId || lectureIndex === null) {
+  // Check for missing URL parameters
+  if (!year || !courseId || !lectureId) {
     return (
       <div className={styles.wrapper}>
         <p>
-          Missing course or lecture info in URL. Please navigate from the admin
-          course/lecture selection.
+          Missing year, course, or lecture info in URL. Please navigate from the
+          admin course/lecture selection.
         </p>
       </div>
     );
@@ -254,8 +264,9 @@ export default function QuizBuilder() {
     <div className={styles.wrapper}>
       <h1>Add Quiz Question</h1>
       <p>
-        <strong>Course ID:</strong> {courseId} | <strong>Lecture:</strong> #
-        {lectureIndex}
+        <strong>Year:</strong> {year.toUpperCase()} |{" "}
+        <strong>Course ID:</strong> {courseId} | <strong>Lecture ID:</strong>{" "}
+        {lectureId}
       </p>
 
       {/* Quiz Duration Section */}
@@ -307,11 +318,7 @@ export default function QuizBuilder() {
                 }
                 min="1"
               />
-              <button
-                type="button"
-                onClick={saveQuizDuration}
-                // className={styles.saveButton}
-              >
+              <button type="button" onClick={saveQuizDuration}>
                 Save New Duration
               </button>
             </div>
@@ -324,13 +331,11 @@ export default function QuizBuilder() {
       {/* Add Question Section */}
       <h2>Add New Question</h2>
       <div className={styles.form}>
-        <input
-          type="text"
+        <textarea
           placeholder="Question"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
         />
-
         {options.map((option, index) => (
           <div
             key={index}
@@ -356,13 +361,11 @@ export default function QuizBuilder() {
             )}
           </div>
         ))}
-
         {options.length < 4 && (
           <button type="button" onClick={addOption}>
             ➕ Add Option
           </button>
         )}
-
         <button type="button" onClick={handleSubmit}>
           ✅ Save Question
         </button>
@@ -382,7 +385,7 @@ export default function QuizBuilder() {
       ) : (
         <p>No questions added yet.</p>
       )}
-
+      <hr style={{ margin: "2rem 0" }} />
       {showModal && (
         <MessageModal
           message={modalMessage}

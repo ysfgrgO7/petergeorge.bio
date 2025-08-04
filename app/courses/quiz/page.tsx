@@ -8,7 +8,7 @@ import {
   DocumentData,
   doc,
   getDoc,
-} from "firebase/firestore"; // Added doc and getDoc
+} from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { markQuizComplete } from "@/lib/studentProgress"; // Assuming this function exists and is correctly typed
 import styles from "../courses.module.css";
@@ -45,8 +45,9 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
 export default function QuizPage() {
   const params = useSearchParams();
   const router = useRouter();
+  const year = params.get("year"); // New: Get year from URL params
   const courseId = params.get("courseId");
-  const lectureIndex = params.get("lectureIndex");
+  const lectureId = params.get("lectureId"); // Changed from lectureIndex to lectureId
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [answers, setAnswers] = useState<number[]>([]);
@@ -64,8 +65,9 @@ export default function QuizPage() {
     const code = localStorage.getItem("studentCode");
     setStudentCode(code);
 
-    if (!courseId || lectureIndex === null) {
-      console.error("Missing courseId or lectureIndex in URL parameters.");
+    // Ensure all necessary params are present
+    if (!year || !courseId || !lectureId) {
+      console.error("Missing year, courseId, or lectureId in URL parameters.");
       setModalMessage(
         "Missing quiz details. Please navigate from the courses page."
       );
@@ -76,9 +78,10 @@ export default function QuizPage() {
     const fetchQuizData = async () => {
       try {
         // 1. Fetch Quiz Duration from the centralized quizSettings document
+        // Updated Firestore path to include 'year' and use 'lectureId'
         const settingsDocRef = doc(
           db,
-          `courses/${courseId}/lectures/${lectureIndex}/quizSettings/duration`
+          `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
         );
         const docSnap = await getDoc(settingsDocRef);
         let durationMinutes = 10; // Default to 10 minutes if not found
@@ -88,13 +91,10 @@ export default function QuizPage() {
         setTimeLeft(durationMinutes * 60); // Convert minutes to seconds
 
         // 2. Fetch Quiz Questions
+        // Updated Firestore path to include 'year' and use 'lectureId'
         const quizRef = collection(
           db,
-          "courses",
-          courseId,
-          "lectures",
-          lectureIndex,
-          "quizzes"
+          `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
         );
         const snapshot = await getDocs(quizRef);
         const fetchedQuestions: QuizQuestion[] = snapshot.docs.map(
@@ -112,7 +112,7 @@ export default function QuizPage() {
     };
 
     fetchQuizData();
-  }, [courseId, lectureIndex]);
+  }, [year, courseId, lectureId]); // Updated dependencies
 
   // Timer useEffect
   useEffect(() => {
@@ -149,10 +149,12 @@ export default function QuizPage() {
     setQuizSubmitted(true); // Mark quiz as submitted
 
     console.log("studentCode:", studentCode);
+    console.log("year:", year); // Log year
     console.log("courseId:", courseId);
-    console.log("lectureIndex:", lectureIndex);
+    console.log("lectureId:", lectureId); // Log lectureId
 
-    if (!studentCode || !courseId || lectureIndex === null) {
+    // Ensure all necessary params are present
+    if (!studentCode || !year || !courseId || !lectureId) {
       setModalMessage(
         "Missing student information or quiz details. Please ensure you are logged in and navigated correctly."
       );
@@ -162,7 +164,8 @@ export default function QuizPage() {
     }
 
     try {
-      await markQuizComplete(studentCode, courseId, Number(lectureIndex));
+      // Updated markQuizComplete to pass 'year' and 'lectureId'
+      await markQuizComplete(studentCode, year, courseId, lectureId);
       setModalMessage("Quiz completed. Video unlocked! 🎉");
       setShowModal(true);
       setTimeout(() => {
