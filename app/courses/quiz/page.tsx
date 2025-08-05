@@ -279,6 +279,14 @@ export default function QuizPage() {
             <p>
               Unsolved: <strong>{unsolvedQuestions}</strong>
             </p>
+            <hr className={styles.titleHr} />
+            <button
+              onClick={handleSubmit}
+              className="mt-8 px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out"
+              disabled={quizSubmitted}
+            >
+              {quizSubmitted ? "Submitting..." : "Submit Quiz"}
+            </button>
           </div>
         )}
       <hr className={styles.summaryHr} />
@@ -339,17 +347,6 @@ export default function QuizPage() {
           </div>
         ))
       )}
-
-      {questions.length > 0 &&
-        !showResults && ( // Only show submit button if questions exist and results are not shown
-          <button
-            onClick={handleSubmit}
-            className="mt-8 px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out"
-            disabled={quizSubmitted}
-          >
-            {quizSubmitted ? "Submitting..." : "Submit Quiz"}
-          </button>
-        )}
 
       {showModal && (
         <MessageModal
