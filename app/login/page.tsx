@@ -16,8 +16,8 @@ export default function LoginPage() {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/home"); // or another page
-    } catch (err: any) {
+      router.push("/"); // or another page
+    } catch {
       setError("Invalid login credentials");
     }
   };

@@ -34,7 +34,15 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [studentCode, setStudentCode] = useState<string | null>(null);
-  const [progressMap, setProgressMap] = useState<Record<string, any>>({}); // Key will now be `${courseId}_${lectureId}`
+  // Define a type for lecture progress (customize fields as needed)
+  type LectureProgress = {
+    quizCompleted?: boolean;
+    // Add other progress fields if needed
+  };
+
+  const [progressMap, setProgressMap] = useState<
+    Record<string, LectureProgress | undefined>
+  >({}); // Key will now be `${courseId}_${lectureId}`
   const [loadingCourses, setLoadingCourses] = useState(true);
 
   // Removed activeYearTab state as we will display all courses
@@ -146,7 +154,7 @@ export default function CoursesPage() {
     }
 
     const loadProgress = async () => {
-      const map: Record<string, any> = {};
+      const map: Record<string, LectureProgress | undefined> = {};
       for (const lecture of courseLectures) {
         // getLectureProgress now needs year and lectureId
         const progress = await getLectureProgress(
