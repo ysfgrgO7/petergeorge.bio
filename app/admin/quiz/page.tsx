@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
 import {
   collection,
   addDoc,
@@ -36,27 +37,28 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
   );
 };
 
-// Interface for existing quiz question data (time property removed)
+// Interface for existing quiz question data
 interface ExistingQuiz extends DocumentData {
   id: string;
   question: string;
   options: string[];
   correctAnswerIndex: number;
-  // 'time' property is no longer here, as it's stored centrally
+  imageUrl?: string; // New: Optional image URL for the question
 }
 
 export default function QuizBuilder() {
   const searchParams = useSearchParams();
-  const year = searchParams.get("year"); // New: Get year from URL params
+  const year = searchParams.get("year");
   const courseId = searchParams.get("courseId");
-  const lectureId = searchParams.get("lectureId"); // Changed from lectureIndex to lectureId
+  const lectureId = searchParams.get("lectureId");
 
   const [question, setQuestion] = useState("");
-  const [quizDurationInput, setQuizDurationInput] = useState<number | "">(""); // For the input field
+  const [imageUrl, setImageUrl] = useState(""); // New state for image URL
+  const [quizDurationInput, setQuizDurationInput] = useState<number | "">("");
   const [currentQuizDuration, setCurrentQuizDuration] = useState<number | null>(
     null
-  ); // For the fetched/set duration
-  const [isDurationLoading, setIsDurationLoading] = useState(true); // Loading state for duration
+  );
+  const [isDurationLoading, setIsDurationLoading] = useState(true);
 
   const [options, setOptions] = useState(["", ""]);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
@@ -68,14 +70,12 @@ export default function QuizBuilder() {
 
   // --- Quiz Duration Management ---
   const fetchQuizDuration = async () => {
-    // Ensure all necessary params are present
     if (!year || !courseId || !lectureId) {
       setIsDurationLoading(false);
       return;
     }
     setIsDurationLoading(true);
     try {
-      // Updated Firestore path to include 'year' and use 'lectureId'
       const settingsDocRef = doc(
         db,
         `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
@@ -90,7 +90,7 @@ export default function QuizBuilder() {
       console.error("Error fetching quiz duration:", error);
       setModalMessage("Failed to load quiz duration.");
       setShowModal(true);
-      setCurrentQuizDuration(null); // Ensure it's null on error
+      setCurrentQuizDuration(null);
     } finally {
       setIsDurationLoading(false);
     }
@@ -111,7 +111,6 @@ export default function QuizBuilder() {
       return;
     }
 
-    // Ensure all necessary params are present
     if (!year || !courseId || !lectureId) {
       setModalMessage(
         "Missing course, lecture, or year information to save duration."
@@ -121,14 +120,13 @@ export default function QuizBuilder() {
     }
 
     try {
-      // Updated Firestore path to include 'year' and use 'lectureId'
       const settingsDocRef = doc(
         db,
         `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
       );
       await setDoc(settingsDocRef, { duration: durationValue });
       setCurrentQuizDuration(durationValue);
-      setQuizDurationInput(""); // Clear input after saving
+      setQuizDurationInput("");
       setModalMessage("Quiz duration saved successfully!");
       setShowModal(true);
     } catch (error: unknown) {
@@ -142,8 +140,8 @@ export default function QuizBuilder() {
 
   useEffect(() => {
     fetchQuizDuration();
-    fetchQuizzes(); // Also fetch questions when course/lecture changes
-  }, [year, courseId, lectureId]); // Updated dependencies
+    fetchQuizzes();
+  }, [year, courseId, lectureId]);
 
   // --- Question Management ---
   const addOption = () => {
@@ -166,14 +164,12 @@ export default function QuizBuilder() {
   };
 
   const handleSubmit = async () => {
-    // Validate that quiz duration is set before adding questions
     if (currentQuizDuration === null) {
       setModalMessage("Please set the overall quiz duration first.");
       setShowModal(true);
       return;
     }
 
-    // Basic validation for question fields
     if (
       !question.trim() ||
       options.some((opt) => !opt.trim()) ||
@@ -186,7 +182,6 @@ export default function QuizBuilder() {
       return;
     }
 
-    // Ensure all necessary params are present
     if (!year || !courseId || !lectureId) {
       setModalMessage(
         "Missing course, lecture, or year information. Please ensure you navigate from the correct admin page."
@@ -196,7 +191,6 @@ export default function QuizBuilder() {
     }
 
     try {
-      // Updated Firestore path to include 'year' and use 'lectureId'
       const quizQuestionsRef = collection(
         db,
         `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
@@ -206,7 +200,7 @@ export default function QuizBuilder() {
         question,
         options,
         correctAnswerIndex,
-        // 'time' is no longer stored here
+        imageUrl: imageUrl.trim() || null, // New: Save imageUrl, if empty string, save as null
       });
 
       setModalMessage("Quiz question saved successfully!");
@@ -214,9 +208,10 @@ export default function QuizBuilder() {
 
       // Reset form fields
       setQuestion("");
+      setImageUrl(""); // Reset image URL field
       setOptions(["", ""]);
       setCorrectAnswerIndex(null);
-      fetchQuizzes(); // Refresh the list of existing quizzes
+      fetchQuizzes();
     } catch (error: unknown) {
       console.error("Error adding quiz question:", error);
       setModalMessage(
@@ -227,10 +222,8 @@ export default function QuizBuilder() {
   };
 
   const fetchQuizzes = async () => {
-    // Ensure all necessary params are present
     if (!year || !courseId || !lectureId) return;
     try {
-      // Updated Firestore path to include 'year' and use 'lectureId'
       const quizQuestionsRef = collection(
         db,
         `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
@@ -248,7 +241,6 @@ export default function QuizBuilder() {
     }
   };
 
-  // Check for missing URL parameters
   if (!year || !courseId || !lectureId) {
     return (
       <div className={styles.wrapper}>
@@ -275,7 +267,6 @@ export default function QuizBuilder() {
         {isDurationLoading ? (
           <p>Loading duration...</p>
         ) : currentQuizDuration === null ? (
-          // Input for setting initial duration
           <>
             <input
               type="number"
@@ -293,7 +284,6 @@ export default function QuizBuilder() {
             </button>
           </>
         ) : (
-          // Display current duration and input for changing it
           <>
             <p>
               Current Quiz Duration:{" "}
@@ -335,6 +325,13 @@ export default function QuizBuilder() {
           placeholder="Question"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
+        />
+        {/* New input for Image URL */}
+        <input
+          type="url"
+          placeholder="Image URL (optional)"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
         />
         {options.map((option, index) => (
           <div
@@ -379,6 +376,15 @@ export default function QuizBuilder() {
           {existingQuizzes.map((quiz, idx) => (
             <li key={quiz.id}>
               {idx + 1}. {quiz.question}
+              {quiz.imageUrl && (
+                <div className={styles.quizImageContainer}>
+                  <img
+                    src={quiz.imageUrl}
+                    alt={`Question ${idx + 1}`}
+                    className={styles.quizImage}
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>

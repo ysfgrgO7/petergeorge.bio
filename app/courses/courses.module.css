@@ -124,6 +124,18 @@
   color: var(--black);
 }
 
+.quizImageContainer {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.quizImage {
+  max-width: 50%; /* Ensure image doesn't overflow its container */
+  height: auto; /* Maintain aspect ratio */
+  border-radius: 8px; /* Slightly rounded corners */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
 @media (max-width: 768px) {
   .wrapper {
     padding: 0.5rem;
@@ -145,5 +157,12 @@
 
   .summaryHr {
     visibility: visible; /* Hide by default */
+  }
+
+  .quizImage {
+    max-width: 100%; /* Ensure image doesn't overflow its container */
+    height: auto; /* Maintain aspect ratio */
+    border-radius: 8px; /* Slightly rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
   }
 }

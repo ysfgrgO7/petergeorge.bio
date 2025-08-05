@@ -13,11 +13,12 @@ import { db } from "@/lib/firebase";
 import { markQuizComplete } from "@/lib/studentProgress"; // Assuming this function exists and is correctly typed
 import styles from "../courses.module.css";
 
-// Define an interface for a single quiz question (removed 'time' property)
+// Define an interface for a single quiz question
 interface QuizQuestion extends DocumentData {
   question: string;
   options: string[];
-  // 'time' property is no longer here, as it's stored centrally in quizSettings
+  correctAnswerIndex: number; // Added: The index of the correct option
+  imageUrl?: string; // Optional image URL for the question
 }
 
 // Simple Message Modal Component (re-used from previous versions)
@@ -45,9 +46,9 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
 export default function QuizPage() {
   const params = useSearchParams();
   const router = useRouter();
-  const year = params.get("year"); // New: Get year from URL params
+  const year = params.get("year");
   const courseId = params.get("courseId");
-  const lectureId = params.get("lectureId"); // Changed from lectureIndex to lectureId
+  const lectureId = params.get("lectureId");
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [answers, setAnswers] = useState<number[]>([]);
@@ -55,17 +56,18 @@ export default function QuizPage() {
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
 
-  // Quiz Timer State
-  // Initialize timeLeft to 0, it will be updated once quiz duration is fetched
   const [timeLeft, setTimeLeft] = useState(0);
-  const [quizSubmitted, setQuizSubmitted] = useState(false); // To prevent multiple submissions
-  const [isQuizReady, setIsQuizReady] = useState(false); // New state to indicate if quiz data and duration are loaded
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [isQuizReady, setIsQuizReady] = useState(false);
+
+  // New states for grading
+  const [score, setScore] = useState<number | null>(null); // Stores the final score
+  const [showResults, setShowResults] = useState(false); // Controls showing results page
 
   useEffect(() => {
     const code = localStorage.getItem("studentCode");
     setStudentCode(code);
 
-    // Ensure all necessary params are present
     if (!year || !courseId || !lectureId) {
       console.error("Missing year, courseId, or lectureId in URL parameters.");
       setModalMessage(
@@ -77,21 +79,19 @@ export default function QuizPage() {
 
     const fetchQuizData = async () => {
       try {
-        // 1. Fetch Quiz Duration from the centralized quizSettings document
-        // Updated Firestore path to include 'year' and use 'lectureId'
+        // 1. Fetch Quiz Duration
         const settingsDocRef = doc(
           db,
           `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
         );
         const docSnap = await getDoc(settingsDocRef);
-        let durationMinutes = 10; // Default to 10 minutes if not found
+        let durationMinutes = 10;
         if (docSnap.exists() && typeof docSnap.data().duration === "number") {
           durationMinutes = docSnap.data().duration;
         }
-        setTimeLeft(durationMinutes * 60); // Convert minutes to seconds
+        setTimeLeft(durationMinutes * 60);
 
         // 2. Fetch Quiz Questions
-        // Updated Firestore path to include 'year' and use 'lectureId'
         const quizRef = collection(
           db,
           `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
@@ -101,9 +101,9 @@ export default function QuizPage() {
           (doc) => doc.data() as QuizQuestion
         );
         setQuestions(fetchedQuestions);
-        setAnswers(new Array(fetchedQuestions.length).fill(-1));
+        setAnswers(new Array(fetchedQuestions.length).fill(-1)); // Initialize answers
 
-        setIsQuizReady(true); // Mark quiz as ready after fetching both duration and questions
+        setIsQuizReady(true);
       } catch (error) {
         console.error("Error fetching quiz data:", error);
         setModalMessage("Failed to load quiz. Please try again later.");
@@ -112,12 +112,11 @@ export default function QuizPage() {
     };
 
     fetchQuizData();
-  }, [year, courseId, lectureId]); // Updated dependencies
+  }, [year, courseId, lectureId]);
 
   // Timer useEffect
   useEffect(() => {
-    // Only start timer if quiz is ready and not yet submitted
-    if (!isQuizReady || quizSubmitted) return;
+    if (!isQuizReady || quizSubmitted || showResults) return; // Stop timer if quiz is submitted or results are shown
 
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
@@ -134,9 +133,8 @@ export default function QuizPage() {
       });
     }, 1000);
 
-    // Cleanup interval on component unmount or if quiz is submitted
     return () => clearInterval(timer);
-  }, [timeLeft, isQuizReady, quizSubmitted]); // Re-run if timeLeft, isQuizReady, or quizSubmitted changes
+  }, [timeLeft, isQuizReady, quizSubmitted, showResults]); // Added showResults to dependencies
 
   const handleChange = (qIndex: number, optionIndex: number) => {
     const updatedAnswers = [...answers];
@@ -145,41 +143,95 @@ export default function QuizPage() {
   };
 
   const handleSubmit = async () => {
-    if (quizSubmitted) return; // Prevent double submission
+    if (quizSubmitted && showResults) {
+      // If already submitted and showing results, go back to courses
+      router.push("/courses");
+      return;
+    }
+
+    if (quizSubmitted) return; // Prevent double submission if already in submission process
     setQuizSubmitted(true); // Mark quiz as submitted
 
-    console.log("studentCode:", studentCode);
-    console.log("year:", year); // Log year
-    console.log("courseId:", courseId);
-    console.log("lectureId:", lectureId); // Log lectureId
+    // Calculate score
+    let correctAnswersCount = 0;
+    questions.forEach((q, i) => {
+      if (answers[i] === q.correctAnswerIndex) {
+        correctAnswersCount++;
+      }
+    });
 
-    // Ensure all necessary params are present
+    const currentTotalQuestions = questions.length;
+
+    // Explicitly check if the calculated values are numbers before proceeding
+    if (typeof correctAnswersCount !== "number" || isNaN(correctAnswersCount)) {
+      console.error(
+        "handleSubmit: correctAnswersCount is not a number:",
+        correctAnswersCount
+      );
+      setModalMessage(
+        "Internal error: Quiz score calculation failed. Please try again."
+      );
+      setShowModal(true);
+      setQuizSubmitted(false); // Allow retry
+      return;
+    }
+    if (
+      typeof currentTotalQuestions !== "number" ||
+      isNaN(currentTotalQuestions)
+    ) {
+      console.error(
+        "handleSubmit: totalQuestions is not a number:",
+        currentTotalQuestions
+      );
+      setModalMessage(
+        "Internal error: Total questions calculation failed. Please try again."
+      );
+      setShowModal(true);
+      setQuizSubmitted(false); // Allow retry
+      return;
+    }
+
+    setScore(correctAnswersCount);
+    setShowResults(true); // Show results after calculating score
+
+    console.log("studentCode:", studentCode);
+    console.log("year:", year);
+    console.log("courseId:", courseId);
+    console.log("lectureId:", lectureId);
+    console.log("Score:", correctAnswersCount); // Log the score
+
     if (!studentCode || !year || !courseId || !lectureId) {
       setModalMessage(
         "Missing student information or quiz details. Please ensure you are logged in and navigated correctly."
       );
       setShowModal(true);
-      setQuizSubmitted(false); // Allow resubmission if info is missing
+      setQuizSubmitted(false);
       return;
     }
 
     try {
-      // Updated markQuizComplete to pass 'year' and 'lectureId'
-      await markQuizComplete(studentCode, year, courseId, lectureId);
-      setModalMessage("Quiz completed. Video unlocked! 🎉");
+      // Pass the score and totalQuestions to markQuizComplete
+      await markQuizComplete(
+        studentCode,
+        year,
+        courseId,
+        lectureId,
+        correctAnswersCount,
+        currentTotalQuestions
+      );
+      setModalMessage(
+        `Quiz completed! You scored ${correctAnswersCount} out of ${currentTotalQuestions}. Video unlocked! 🎉`
+      );
       setShowModal(true);
-      setTimeout(() => {
-        router.push("/courses");
-      }, 1500);
+      // Removed immediate redirect, user can see results and then click "Back to Courses"
     } catch (error: unknown) {
       console.error("Error completing quiz:", error);
       setModalMessage("Failed to complete quiz. " + (error as Error).message);
       setShowModal(true);
-      setQuizSubmitted(false); // Allow resubmission on error
+      setQuizSubmitted(false);
     }
   };
 
-  // Format time for display
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -188,12 +240,11 @@ export default function QuizPage() {
       .padStart(2, "0")}`;
   };
 
-  // Calculate question statistics
-  const totalQuestions = questions.length;
+  const totalQuestions = questions.length; // This is a state-derived value
+
   const solvedQuestions = answers.filter((ans) => ans !== -1).length;
   const unsolvedQuestions = totalQuestions - solvedQuestions;
 
-  // Show loading state until quiz data and duration are ready
   if (!isQuizReady) {
     return (
       <div className={styles.wrapper}>
@@ -212,57 +263,93 @@ export default function QuizPage() {
       )}
 
       {/* Floating Quiz Summary Window */}
-      {questions.length > 0 && (
-        <div className={styles.quizSummaryFloating}>
-          <h2>Quiz Summary</h2>
+      {questions.length > 0 &&
+        !showResults && ( // Hide summary when results are shown
+          <div className={styles.quizSummaryFloating}>
+            <h2>Quiz Summary</h2>
+            <p>
+              Time Left: <strong>{formatTime(timeLeft)}</strong>
+            </p>
+            <p>
+              Total Questions: <strong>{totalQuestions}</strong>
+            </p>
+            <p>
+              Solved: <strong>{solvedQuestions}</strong>
+            </p>
+            <p>
+              Unsolved: <strong>{unsolvedQuestions}</strong>
+            </p>
+          </div>
+        )}
+      <hr className={styles.summaryHr} />
+
+      {showResults ? (
+        // Display Quiz Results
+        <div className={styles.quizResults}>
+          <h2>Quiz Results</h2>
           <p>
-            Time Left: <strong>{formatTime(timeLeft)}</strong>
+            You scored <strong>{score}</strong> out of{" "}
+            <strong>{totalQuestions}</strong> questions correctly!
           </p>
-          <p>
-            Total Questions: <strong>{totalQuestions}</strong>
-          </p>
-          <p>
-            Solved: <strong>{solvedQuestions}</strong>
-          </p>
-          <p>
-            Unsolved: <strong>{unsolvedQuestions}</strong>
-          </p>
-          <hr />
+          <button
+            onClick={() => router.push("/courses")} // Go back to courses
+            className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
+          >
+            Back to Courses
+          </button>
+        </div>
+      ) : (
+        // Display Quiz Questions
+        questions.map((q, i) => (
+          <div key={i} className={styles.question}>
+            {q.imageUrl && (
+              <div className={styles.quizImageContainer}>
+                <img
+                  src={q.imageUrl}
+                  alt={`Question ${i + 1}`}
+                  className={styles.quizImage}
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src =
+                      "https://placehold.co/400x200/cccccc/000000?text=Image+Not+Found";
+                  }}
+                />
+              </div>
+            )}
+            <p>
+              <strong>Q{i + 1}:</strong> {q.question}
+            </p>
+            {q.options.map((opt: string, j: number) => (
+              <label
+                key={j}
+                className={`${styles.choices} ${
+                  answers[i] === j ? styles.selectedChoice : ""
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`q-${i}`}
+                  checked={answers[i] === j}
+                  onChange={() => handleChange(i, j)}
+                />
+                {opt}
+              </label>
+            ))}
+            <hr />
+          </div>
+        ))
+      )}
+
+      {questions.length > 0 &&
+        !showResults && ( // Only show submit button if questions exist and results are not shown
           <button
             onClick={handleSubmit}
             className="mt-8 px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out"
-            disabled={quizSubmitted} // Disable button after submission
+            disabled={quizSubmitted}
           >
             {quizSubmitted ? "Submitting..." : "Submit Quiz"}
           </button>
-        </div>
-      )}
-      <hr className={styles.summaryHr} />
-
-      {questions.map((q, i) => (
-        <div key={i} className={styles.question}>
-          <p>
-            <strong>Q{i + 1}:</strong> {q.question}
-          </p>
-          {q.options.map((opt: string, j: number) => (
-            <label
-              key={j}
-              className={`${styles.choices} ${
-                answers[i] === j ? styles.selectedChoice : ""
-              }`}
-            >
-              <input
-                type="radio"
-                name={`q-${i}`}
-                checked={answers[i] === j}
-                onChange={() => handleChange(i, j)}
-              />
-              {opt}
-            </label>
-          ))}
-          <hr />
-        </div>
-      ))}
+        )}
 
       {showModal && (
         <MessageModal
