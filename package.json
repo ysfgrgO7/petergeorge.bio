@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "deploy": "next build && npx gh-pages -d out --nojekyll --branch deployment"
+    "deploy": "next build && npx gh-pages -d out --nojekyll --branch Deployment"
   },
   "dependencies": {
     "firebase": "^12.0.0",
