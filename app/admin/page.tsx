@@ -11,10 +11,11 @@ import {
   query,
   orderBy,
   setDoc,
-  updateDoc, // Import updateDoc
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import styles from "./admin.module.css";
+import { MdArrowUpward, MdArrowDownward } from "react-icons/md"; // Import the icons
 
 // Re-using the MessageModalProps interface and MessageModal component
 interface MessageModalProps {
@@ -66,20 +67,25 @@ export default function AdminDashboard() {
   const [openLecturePanels, setOpenLecturePanels] = useState<Set<string>>(
     new Set()
   );
+
   const [lectureTitle, setLectureTitle] = useState("");
   const [odyseeLink, setOdyseeLink] = useState("");
   const [activeYearTab, setActiveYearTab] = useState<
     "year1" | "year3 (Biology)" | "year3 (Geology)"
   >("year1");
+
   const [courseLectures, setCourseLectures] = useState<
     Record<string, Lecture[]>
-  >({});
+  >({}); // Store lectures per courseId
   const [loadingLectures, setLoadingLectures] = useState<Set<string>>(
     new Set()
-  );
+  ); // Loading state per course for lectures
+
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+
   const [showHidden, setShowHidden] = useState(false); // New state for showing hidden lectures
+  const [cardsDirection, setCardsDirection] = useState<React.CSSProperties["flexDirection"]>("column-reverse"); // State for card direction
 
   const toggleLecturePanel = async (courseId: string) => {
     setOpenLecturePanels((prev) => {
@@ -97,13 +103,17 @@ export default function AdminDashboard() {
     });
   };
 
+  const toggleCardsDirection = () => {
+    setCardsDirection((prev) =>
+      prev === "column" ? "column-reverse" : "column"
+    );
+  };
+
   // Function to fetch courses for a specific year
   const fetchCourses = async (
     yearToFetch: "year1" | "year3 (Biology)" | "year3 (Geology)"
   ) => {
     try {
-      // Ensure the year document exists (e.g., 'years/year1')
-      // This is a common pattern to ensure parent documents exist for subcollections
       await setDoc(
         doc(db, "years", yearToFetch),
         { exists: true },
@@ -116,7 +126,7 @@ export default function AdminDashboard() {
         id: doc.id,
         ...doc.data(),
       })) as Course[];
-      setCourses(fetched); // Set courses for the current active tab
+      setCourses(fetched);
     } catch (error) {
       console.error(`Error fetching courses for ${yearToFetch}:`, error);
       setModalMessage(`Failed to load courses for ${yearToFetch}.`);
@@ -165,7 +175,6 @@ export default function AdminDashboard() {
       return;
     }
     try {
-      // Add course to the specific year's subcollection
       await addDoc(collection(db, "years", yearForNewCourse, "courses"), {
         title,
         description,
@@ -183,7 +192,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // handleDelete now needs the year of the course
   const handleDelete = async (
     courseYear: "year1" | "year3 (Biology)" | "year3 (Geology)",
     courseId: string
@@ -227,7 +235,6 @@ export default function AdminDashboard() {
     }
 
     try {
-      // Add lecture to the specific course's lectures subcollection within its year
       const lecturesRef = collection(
         db,
         `years/${activeYearTab}/courses/${courseId}/lectures`
@@ -243,12 +250,12 @@ export default function AdminDashboard() {
         odyseeName: info.name,
         odyseeId: info.id,
         order: newOrder,
-        isHidden: true, // Default new lectures to hidden
+        isHidden: true,
       });
 
       setLectureTitle("");
       setOdyseeLink("");
-      fetchLecturesForCourse(activeYearTab, courseId); // Re-fetch lectures for the specific course
+      fetchLecturesForCourse(activeYearTab, courseId);
       setModalMessage("Lecture added successfully!");
       setShowModal(true);
     } catch (error: unknown) {
@@ -267,7 +274,7 @@ export default function AdminDashboard() {
           lectureId
         )
       );
-      fetchLecturesForCourse(activeYearTab, courseId); // Re-fetch lectures for the specific course
+      fetchLecturesForCourse(activeYearTab, courseId);
       setModalMessage("Lecture deleted successfully!");
       setShowModal(true);
     } catch (error: unknown) {
@@ -340,7 +347,6 @@ export default function AdminDashboard() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
-        {/* Dropdown for selecting year when creating a new course */}
         <select
           value={yearForNewCourse}
           onChange={(e) =>
@@ -367,31 +373,40 @@ export default function AdminDashboard() {
 
       <h1>Existing Courses</h1>
       <div className={styles.tabs}>
-        <button
-          className={activeYearTab === "year1" ? styles.activeTab : ""}
-          onClick={() => setActiveYearTab("year1")}
-        >
-          Year 1
-        </button>
-        <button
-          className={
-            activeYearTab === "year3 (Biology)" ? styles.activeTab : ""
-          }
-          onClick={() => setActiveYearTab("year3 (Biology)")}
-        >
-          Year 3 (Biology)
-        </button>
-        <button
-          className={
-            activeYearTab === "year3 (Geology)" ? styles.activeTab : ""
-          }
-          onClick={() => setActiveYearTab("year3 (Geology)")}
-        >
-          Year 3 (Geology)
+        <div className={styles.yearTabs}>
+          <button
+            className={activeYearTab === "year1" ? styles.activeTab : ""}
+            onClick={() => setActiveYearTab("year1")}
+          >
+            Year 1
+          </button>
+          <button
+            className={
+              activeYearTab === "year3 (Biology)" ? styles.activeTab : ""
+            }
+            onClick={() => setActiveYearTab("year3 (Biology)")}
+          >
+            Year 3 (Biology)
+          </button>
+          <button
+            className={
+              activeYearTab === "year3 (Geology)" ? styles.activeTab : ""
+            }
+            onClick={() => setActiveYearTab("year3 (Geology)")}
+          >
+            Year 3 (Geology)
+          </button>
+        </div>
+        <button onClick={toggleCardsDirection}>
+          {cardsDirection === "column" ? (
+            <MdArrowUpward />
+          ) : (
+            <MdArrowDownward />
+          )}
         </button>
       </div>
 
-      <div className={styles.cards}>
+      <div className={styles.cards} style={{ flexDirection: cardsDirection }}>
         {courses.map((course) => (
           <div key={course.id} className={styles.card}>
             <h2>{course.title}</h2>

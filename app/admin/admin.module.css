@@ -69,8 +69,13 @@
 
 .tabs {
   display: flex;
-  gap: 0.5rem;
+  justify-content: space-between;
   margin-bottom: 1rem;
+}
+
+.yearTabs {
+  display: flex;
+  gap: 0.5rem;
 }
 
 /* Buttons */
