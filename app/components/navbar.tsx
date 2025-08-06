@@ -108,6 +108,7 @@ export default function Navbar({
             width={70}
             height={70}
             style={{ marginBottom: "1rem" }}
+            unoptimized
           />
           {!isCollapsed && <div className={styles.logo}>Master Biology</div>}
         </div>
