@@ -22,23 +22,28 @@
 }
 
 .cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  display: flex;
+  flex-direction: column-reverse;
+  /* grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); */
   gap: 1rem;
 }
 
 .card {
-  padding: 1rem;
+  padding: 0.5rem;
   border-radius: 8px;
   box-shadow: 0px 0px 9px 1px var(--black);
   background-color: var(--white);
   filter: brightness(0.95);
   color: var(--black);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  flex-direction: column;
 }
 
 .lecturePanel {
-  margin-top: 2rem;
-  padding: 1rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
   border-top: 2px solid var(--black);
 }
 
@@ -47,7 +52,7 @@
   margin-right: 0.5rem;
   margin-bottom: 0.5rem;
   border-radius: 6px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--dark);
 }
 
 .lectureList {
@@ -64,7 +69,7 @@
 
 .tabs {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-bottom: 1rem;
 }
 

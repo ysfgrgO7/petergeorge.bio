@@ -10,7 +10,8 @@ import {
   DocumentData,
   query,
   orderBy,
-  setDoc, // Added setDoc for initializing year documents if needed
+  setDoc,
+  updateDoc, // Import updateDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import styles from "./admin.module.css";
@@ -44,45 +45,41 @@ interface Lecture extends DocumentData {
   odyseeName: string;
   odyseeId: string;
   order: number; // To maintain the display order of lectures
+  isHidden?: boolean; // New optional field to track visibility
 }
 
-// Define an interface for the Course structure (lectures array removed, 'year' removed as it's now in the path)
 interface Course extends DocumentData {
-  id: string; // Firestore document ID
+  id: string;
   title: string;
   description: string;
-  thumbnailUrl?: string; // Optional property
-  // 'year' is no longer a field in the Course document, it's part of the path
+  thumbnailUrl?: string;
 }
 
 export default function AdminDashboard() {
-  const [courses, setCourses] = useState<Course[]>([]); // Courses for the activeYearTab
+  const [courses, setCourses] = useState<Course[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  // 'year' state for creating new courses, will determine which year's subcollection to add to
-  const [yearForNewCourse, setYearForNewCourse] = useState<"year1" | "year3">(
-    "year1"
-  );
+  const [yearForNewCourse, setYearForNewCourse] = useState<
+    "year1" | "year3 (Biology)" | "year3 (Geology)"
+  >("year1");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [openLecturePanels, setOpenLecturePanels] = useState<Set<string>>(
     new Set()
   );
-
   const [lectureTitle, setLectureTitle] = useState("");
   const [odyseeLink, setOdyseeLink] = useState("");
-  const [activeYearTab, setActiveYearTab] = useState<"year1" | "year3">(
-    "year1"
-  );
-
+  const [activeYearTab, setActiveYearTab] = useState<
+    "year1" | "year3 (Biology)" | "year3 (Geology)"
+  >("year1");
   const [courseLectures, setCourseLectures] = useState<
     Record<string, Lecture[]>
-  >({}); // Store lectures per courseId
+  >({});
   const [loadingLectures, setLoadingLectures] = useState<Set<string>>(
     new Set()
-  ); // Loading state per course for lectures
-
+  );
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [showHidden, setShowHidden] = useState(false); // New state for showing hidden lectures
 
   const toggleLecturePanel = async (courseId: string) => {
     setOpenLecturePanels((prev) => {
@@ -101,7 +98,9 @@ export default function AdminDashboard() {
   };
 
   // Function to fetch courses for a specific year
-  const fetchCourses = async (yearToFetch: "year1" | "year3") => {
+  const fetchCourses = async (
+    yearToFetch: "year1" | "year3 (Biology)" | "year3 (Geology)"
+  ) => {
     try {
       // Ensure the year document exists (e.g., 'years/year1')
       // This is a common pattern to ensure parent documents exist for subcollections
@@ -127,7 +126,7 @@ export default function AdminDashboard() {
 
   // Function to fetch lectures for a specific course within a specific year
   const fetchLecturesForCourse = async (
-    courseYear: "year1" | "year3",
+    courseYear: "year1" | "year3 (Biology)" | "year3 (Geology)",
     courseId: string
   ) => {
     setLoadingLectures((prev) => new Set(prev).add(courseId));
@@ -186,7 +185,7 @@ export default function AdminDashboard() {
 
   // handleDelete now needs the year of the course
   const handleDelete = async (
-    courseYear: "year1" | "year3",
+    courseYear: "year1" | "year3 (Biology)" | "year3 (Geology)",
     courseId: string
   ) => {
     try {
@@ -244,6 +243,7 @@ export default function AdminDashboard() {
         odyseeName: info.name,
         odyseeId: info.id,
         order: newOrder,
+        isHidden: true, // Default new lectures to hidden
       });
 
       setLectureTitle("");
@@ -258,10 +258,8 @@ export default function AdminDashboard() {
     }
   };
 
-  // handleDeleteLecture now needs the year of the course
   const handleDeleteLecture = async (courseId: string, lectureId: string) => {
     try {
-      // Delete lecture from the specific course's lectures subcollection within its year
       await deleteDoc(
         doc(
           db,
@@ -279,13 +277,40 @@ export default function AdminDashboard() {
     }
   };
 
-  useEffect(() => {
-    // Fetch courses for the initially active year tab
-    fetchCourses(activeYearTab);
-  }, [activeYearTab]); // Re-fetch courses whenever the active year tab changes
+  const handleToggleLectureVisibility = async (
+    courseId: string,
+    lectureId: string,
+    currentVisibility: boolean
+  ) => {
+    try {
+      const lectureRef = doc(
+        db,
+        `years/${activeYearTab}/courses/${courseId}/lectures`,
+        lectureId
+      );
+      await updateDoc(lectureRef, {
+        isHidden: !currentVisibility,
+      });
+      fetchLecturesForCourse(activeYearTab, courseId);
+      setModalMessage(
+        `Lecture visibility updated successfully! It is now ${
+          !currentVisibility ? "hidden" : "visible"
+        }.`
+      );
+      setShowModal(true);
+    } catch (error: unknown) {
+      console.error("Error updating lecture visibility:", error);
+      setModalMessage(
+        "Failed to update lecture visibility: " + (error as Error).message
+      );
+      setShowModal(true);
+    }
+  };
 
-  // This useEffect ensures that the 'yearForNewCourse' state for new course creation
-  // always matches the currently active tab.
+  useEffect(() => {
+    fetchCourses(activeYearTab);
+  }, [activeYearTab]);
+
   useEffect(() => {
     setYearForNewCourse(activeYearTab);
   }, [activeYearTab]);
@@ -319,11 +344,14 @@ export default function AdminDashboard() {
         <select
           value={yearForNewCourse}
           onChange={(e) =>
-            setYearForNewCourse(e.target.value as "year1" | "year3")
+            setYearForNewCourse(
+              e.target.value as "year1" | "year3 (Biology)" | "year3 (Geology)"
+            )
           }
         >
           <option value="year1">Year 1</option>
-          <option value="year3">Year 3</option>
+          <option value="year3 (Biology)">Year 3 (Biology)</option>
+          <option value="year3 (Geology)">Year 3 (Geology)</option>
         </select>
         <button onClick={handleCreate}>Create Course</button>
       </div>
@@ -346,21 +374,29 @@ export default function AdminDashboard() {
           Year 1
         </button>
         <button
-          className={activeYearTab === "year3" ? styles.activeTab : ""}
-          onClick={() => setActiveYearTab("year3")}
+          className={
+            activeYearTab === "year3 (Biology)" ? styles.activeTab : ""
+          }
+          onClick={() => setActiveYearTab("year3 (Biology)")}
         >
-          Year 3
+          Year 3 (Biology)
+        </button>
+        <button
+          className={
+            activeYearTab === "year3 (Geology)" ? styles.activeTab : ""
+          }
+          onClick={() => setActiveYearTab("year3 (Geology)")}
+        >
+          Year 3 (Geology)
         </button>
       </div>
 
       <div className={styles.cards}>
-        {/* Courses are now directly filtered by the fetchCourses function based on activeYearTab */}
         {courses.map((course) => (
           <div key={course.id} className={styles.card}>
             <h2>{course.title}</h2>
             <p>{course.description}</p>
             <p>
-              {/* Year is no longer a field in the course document, but we can display the active tab's year */}
               <strong>Year:</strong> {activeYearTab.toUpperCase()}
             </p>
             <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -394,36 +430,69 @@ export default function AdminDashboard() {
                 </button>
 
                 <h3 style={{ marginTop: "1.5rem" }}>Existing Lectures</h3>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  <label htmlFor="show-hidden-toggle">
+                    Show Hidden Lectures
+                  </label>
+                  <input
+                    id="show-hidden-toggle"
+                    type="checkbox"
+                    checked={showHidden}
+                    onChange={(e) => setShowHidden(e.target.checked)}
+                  />
+                </div>
                 {loadingLectures.has(course.id) ? (
                   <p>Loading lectures...</p>
                 ) : courseLectures[course.id] &&
                   courseLectures[course.id].length > 0 ? (
                   <ul className={styles.lectureList}>
-                    {courseLectures[course.id].map((lecture: Lecture) => (
-                      <li key={lecture.id}>
-                        {" "}
-                        {/* Use lecture.id for key */}
-                        {lecture.title} ({lecture.odyseeId}) (Order:{" "}
-                        {lecture.order})
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
-                          <button
-                            onClick={
-                              () => handleDeleteLecture(course.id, lecture.id) // Pass courseId and lecture.id
+                    {courseLectures[course.id]
+                      .filter((lecture) => showHidden || !lecture.isHidden)
+                      .map((lecture: Lecture) => (
+                        <li key={lecture.id}>
+                          <span
+                            className={
+                              lecture.isHidden ? styles.hiddenLecture : ""
                             }
                           >
-                            ❌
-                          </button>
-                          <button
-                            onClick={
-                              () =>
-                                (window.location.href = `/admin/quiz?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}`) // Pass year, courseId, lectureId
-                            }
-                          >
-                            ➕ Quiz
-                          </button>
-                        </div>
-                      </li>
-                    ))}
+                            {lecture.title} ({lecture.order + 1})
+                          </span>
+                          <div style={{ display: "flex", gap: "0.5rem" }}>
+                            <button
+                              onClick={() =>
+                                handleToggleLectureVisibility(
+                                  course.id,
+                                  lecture.id,
+                                  lecture.isHidden || false
+                                )
+                              }
+                            >
+                              {lecture.isHidden ? "Show" : "Hide"}
+                            </button>
+                            <button
+                              onClick={() =>
+                                (window.location.href = `/admin/quiz?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}`)
+                              }
+                            >
+                              Manage Quiz
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleDeleteLecture(course.id, lecture.id)
+                              }
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </li>
+                      ))}
                   </ul>
                 ) : (
                   <p>No lectures added yet for this course.</p>

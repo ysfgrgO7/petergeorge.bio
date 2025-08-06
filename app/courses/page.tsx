@@ -7,47 +7,45 @@ import {
   DocumentData,
   query,
   orderBy,
+  where, // Import the where function
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getLectureProgress } from "@/lib/studentProgress"; // This function will need to be updated to accept year and lectureId
+import { getLectureProgress } from "@/lib/studentProgress";
 import styles from "./courses.module.css";
 
 // Updated Lecture interface to reflect subcollection structure
 interface Lecture extends DocumentData {
-  id: string; // The document ID of the lecture in the subcollection
+  id: string;
   title: string;
   odyseeName: string;
   odyseeId: string;
-  order: number; // For sorting lectures
-  hasQuiz?: boolean; // Still determined dynamically
+  order: number;
+  hasQuiz?: boolean;
+  isHidden?: boolean; // Added isHidden property
 }
 
-// Updated Course interface (re-adding year field for frontend representation)
+// Updated Course interface
 interface Course extends DocumentData {
-  id: string; // The document ID of the course
+  id: string;
   title: string;
   description: string;
-  year: "year1" | "year3"; // Re-added year property for frontend display
+  year: "year1" | "year3";
 }
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [studentCode, setStudentCode] = useState<string | null>(null);
-  // Define a type for lecture progress (customize fields as needed)
+
   type LectureProgress = {
     quizCompleted?: boolean;
-    // Add other progress fields if needed
   };
 
   const [progressMap, setProgressMap] = useState<
     Record<string, LectureProgress | undefined>
-  >({}); // Key will now be `${courseId}_${lectureId}`
+  >({});
   const [loadingCourses, setLoadingCourses] = useState(true);
 
-  // Removed activeYearTab state as we will display all courses
-
-  // New states for managing lectures within a selected course
   const [courseLectures, setCourseLectures] = useState<Lecture[]>([]);
   const [loadingLectures, setLoadingLectures] = useState(false);
 
@@ -65,7 +63,7 @@ export default function CoursesPage() {
           fetchedCourses.push({
             id: docSnap.id,
             ...docSnap.data(),
-            year: "year1", // Explicitly add year
+            year: "year1",
           } as Course);
         });
 
@@ -76,21 +74,20 @@ export default function CoursesPage() {
           fetchedCourses.push({
             id: docSnap.id,
             ...docSnap.data(),
-            year: "year3", // Explicitly add year
+            year: "year3",
           } as Course);
         });
 
         setCourses(fetchedCourses);
       } catch (error) {
         console.error(`Error fetching all courses:`, error);
-        // Optionally show an error message to the user
       } finally {
         setLoadingCourses(false);
       }
     };
 
     fetchAllCourses();
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   // --- Fetch Lectures for Selected Course ---
   useEffect(() => {
@@ -102,13 +99,19 @@ export default function CoursesPage() {
 
       setLoadingLectures(true);
       try {
-        // Fetch lectures from the subcollection, ordered by 'order'
-        // Use selectedCourse.year to construct the path
+        // Fetch lectures from the subcollection, ordered by 'order', and filter out hidden ones
         const lecturesRef = collection(
           db,
           `years/${selectedCourse.year}/courses/${selectedCourse.id}/lectures`
         );
-        const q = query(lecturesRef, orderBy("order"));
+
+        // Construct the query with both orderBy and where clauses
+        const q = query(
+          lecturesRef,
+          where("isHidden", "==", false),
+          orderBy("order")
+        );
+
         const snapshot = await getDocs(q);
         const fetchedLectures: Lecture[] = [];
 
@@ -133,49 +136,44 @@ export default function CoursesPage() {
           `Error fetching lectures for course ${selectedCourse.id}:`,
           error
         );
-        // Optionally show an error message
       } finally {
         setLoadingLectures(false);
       }
     };
 
     fetchLectures();
-  }, [selectedCourse]); // Only depend on selectedCourse, as year is now part of selectedCourse object
+  }, [selectedCourse]);
 
   // --- Load Student Progress ---
   useEffect(() => {
     const code = localStorage.getItem("studentCode");
     setStudentCode(code);
 
-    // Only load progress if studentCode is available and lectures have been fetched for the selected course
     if (!code || !selectedCourse || courseLectures.length === 0) {
-      setProgressMap({}); // Clear progress if no course selected or no lectures
+      setProgressMap({});
       return;
     }
 
     const loadProgress = async () => {
       const map: Record<string, LectureProgress | undefined> = {};
       for (const lecture of courseLectures) {
-        // getLectureProgress now needs year and lectureId
         const progress = await getLectureProgress(
           code,
           selectedCourse.year,
           selectedCourse.id,
           lecture.id
         );
-        map[`${selectedCourse.id}_${lecture.id}`] = progress; // Key by courseId_lectureId
+        map[`${selectedCourse.id}_${lecture.id}`] = progress;
       }
       setProgressMap(map);
     };
 
     loadProgress();
-  }, [studentCode, selectedCourse, courseLectures]); // Removed activeYearTab from dependencies
+  }, [studentCode, selectedCourse, courseLectures]);
 
   return (
     <div className={styles.wrapper}>
       <h1>Available Courses</h1>
-
-      {/* Removed Year Selection Tabs */}
 
       {loadingCourses ? (
         <p>Loading courses...</p>
@@ -189,7 +187,6 @@ export default function CoursesPage() {
                   <h2>{course.title}</h2>
                   <p>{course.description}</p>
                   <p>
-                    {/* Display the year from the course object */}
                     <strong>Year:</strong> {course.year.toUpperCase()}
                   </p>
                   <button onClick={() => setSelectedCourse(course)}>
@@ -211,14 +208,11 @@ export default function CoursesPage() {
                 <p>No lectures available for this course.</p>
               ) : (
                 courseLectures.map((lecture) => {
-                  // Removed index as it's not directly used for key or path
-                  const key = `${selectedCourse.id}_${lecture.id}`; // Use lecture.id for key
+                  const key = `${selectedCourse.id}_${lecture.id}`;
                   const progress = progressMap[key];
 
                   return (
                     <div key={lecture.id} className={styles.lecture}>
-                      {" "}
-                      {/* Use lecture.id as key */}
                       <h3>{lecture.title}</h3>
                       {lecture.hasQuiz ? (
                         !progress?.quizCompleted ? (
