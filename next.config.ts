@@ -6,7 +6,8 @@ const nextConfig: NextConfig = {
     return [];
   },
   output: "export",
-  basePath: "/petergeorge.bio",
+  basePath: "/",
+  // basePath: process.env.PAGES_BASE_PATH,
 };
 
 export default nextConfig;
