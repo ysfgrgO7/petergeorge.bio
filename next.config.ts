@@ -5,7 +5,6 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [];
   },
-  output: "export",
 };
 
 export default nextConfig;
