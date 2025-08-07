@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Master Biology",
   description: "Learn Biology",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

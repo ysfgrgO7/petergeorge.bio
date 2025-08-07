@@ -221,10 +221,10 @@ export default function Register() {
             />
             <select name="year" onChange={handleChange} required>
               <option value="">Select School Year</option>
-              <option value="Year 1">
+              <option value="year1">
                 1st Secondary (Integrated Sciences)
               </option>
-              <option value="Year 3">3rd Secondary (Biology)</option>
+              <option value="year3">3rd Secondary (Biology)</option>
             </select>
           </div>
           <div className={styles.section}>

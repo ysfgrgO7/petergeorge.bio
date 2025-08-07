@@ -7,13 +7,14 @@ import {
   DocumentData,
   query,
   orderBy,
-  where, // Import the where function
+  where,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getLectureProgress } from "@/lib/studentProgress";
 import styles from "./courses.module.css";
 
-// Updated Lecture interface to reflect subcollection structure
 interface Lecture extends DocumentData {
   id: string;
   title: string;
@@ -21,21 +22,21 @@ interface Lecture extends DocumentData {
   odyseeId: string;
   order: number;
   hasQuiz?: boolean;
-  isHidden?: boolean; // Added isHidden property
+  isHidden?: boolean;
 }
 
-// Updated Course interface
 interface Course extends DocumentData {
   id: string;
   title: string;
   description: string;
-  year: "year1" | "year3";
+  year: "year1" | "year3 (Biology)" | "year3 (Geology)";
 }
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [studentCode, setStudentCode] = useState<string | null>(null);
+  const [studentYear, setStudentYear] = useState<string | null>(null);
 
   type LectureProgress = {
     quizCompleted?: boolean;
@@ -49,45 +50,69 @@ export default function CoursesPage() {
   const [courseLectures, setCourseLectures] = useState<Lecture[]>([]);
   const [loadingLectures, setLoadingLectures] = useState(false);
 
-  // --- Fetch All Courses (from both years) ---
+  // --- Fetch Student's Year from Firestore ---
   useEffect(() => {
-    const fetchAllCourses = async () => {
+    const getStudentYear = async (code: string) => {
+      try {
+        const studentRef = doc(db, "students", code);
+        const studentSnap = await getDoc(studentRef);
+        if (studentSnap.exists()) {
+          const data = studentSnap.data();
+          if (data && data.year) {
+            setStudentYear(data.year);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching student year:", error);
+      }
+    };
+
+    const code = localStorage.getItem("studentCode");
+    if (code) {
+      setStudentCode(code);
+      getStudentYear(code);
+    } else {
+      setLoadingCourses(false);
+    }
+  }, []);
+
+  // --- Fetch Courses for Student's Year (and year3 sub-years) ---
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!studentYear) {
+        return;
+      }
+
       setLoadingCourses(true);
       try {
-        const fetchedCourses: Course[] = [];
+        let fetchedCourses: Course[] = [];
+        const yearsToFetch =
+          studentYear === "year3"
+            ? ["year3 (Biology)", "year3 (Geology)"]
+            : [studentYear];
 
-        // Fetch Year 1 courses
-        const year1CoursesRef = collection(db, "years", "year1", "courses");
-        const year1Snapshot = await getDocs(year1CoursesRef);
-        year1Snapshot.docs.forEach((docSnap) => {
-          fetchedCourses.push({
-            id: docSnap.id,
-            ...docSnap.data(),
-            year: "year1",
-          } as Course);
-        });
-
-        // Fetch Year 3 courses
-        const year3CoursesRef = collection(db, "years", "year3", "courses");
-        const year3Snapshot = await getDocs(year3CoursesRef);
-        year3Snapshot.docs.forEach((docSnap) => {
-          fetchedCourses.push({
-            id: docSnap.id,
-            ...docSnap.data(),
-            year: "year3",
-          } as Course);
-        });
+        for (const year of yearsToFetch) {
+          const coursesRef = collection(db, "years", year, "courses");
+          const snapshot = await getDocs(coursesRef);
+          snapshot.docs.forEach((docSnap) => {
+            fetchedCourses.push({
+              id: docSnap.id,
+              ...docSnap.data(),
+              year: year as "year1" | "year3 (Biology)" | "year3 (Geology)",
+            } as Course);
+          });
+        }
 
         setCourses(fetchedCourses);
       } catch (error) {
-        console.error(`Error fetching all courses:`, error);
+        console.error(`Error fetching courses:`, error);
       } finally {
         setLoadingCourses(false);
       }
     };
 
-    fetchAllCourses();
-  }, []);
+    fetchCourses();
+  }, [studentYear]);
 
   // --- Fetch Lectures for Selected Course ---
   useEffect(() => {
@@ -99,13 +124,11 @@ export default function CoursesPage() {
 
       setLoadingLectures(true);
       try {
-        // Fetch lectures from the subcollection, ordered by 'order', and filter out hidden ones
         const lecturesRef = collection(
           db,
           `years/${selectedCourse.year}/courses/${selectedCourse.id}/lectures`
         );
 
-        // Construct the query with both orderBy and where clauses
         const q = query(
           lecturesRef,
           where("isHidden", "==", false),
@@ -121,7 +144,6 @@ export default function CoursesPage() {
             ...doc.data(),
           } as Lecture;
 
-          // Check if quiz exists for this lecture
           const quizRef = collection(
             db,
             `years/${selectedCourse.year}/courses/${selectedCourse.id}/lectures/${lectureData.id}/quizzes`
@@ -146,10 +168,7 @@ export default function CoursesPage() {
 
   // --- Load Student Progress ---
   useEffect(() => {
-    const code = localStorage.getItem("studentCode");
-    setStudentCode(code);
-
-    if (!code || !selectedCourse || courseLectures.length === 0) {
+    if (!studentCode || !selectedCourse || courseLectures.length === 0) {
       setProgressMap({});
       return;
     }
@@ -158,7 +177,7 @@ export default function CoursesPage() {
       const map: Record<string, LectureProgress | undefined> = {};
       for (const lecture of courseLectures) {
         const progress = await getLectureProgress(
-          code,
+          studentCode,
           selectedCourse.year,
           selectedCourse.id,
           lecture.id
@@ -187,7 +206,7 @@ export default function CoursesPage() {
                   <h2>{course.title}</h2>
                   <p>{course.description}</p>
                   <p>
-                    <strong>Year:</strong> {course.year.toUpperCase()}
+                    <strong>Year:</strong> {course.year}
                   </p>
                   <button onClick={() => setSelectedCourse(course)}>
                     View Lectures
