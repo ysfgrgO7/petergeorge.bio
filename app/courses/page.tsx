@@ -85,7 +85,7 @@ export default function CoursesPage() {
 
       setLoadingCourses(true);
       try {
-        let fetchedCourses: Course[] = [];
+        const fetchedCourses: Course[] = [];
         const yearsToFetch =
           studentYear === "year3"
             ? ["year3 (Biology)", "year3 (Geology)"]
