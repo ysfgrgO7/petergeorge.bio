@@ -81,6 +81,10 @@
   border-radius: 4px;
 }
 
+.question p {
+  margin-bottom: 15px;
+}
+
 .choices {
   display: flex;
   align-items: center; /* Align items vertically in the center */

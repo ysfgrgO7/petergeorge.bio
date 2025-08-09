@@ -314,7 +314,9 @@ export default function QuizClient() {
               </div>
             )}
             <p>
-              <strong>Q{i + 1}:</strong> {q.question}
+              <strong>
+                Q{i + 1}: {q.question}{" "}
+              </strong>
             </p>
             {q.options.map((opt: string, j: number) => (
               <label
