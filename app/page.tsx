@@ -65,28 +65,28 @@ export default function Home() {
 
       <div className={styles.socialMedia}>
         <a
-          href="https://www.facebook.com/your-facebook-page"
+          href="https://www.facebook.com/share/19ooXGtmA1/?mibextid=wwXIfr"
           target="_blank"
           rel="noopener noreferrer"
         >
           <FaFacebook className={styles.icon} />
         </a>
         <a
-          href="https://www.instagram.com/your-instagram-page"
+          href="https://www.instagram.com/master__biology?igsh=MW5vY2JzOGNqbW5jbg%3D%3D&utm_source=qr"
           target="_blank"
           rel="noopener noreferrer"
         >
           <FaInstagram className={styles.icon} />
         </a>
         <a
-          href="https://www.youtube.com/your-youtube-channel"
+          href="https://youtube.com/@masterbiology2018?si=Or6xu8QocRjF4OFD"
           target="_blank"
           rel="noopener noreferrer"
         >
           <FaYoutube className={styles.icon} />
         </a>
         <a
-          href="https://www.tiktok.com/@your-tiktok-page"
+          href="https://www.tiktok.com/@master.biology?_t=ZS-8yk6O4EtrV3&_r=1"
           target="_blank"
           rel="noopener noreferrer"
         >
