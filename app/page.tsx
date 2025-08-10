@@ -36,7 +36,7 @@ export default function Home() {
           className={styles.button}
           onClick={() => handleButtonClick("year1")}
         >
-          Integrated Sciences
+          <strong>Integrated Sciences</strong>
           <Image
             src="/science.svg"
             alt="Integrated Sciences"
@@ -49,7 +49,7 @@ export default function Home() {
           className={styles.button}
           onClick={() => handleButtonClick("year3")}
         >
-          Biology
+          <strong>Biology</strong>
           <Image src="/heart.svg" alt="Biology" width={250} height={250} />
           Third Secondary
         </button>
@@ -57,7 +57,7 @@ export default function Home() {
           className={styles.button}
           onClick={() => handleButtonClick("year3")}
         >
-          Geology
+          <strong>Geology</strong>
           <Image src="/earth.svg" alt="Geology" width={250} height={250} />
           Third Secondary
         </button>

@@ -12,7 +12,6 @@
   font-size: 3rem;
   text-align: center;
   color: var(--black);
-  text-shadow: 1px 1px 5px var(--dark);
 }
 
 .buttonContainer {
@@ -37,9 +36,9 @@
   box-shadow: 0px 0px 20px 2px var(--black);
   cursor: pointer;
   transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-  width: 45%; /* Buttons take up half the width on larger screens */
+  width: 45%;
   max-width: 300px;
-  height: 350px;
+  height: 400px;
   text-align: center;
   gap: 1rem;
 }

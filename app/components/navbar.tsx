@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { FaWallet } from "react-icons/fa";
 import {
   MdHome,
   MdMenuBook,
@@ -130,6 +131,13 @@ export default function Navbar({
                   <MdMenuBook className={styles.icon} />
                   {!isCollapsed && <span>Courses</span>}{" "}
                   {/* Conditionally show text */}
+                </Link>
+              </li>
+
+              <li className={pathname === "/payment" ? styles.active : ""}>
+                <Link href="/" onClick={toggleSidebar}>
+                  <FaWallet className={styles.icon} />
+                  {!isCollapsed && <span>Payment</span>}{" "}
                 </Link>
               </li>
 
