@@ -1,58 +1,101 @@
 "use client";
-
-import { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import React, { useState, ChangeEvent, FormEvent } from "react";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
-
 import styles from "../styles.module.css";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const auth = getAuth();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const getDeviceId = () => {
+    let deviceId = localStorage.getItem("deviceId");
+    if (!deviceId) {
+      deviceId = crypto.randomUUID();
+      localStorage.setItem("deviceId", deviceId);
+    }
+    return deviceId;
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push("/"); // or another page
-    } catch {
-      setError("Invalid login credentials");
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const userId = userCredential.user.uid;
+
+      const studentRef = doc(db, "students", userId);
+      const studentSnap = await getDoc(studentRef);
+      if (!studentSnap.exists()) {
+        throw new Error("Student data not found. Contact support.");
+      }
+
+      const studentData = studentSnap.data();
+      const devices: string[] = studentData?.devices || [];
+      const deviceId = getDeviceId();
+
+      if (!devices.includes(deviceId)) {
+        if (devices.length >= 2) {
+          throw new Error("Device limit reached. Contact support.");
+        }
+        await updateDoc(studentRef, {
+          devices: arrayUnion(deviceId),
+        });
+      }
+
+      router.push("/");
+    } catch (err: unknown) {
+      if (err instanceof FirebaseError) {
+        setError(`Firebase error: ${err.message}`);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unexpected error occurred.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className={styles.container}>
-      <form onSubmit={handleLogin} className={styles.form}>
-        <h1>Login</h1>
-        {error && <p className={styles.errorText}>{error}</p>}
+      <h2>Login</h2>
+      <form onSubmit={handleSubmit} className={styles.form}>
         <input
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+            setEmail(e.target.value)
+          }
           required
         />
-        <div className={styles.password}>
-          <input
-            type={showPassword ? "text" : "password"}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword((prev) => !prev)}
-          >
-            {showPassword ? <FaEyeSlash /> : <FaEye />}
-          </button>
-        </div>
-        <button type="submit">Login</button>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e: ChangeEvent<HTMLInputElement>) =>
+            setPassword(e.target.value)
+          }
+          required
+        />
+        {error && <p className={styles.error}>{error}</p>}
+        <button type="submit" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
       </form>
     </div>
   );

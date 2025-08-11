@@ -8,8 +8,6 @@ import {
   query,
   orderBy,
   where,
-  doc,
-  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";

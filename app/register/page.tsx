@@ -3,11 +3,10 @@ import React, { useState, ChangeEvent, FormEvent } from "react";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { setDoc, doc } from "firebase/firestore"; // Removed unused imports: collection, addDoc
+import { setDoc, doc } from "firebase/firestore";
 import styles from "../styles.module.css";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 
-// Define interfaces for form data and errors to provide strong typing
 interface FormData {
   firstName: string;
   secondName: string;
@@ -43,7 +42,6 @@ interface FormErrors {
 export default function Register() {
   const auth = getAuth();
   const router = useRouter();
-  // Initialize errors state with the defined FormErrors interface
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
 
@@ -63,7 +61,6 @@ export default function Register() {
     year: "",
   });
 
-  // Explicitly type the event parameter 'e'
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -77,10 +74,10 @@ export default function Register() {
     return Math.floor(100000 + Math.random() * 900000).toString();
   };
 
-  // Explicitly type the event parameter 'e'
+  const isValidPhone = (phone: string) => /^01[0-9]{9}$/.test(phone);
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Initialize newErrors with the defined FormErrors interface
     const newErrors: FormErrors = {};
 
     const {
@@ -95,36 +92,36 @@ export default function Register() {
       newErrors.confirmPassword = "Passwords do not match.";
     }
 
-    // Phone uniqueness validation
+    // Check phone uniqueness
     const phones = [studentPhone, fatherPhone, motherPhone].filter(Boolean);
     const uniquePhones = new Set(phones);
     if (uniquePhones.size !== phones.length) {
       if (
         studentPhone &&
         (studentPhone === fatherPhone || studentPhone === motherPhone)
-      )
+      ) {
         newErrors.studentPhone = "Student phone must be unique.";
-
+      }
       if (
         fatherPhone &&
         (fatherPhone === motherPhone || fatherPhone === studentPhone)
-      )
+      ) {
         newErrors.fatherPhone = "Father phone must be unique.";
-
+      }
       if (
         motherPhone &&
         (motherPhone === fatherPhone || motherPhone === studentPhone)
-      )
+      ) {
         newErrors.motherPhone = "Mother phone must be unique.";
+      }
     }
 
-    // Validate phone format (Egyptian)
-    const isValidPhone = (phone: string) => /^01[0-9]{9}$/.test(phone);
+    // Validate phone format
     (
-      ["studentPhone", "FatherPhone", "MotherPhone"] as Array<keyof FormData>
+      ["studentPhone", "fatherPhone", "motherPhone"] as Array<keyof FormData>
     ).forEach((field) => {
       const phone = formData[field];
-      if (typeof phone === "string" && phone && !isValidPhone(phone)) {
+      if (phone && !isValidPhone(phone)) {
         newErrors[field] = "Enter a valid 11-digit Egyptian number.";
       }
     });
@@ -134,7 +131,7 @@ export default function Register() {
       return;
     }
 
-    setErrors({}); // Clear errors if validation passes
+    setErrors({});
     const studentCode = generateStudentCode();
 
     try {
@@ -145,22 +142,24 @@ export default function Register() {
       );
       const user = userCredential.user;
 
-      await setDoc(doc(db, "students", studentCode), {
+      // Use UID as document ID for consistent login lookups
+      await setDoc(doc(db, "students", user.uid), {
         uid: user.uid,
         ...formData,
         studentCode,
-        createdAt: new Date(),
+        logins: [new Date().toISOString()],
+        createdAt: new Date().toISOString(),
       });
 
-      // save the code in localstorage
+      // Optional: store locally for immediate use
       localStorage.setItem("studentCode", studentCode);
 
-      router.push("/");
-    } catch (error: unknown) {
-      // Explicitly type error as unknown
+      await auth.signOut();
+      router.push("/login");
+    } catch (error) {
       console.error("Error:", error);
-      // Safely access error message by asserting its type
-      alert("Registration failed. " + (error as Error).message);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      alert("Registration failed. " + message);
     }
   };
 
@@ -224,7 +223,7 @@ export default function Register() {
             <select name="year" onChange={handleChange} required>
               <option value="">Select School Year</option>
               <option value="year1">1st Secondary (Integrated Sciences)</option>
-              <option value="year3">3rd Secondary (Biology)</option>
+              <option value="year3">3rd Secondary (Biology/Geology)</option>
             </select>
           </div>
           <div className={styles.section}>
@@ -252,7 +251,6 @@ export default function Register() {
           </div>
         </div>
 
-        {/* Sign-in Credentials Section */}
         <div className={styles.credentials}>
           <h3>Sign-in Credentials</h3>
           {errors.email && <p className={styles.errorText}>{errors.email}</p>}
