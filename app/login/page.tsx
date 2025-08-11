@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, ChangeEvent, FormEvent } from "react";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth"; // Import signOut
 import { FirebaseError } from "firebase/app";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
@@ -40,6 +40,10 @@ export default function LoginPage() {
       const studentRef = doc(db, "students", userId);
       const studentSnap = await getDoc(studentRef);
       if (!studentSnap.exists()) {
+        // Correctly handle the case where student data is missing.
+        // It's crucial to sign out the user to prevent them from
+        // being "partially" logged in.
+        await signOut(auth); // <-- Add this line to sign out the user
         throw new Error("Student data not found. Contact support.");
       }
 
@@ -49,6 +53,8 @@ export default function LoginPage() {
 
       if (!devices.includes(deviceId)) {
         if (devices.length >= 2) {
+          // Same as above, sign out if the device limit is reached.
+          await signOut(auth); // <-- Add this line
           throw new Error("Device limit reached. Contact support.");
         }
         await updateDoc(studentRef, {
