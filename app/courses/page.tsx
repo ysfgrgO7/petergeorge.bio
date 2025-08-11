@@ -12,6 +12,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getLectureProgress } from "@/lib/studentProgress";
 import styles from "./courses.module.css";
 
@@ -37,53 +38,51 @@ export default function CoursesPage() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [studentCode, setStudentCode] = useState<string | null>(null);
   const [studentYear, setStudentYear] = useState<string | null>(null);
-
-  type LectureProgress = {
-    quizCompleted?: boolean;
-  };
-
   const [progressMap, setProgressMap] = useState<
-    Record<string, LectureProgress | undefined>
+    Record<string, { quizCompleted?: boolean } | undefined>
   >({});
   const [loadingCourses, setLoadingCourses] = useState(true);
-
   const [courseLectures, setCourseLectures] = useState<Lecture[]>([]);
   const [loadingLectures, setLoadingLectures] = useState(false);
 
-  // --- Fetch Student's Year from Firestore ---
+  // --- Get student info from Firestore using Auth UID ---
   useEffect(() => {
-    const getStudentYear = async (code: string) => {
-      try {
-        const studentRef = doc(db, "students", code);
-        const studentSnap = await getDoc(studentRef);
-        if (studentSnap.exists()) {
-          const data = studentSnap.data();
-          if (data && data.year) {
-            setStudentYear(data.year);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching student year:", error);
-      }
-    };
-
-    const code = localStorage.getItem("studentCode");
-    if (code) {
-      setStudentCode(code);
-      getStudentYear(code);
-    } else {
-      setLoadingCourses(false);
-    }
-  }, []);
-
-  // --- Fetch Courses for Student's Year (and year3 sub-years) ---
-  useEffect(() => {
-    const fetchCourses = async () => {
-      if (!studentYear) {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "/login";
         return;
       }
 
+      try {
+        // Find the student document with this UID
+        const studentsRef = collection(db, "students");
+        const q = query(studentsRef, where("uid", "==", user.uid));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          const studentData = snapshot.docs[0].data();
+          setStudentCode(studentData.studentCode || null);
+          setStudentYear(studentData.year || null);
+        } else {
+          console.error("No student document found for UID:", user.uid);
+        }
+      } catch (error) {
+        console.error("Error fetching student info:", error);
+      } finally {
+        setLoadingCourses(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // --- Fetch courses for this student's year ---
+  useEffect(() => {
+    const fetchCourses = async () => {
+      if (!studentYear) return;
       setLoadingCourses(true);
+
       try {
         const fetchedCourses: Course[] = [];
         const yearsToFetch =
@@ -105,7 +104,7 @@ export default function CoursesPage() {
 
         setCourses(fetchedCourses);
       } catch (error) {
-        console.error(`Error fetching courses:`, error);
+        console.error("Error fetching courses:", error);
       } finally {
         setLoadingCourses(false);
       }
@@ -114,7 +113,7 @@ export default function CoursesPage() {
     fetchCourses();
   }, [studentYear]);
 
-  // --- Fetch Lectures for Selected Course ---
+  // --- Fetch lectures for selected course ---
   useEffect(() => {
     const fetchLectures = async () => {
       if (!selectedCourse) {
@@ -134,15 +133,11 @@ export default function CoursesPage() {
           where("isHidden", "==", false),
           orderBy("order")
         );
-
         const snapshot = await getDocs(q);
-        const fetchedLectures: Lecture[] = [];
 
-        for (const doc of snapshot.docs) {
-          const lectureData = {
-            id: doc.id,
-            ...doc.data(),
-          } as Lecture;
+        const fetchedLectures: Lecture[] = [];
+        for (const docSnap of snapshot.docs) {
+          const lectureData = { id: docSnap.id, ...docSnap.data() } as Lecture;
 
           const quizRef = collection(
             db,
@@ -150,14 +145,12 @@ export default function CoursesPage() {
           );
           const quizSnapshot = await getDocs(quizRef);
           lectureData.hasQuiz = !quizSnapshot.empty;
+
           fetchedLectures.push(lectureData);
         }
         setCourseLectures(fetchedLectures);
       } catch (error) {
-        console.error(
-          `Error fetching lectures for course ${selectedCourse.id}:`,
-          error
-        );
+        console.error("Error fetching lectures:", error);
       } finally {
         setLoadingLectures(false);
       }
@@ -166,7 +159,7 @@ export default function CoursesPage() {
     fetchLectures();
   }, [selectedCourse]);
 
-  // --- Load Student Progress ---
+  // --- Load student progress ---
   useEffect(() => {
     if (!studentCode || !selectedCourse || courseLectures.length === 0) {
       setProgressMap({});
@@ -174,7 +167,7 @@ export default function CoursesPage() {
     }
 
     const loadProgress = async () => {
-      const map: Record<string, LectureProgress | undefined> = {};
+      const map: Record<string, { quizCompleted?: boolean } | undefined> = {};
       for (const lecture of courseLectures) {
         const progress = await getLectureProgress(
           studentCode,
