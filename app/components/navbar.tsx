@@ -4,9 +4,10 @@ import Link from "next/link";
 import Image from "next/image";
 import styles from "./components.module.css";
 import { usePathname, useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase"; // Import db here
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore"; // Import doc and getDoc
 import { FaWallet } from "react-icons/fa";
 import {
   MdHome,
@@ -31,6 +32,7 @@ export default function Navbar({
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // New state for admin status
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -51,9 +53,19 @@ export default function Navbar({
     setSidebarOpen(false); // Close sidebar on route change
   }, [pathname]);
 
+  // Combined useEffect for auth and admin check
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoggedIn(!!user);
+
+      if (user && user.email) {
+        // Check if the user is an admin
+        const adminDocRef = doc(db, "admins", user.email);
+        const adminDocSnap = await getDoc(adminDocRef);
+        setIsAdmin(adminDocSnap.exists());
+      } else {
+        setIsAdmin(false);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -134,20 +146,16 @@ export default function Navbar({
                 </Link>
               </li>
 
-              <li className={pathname === "/payment" ? styles.active : ""}>
-                <Link href="/" onClick={toggleSidebar}>
-                  <FaWallet className={styles.icon} />
-                  {!isCollapsed && <span>Payment</span>}{" "}
-                </Link>
-              </li>
-
-              <li className={pathname === "/admin" ? styles.active : ""}>
-                <Link href="/admin" onClick={toggleSidebar}>
-                  <MdAdminPanelSettings className={styles.icon} />
-                  {!isCollapsed && <span>Admin</span>}{" "}
-                  {/* Conditionally show text */}
-                </Link>
-              </li>
+              {/* Conditionally render the admin link */}
+              {isAdmin && (
+                <li className={pathname === "/admin" ? styles.active : ""}>
+                  <Link href="/admin" onClick={toggleSidebar}>
+                    <MdAdminPanelSettings className={styles.icon} />
+                    {!isCollapsed && <span>Admin</span>}{" "}
+                    {/* Conditionally show text */}
+                  </Link>
+                </li>
+              )}
             </ul>
             <button
               onClick={toggleDesktopSidebar}

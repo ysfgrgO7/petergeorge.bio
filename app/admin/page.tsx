@@ -1,21 +1,24 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
+import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
 import {
+  doc,
+  getDoc,
   collection,
   getDocs,
   addDoc,
   deleteDoc,
-  doc,
   DocumentData,
   query,
   orderBy,
   setDoc,
   updateDoc,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase"; // Import auth from firebase.ts
 import styles from "./admin.module.css";
-import { MdArrowUpward, MdArrowDownward } from "react-icons/md"; // Import the icons
+import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
 
 // Re-using the MessageModalProps interface and MessageModal component
 interface MessageModalProps {
@@ -57,6 +60,11 @@ interface Course extends DocumentData {
 }
 
 export default function AdminDashboard() {
+  // New state variables for admin check and loading
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
   const [courses, setCourses] = useState<Course[]>([]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -85,7 +93,38 @@ export default function AdminDashboard() {
   const [modalMessage, setModalMessage] = useState("");
 
   const [showHidden, setShowHidden] = useState(false); // New state for showing hidden lectures
-  const [cardsDirection, setCardsDirection] = useState<React.CSSProperties["flexDirection"]>("column-reverse"); // State for card direction
+  const [cardsDirection, setCardsDirection] =
+    useState<React.CSSProperties["flexDirection"]>("column-reverse"); // State for card direction
+
+  // Admin Check Logic
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is logged in, now check Firestore for admin status
+        if (user.email) {
+          const adminDocRef = doc(db, "admins", user.email);
+          const adminDocSnap = await getDoc(adminDocRef);
+
+          if (adminDocSnap.exists()) {
+            // Document exists, user is an admin
+            setIsAdmin(true);
+          } else {
+            // Document does not exist, not an admin, redirect
+            router.push("/");
+          }
+        } else {
+          // User has no email, redirect
+          router.push("/");
+        }
+      } else {
+        // No user logged in, redirect
+        router.push("/");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe(); // Cleanup the listener on component unmount
+  }, [router]);
 
   const toggleLecturePanel = async (courseId: string) => {
     setOpenLecturePanels((prev) => {
@@ -315,13 +354,25 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchCourses(activeYearTab);
-  }, [activeYearTab]);
+    // Only fetch courses if the user is an admin and the page is not loading
+    if (isAdmin) {
+      fetchCourses(activeYearTab);
+    }
+  }, [activeYearTab, isAdmin]);
 
   useEffect(() => {
     setYearForNewCourse(activeYearTab);
   }, [activeYearTab]);
 
+  // If loading or not an admin, show a loading message or nothing
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  if (!isAdmin) {
+    return null; // The redirect will handle sending them away
+  }
+
+  // Rest of the component renders only if the user is an admin
   return (
     <div className={styles.wrapper}>
       <h1>Admin Dashboard</h1>
@@ -333,7 +384,6 @@ export default function AdminDashboard() {
           borderRadius: "4px",
         }}
       />
-
       <h1>Create Course</h1>
       <div className={styles.form}>
         <input
