@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { setDoc, doc } from "firebase/firestore"; // Removed unused imports: collection, addDoc
 import styles from "../styles.module.css";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 // Define interfaces for form data and errors to provide strong typing
 interface FormData {
@@ -18,8 +19,8 @@ interface FormData {
   confirmPassword: string;
   studentPhone: string;
   school: string;
-  parentPhone1: string;
-  parentPhone2: string;
+  fatherPhone: string;
+  motherPhone: string;
   year: string;
 }
 
@@ -34,8 +35,8 @@ interface FormErrors {
   confirmPassword?: string;
   studentPhone?: string;
   school?: string;
-  parentPhone1?: string;
-  parentPhone2?: string;
+  fatherPhone?: string;
+  motherPhone?: string;
   year?: string;
 }
 
@@ -44,6 +45,7 @@ export default function Register() {
   const router = useRouter();
   // Initialize errors state with the defined FormErrors interface
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -56,8 +58,8 @@ export default function Register() {
     confirmPassword: "",
     studentPhone: "",
     school: "",
-    parentPhone1: "",
-    parentPhone2: "",
+    fatherPhone: "",
+    motherPhone: "",
     year: "",
   });
 
@@ -85,8 +87,8 @@ export default function Register() {
       password,
       confirmPassword,
       studentPhone,
-      parentPhone1,
-      parentPhone2,
+      fatherPhone,
+      motherPhone,
     } = formData;
 
     if (password !== confirmPassword) {
@@ -94,32 +96,32 @@ export default function Register() {
     }
 
     // Phone uniqueness validation
-    const phones = [studentPhone, parentPhone1, parentPhone2].filter(Boolean);
+    const phones = [studentPhone, fatherPhone, motherPhone].filter(Boolean);
     const uniquePhones = new Set(phones);
     if (uniquePhones.size !== phones.length) {
       if (
         studentPhone &&
-        (studentPhone === parentPhone1 || studentPhone === parentPhone2)
+        (studentPhone === fatherPhone || studentPhone === motherPhone)
       )
         newErrors.studentPhone = "Student phone must be unique.";
 
       if (
-        parentPhone1 &&
-        (parentPhone1 === parentPhone2 || parentPhone1 === studentPhone)
+        fatherPhone &&
+        (fatherPhone === motherPhone || fatherPhone === studentPhone)
       )
-        newErrors.parentPhone1 = "Parent 1 phone must be unique.";
+        newErrors.fatherPhone = "Father phone must be unique.";
 
       if (
-        parentPhone2 &&
-        (parentPhone2 === parentPhone1 || parentPhone2 === studentPhone)
+        motherPhone &&
+        (motherPhone === fatherPhone || motherPhone === studentPhone)
       )
-        newErrors.parentPhone2 = "Parent 2 phone must be unique.";
+        newErrors.motherPhone = "Mother phone must be unique.";
     }
 
     // Validate phone format (Egyptian)
     const isValidPhone = (phone: string) => /^01[0-9]{9}$/.test(phone);
     (
-      ["studentPhone", "parentPhone1", "parentPhone2"] as Array<keyof FormData>
+      ["studentPhone", "FatherPhone", "MotherPhone"] as Array<keyof FormData>
     ).forEach((field) => {
       const phone = formData[field];
       if (typeof phone === "string" && phone && !isValidPhone(phone)) {
@@ -153,7 +155,7 @@ export default function Register() {
       // save the code in localstorage
       localStorage.setItem("studentCode", studentCode);
 
-      router.push("/home");
+      router.push("/");
     } catch (error: unknown) {
       // Explicitly type error as unknown
       console.error("Error:", error);
@@ -221,32 +223,31 @@ export default function Register() {
             />
             <select name="year" onChange={handleChange} required>
               <option value="">Select School Year</option>
-              <option value="year1">
-                1st Secondary (Integrated Sciences)
-              </option>
+              <option value="year1">1st Secondary (Integrated Sciences)</option>
               <option value="year3">3rd Secondary (Biology)</option>
             </select>
           </div>
           <div className={styles.section}>
             <h3>Parent Info</h3>
-            {errors.parentPhone1 && (
-              <p className={styles.errorText}>{errors.parentPhone1}</p>
+            {errors.fatherPhone && (
+              <p className={styles.errorText}>{errors.fatherPhone}</p>
             )}
             <input
               type="tel"
-              name="parentPhone1"
-              placeholder="Parent 1 Phone Number"
+              name="fatherPhone"
+              placeholder="Father Phone Number"
               onChange={handleChange}
               required
             />
-            {errors.parentPhone2 && (
-              <p className={styles.errorText}>{errors.parentPhone2}</p>
+            {errors.motherPhone && (
+              <p className={styles.errorText}>{errors.motherPhone}</p>
             )}
             <input
               type="tel"
-              name="parentPhone2"
-              placeholder="Parent 2 Phone Number"
+              name="motherPhone"
+              placeholder="Mother Phone Number"
               onChange={handleChange}
+              required
             />
           </div>
         </div>
@@ -262,13 +263,23 @@ export default function Register() {
             onChange={handleChange}
             required
           />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            onChange={handleChange}
-            required
-          />
+
+          <div className={styles.password}>
+            <input
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Password"
+              onChange={handleChange}
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </div>
+
           {errors.confirmPassword && (
             <p className={styles.errorText}>{errors.confirmPassword}</p>
           )}
