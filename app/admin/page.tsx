@@ -351,6 +351,38 @@ export default function AdminDashboard() {
       setShowModal(true);
     }
   };
+  const handleGenerateUniversalCode = async () => {
+    try {
+      const generateCodeString = () => {
+        const characters =
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let result = "";
+        for (let i = 0; i < 12; i++) {
+          const randomIndex = Math.floor(Math.random() * characters.length);
+          result += characters[randomIndex];
+        }
+        return result;
+      };
+
+      const newCode = generateCodeString();
+      const codesCollectionRef = collection(db, "accessCodes");
+
+      await addDoc(codesCollectionRef, {
+        code: newCode,
+        isUniversal: true,
+        isUsed: false,
+      });
+
+      setModalMessage(`Universal one-time use code generated: ${newCode}`);
+      setShowModal(true);
+    } catch (error) {
+      console.error("Error generating universal access code:", error);
+      setModalMessage("Failed to generate universal code.");
+      setShowModal(true);
+    }
+  };
+
+  // NEW: Function to generate and save a universal one-time code
 
   useEffect(() => {
     // Only fetch courses if the user is an admin and the page is not loading
@@ -410,6 +442,26 @@ export default function AdminDashboard() {
         </select>
         <button onClick={handleCreate}>Create Course</button>
       </div>
+
+      <hr
+        style={{
+          margin: "1rem 0",
+          border: "none",
+          borderTop: "3px solid var(--black)",
+          borderRadius: "4px",
+        }}
+      />
+
+      {/* NEW: Section for generating a universal code */}
+      <section>
+        <h2>Generate Universal Lecture Code</h2>
+        <p>This code will unlock a single, locked lecture for one user.</p>
+        <div className={styles.form}>
+          <button onClick={handleGenerateUniversalCode}>
+            Generate New Universal Code
+          </button>
+        </div>
+      </section>
 
       <hr
         style={{
@@ -520,6 +572,17 @@ export default function AdminDashboard() {
                             }
                           >
                             Manage Lecture
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleToggleLectureVisibility(
+                                course.id,
+                                lecture.id,
+                                !!lecture.isHidden
+                              )
+                            }
+                          >
+                            {lecture.isHidden ? "Make Visible" : "Hide Lecture"}
                           </button>
                         </div>
                       </li>
