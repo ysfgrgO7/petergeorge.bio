@@ -8,11 +8,14 @@ import {
   query,
   orderBy,
   where,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getLectureProgress } from "@/lib/studentProgress";
 import styles from "./courses.module.css";
+import { useRouter } from "next/navigation";
 
 interface Lecture extends DocumentData {
   id: string;
@@ -34,36 +37,40 @@ interface Course extends DocumentData {
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [studentCode, setStudentCode] = useState<string | null>(null);
   const [studentYear, setStudentYear] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [progressMap, setProgressMap] = useState<
     Record<string, { quizCompleted?: boolean } | undefined>
   >({});
   const [loadingCourses, setLoadingCourses] = useState(true);
   const [courseLectures, setCourseLectures] = useState<Lecture[]>([]);
   const [loadingLectures, setLoadingLectures] = useState(false);
+  const router = useRouter();
 
   // --- Get student info from Firestore using Auth UID ---
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        window.location.href = "/login";
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        router.push("/login");
         return;
       }
 
-      try {
-        // Find the student document with this UID
-        const studentsRef = collection(db, "students");
-        const q = query(studentsRef, where("uid", "==", user.uid));
-        const snapshot = await getDocs(q);
+      setUser(currentUser); // Store the current user object
+      setLoadingCourses(true);
 
-        if (!snapshot.empty) {
-          const studentData = snapshot.docs[0].data();
-          setStudentCode(studentData.studentCode || null);
+      try {
+        // Fetch the student document using UID directly
+        const studentDocRef = doc(db, "students", currentUser.uid);
+        const studentDocSnap = await getDoc(studentDocRef);
+
+        if (studentDocSnap.exists()) {
+          const studentData = studentDocSnap.data();
           setStudentYear(studentData.year || null);
         } else {
-          console.error("No student document found for UID:", user.uid);
+          console.error("No student document found for UID:", currentUser.uid);
+          // Handle case where a user is authenticated but no student doc exists
+          // Maybe redirect them to a profile completion page
         }
       } catch (error) {
         console.error("Error fetching student info:", error);
@@ -73,13 +80,12 @@ export default function CoursesPage() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   // --- Fetch courses for this student's year ---
   useEffect(() => {
     const fetchCourses = async () => {
       if (!studentYear) return;
-      setLoadingCourses(true);
 
       try {
         const fetchedCourses: Course[] = [];
@@ -103,8 +109,6 @@ export default function CoursesPage() {
         setCourses(fetchedCourses);
       } catch (error) {
         console.error("Error fetching courses:", error);
-      } finally {
-        setLoadingCourses(false);
       }
     };
 
@@ -159,7 +163,7 @@ export default function CoursesPage() {
 
   // --- Load student progress ---
   useEffect(() => {
-    if (!studentCode || !selectedCourse || courseLectures.length === 0) {
+    if (!user || !selectedCourse || courseLectures.length === 0) {
       setProgressMap({});
       return;
     }
@@ -168,7 +172,7 @@ export default function CoursesPage() {
       const map: Record<string, { quizCompleted?: boolean } | undefined> = {};
       for (const lecture of courseLectures) {
         const progress = await getLectureProgress(
-          studentCode,
+          user.uid, // Use user.uid here
           selectedCourse.year,
           selectedCourse.id,
           lecture.id
@@ -179,7 +183,7 @@ export default function CoursesPage() {
     };
 
     loadProgress();
-  }, [studentCode, selectedCourse, courseLectures]);
+  }, [user, selectedCourse, courseLectures]);
 
   return (
     <div className={styles.wrapper}>
@@ -228,7 +232,9 @@ export default function CoursesPage() {
                         !progress?.quizCompleted ? (
                           <button
                             onClick={() =>
-                              (window.location.href = `/courses/quiz?year=${selectedCourse.year}&courseId=${selectedCourse.id}&lectureId=${lecture.id}`)
+                              router.push(
+                                `/courses/quiz?year=${selectedCourse.year}&courseId=${selectedCourse.id}&lectureId=${lecture.id}`
+                              )
                             }
                           >
                             📝 Take Quiz to Unlock Video

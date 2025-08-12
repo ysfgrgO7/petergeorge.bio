@@ -12,6 +12,7 @@ import {
 import { db } from "@/lib/firebase";
 import { markQuizComplete } from "@/lib/studentProgress";
 import styles from "../courses.module.css";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 
 interface QuizQuestion extends DocumentData {
   question: string;
@@ -50,9 +51,10 @@ export default function QuizClient() {
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [answers, setAnswers] = useState<number[]>([]);
-  const [studentCode, setStudentCode] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const [timeLeft, setTimeLeft] = useState(0);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
@@ -61,6 +63,7 @@ export default function QuizClient() {
   const [score, setScore] = useState<number | null>(null);
   const [showResults, setShowResults] = useState(false);
 
+  // --- Handle quiz submission logic
   const handleSubmit = useCallback(async () => {
     if (quizSubmitted && showResults) {
       router.push("/courses");
@@ -70,6 +73,13 @@ export default function QuizClient() {
     if (quizSubmitted) return;
     setQuizSubmitted(true);
 
+    if (!user || !year || !courseId || !lectureId) {
+      setModalMessage("Missing user or quiz details. Please log in.");
+      setShowModal(true);
+      setQuizSubmitted(false);
+      return;
+    }
+
     let correctAnswersCount = 0;
     questions.forEach((q, i) => {
       if (answers[i] === q.correctAnswerIndex) {
@@ -78,51 +88,12 @@ export default function QuizClient() {
     });
 
     const currentTotalQuestions = questions.length;
-
-    if (typeof correctAnswersCount !== "number" || isNaN(correctAnswersCount)) {
-      console.error(
-        "handleSubmit: correctAnswersCount is not a number:",
-        correctAnswersCount
-      );
-      setModalMessage(
-        "Internal error: Quiz score calculation failed. Please try again."
-      );
-      setShowModal(true);
-      setQuizSubmitted(false);
-      return;
-    }
-
-    if (
-      typeof currentTotalQuestions !== "number" ||
-      isNaN(currentTotalQuestions)
-    ) {
-      console.error(
-        "handleSubmit: totalQuestions is not a number:",
-        currentTotalQuestions
-      );
-      setModalMessage(
-        "Internal error: Total questions calculation failed. Please try again."
-      );
-      setShowModal(true);
-      setQuizSubmitted(false);
-      return;
-    }
-
     setScore(correctAnswersCount);
     setShowResults(true);
 
-    if (!studentCode || !year || !courseId || !lectureId) {
-      setModalMessage(
-        "Missing student information or quiz details. Please ensure you are logged in and navigated correctly."
-      );
-      setShowModal(true);
-      setQuizSubmitted(false);
-      return;
-    }
-
     try {
       await markQuizComplete(
-        studentCode,
+        user.uid, // Use user.uid here instead of studentCode
         year,
         courseId,
         lectureId,
@@ -144,63 +115,78 @@ export default function QuizClient() {
     showResults,
     questions,
     answers,
-    studentCode,
+    user,
     year,
     courseId,
     lectureId,
     router,
   ]);
 
+  // --- Fetch quiz data and user info
   useEffect(() => {
-    const code = localStorage.getItem("studentCode");
-    setStudentCode(code);
-
-    if (!year || !courseId || !lectureId) {
-      console.error("Missing year, courseId, or lectureId in URL parameters.");
-      setModalMessage(
-        "Missing quiz details. Please navigate from the courses page."
-      );
-      setShowModal(true);
-      return;
-    }
-
-    const fetchQuizData = async () => {
-      try {
-        const settingsDocRef = doc(
-          db,
-          `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
-        );
-        const docSnap = await getDoc(settingsDocRef);
-        let durationMinutes = 10;
-        if (docSnap.exists() && typeof docSnap.data().duration === "number") {
-          durationMinutes = docSnap.data().duration;
-        }
-        setTimeLeft(durationMinutes * 60);
-
-        const quizRef = collection(
-          db,
-          `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
-        );
-        const snapshot = await getDocs(quizRef);
-        const fetchedQuestions: QuizQuestion[] = snapshot.docs.map(
-          (doc) => doc.data() as QuizQuestion
-        );
-        setQuestions(fetchedQuestions);
-        setAnswers(new Array(fetchedQuestions.length).fill(-1));
-
-        setIsQuizReady(true);
-      } catch (error) {
-        console.error("Error fetching quiz data:", error);
-        setModalMessage("Failed to load quiz. Please try again later.");
-        setShowModal(true);
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        router.push("/login");
+        return;
       }
-    };
+      setUser(currentUser);
+      setLoading(false);
 
-    fetchQuizData();
-  }, [year, courseId, lectureId]);
+      if (!year || !courseId || !lectureId) {
+        console.error(
+          "Missing year, courseId, or lectureId in URL parameters."
+        );
+        setModalMessage(
+          "Missing quiz details. Please navigate from the courses page."
+        );
+        setShowModal(true);
+        return;
+      }
 
+      // Fetch quiz data after user is authenticated
+      const fetchQuizData = async () => {
+        try {
+          // Fetch quiz duration
+          const settingsDocRef = doc(
+            db,
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
+          );
+          const docSnap = await getDoc(settingsDocRef);
+          let durationMinutes = 10;
+          if (docSnap.exists() && typeof docSnap.data().duration === "number") {
+            durationMinutes = docSnap.data().duration;
+          }
+          setTimeLeft(durationMinutes * 60);
+
+          // Fetch quiz questions
+          const quizRef = collection(
+            db,
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
+          );
+          const snapshot = await getDocs(quizRef);
+          const fetchedQuestions: QuizQuestion[] = snapshot.docs.map(
+            (doc) => doc.data() as QuizQuestion
+          );
+          setQuestions(fetchedQuestions);
+          setAnswers(new Array(fetchedQuestions.length).fill(-1));
+          setIsQuizReady(true);
+        } catch (error) {
+          console.error("Error fetching quiz data:", error);
+          setModalMessage("Failed to load quiz. Please try again later.");
+          setShowModal(true);
+        }
+      };
+
+      fetchQuizData();
+    });
+
+    return () => unsubscribe();
+  }, [year, courseId, lectureId, router]);
+
+  // --- Timer logic
   useEffect(() => {
-    if (!isQuizReady || quizSubmitted || showResults) return;
+    if (!isQuizReady || quizSubmitted || showResults || loading) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
@@ -218,7 +204,14 @@ export default function QuizClient() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, isQuizReady, quizSubmitted, showResults, handleSubmit]);
+  }, [
+    timeLeft,
+    isQuizReady,
+    quizSubmitted,
+    showResults,
+    handleSubmit,
+    loading,
+  ]);
 
   const handleChange = (qIndex: number, optionIndex: number) => {
     const updatedAnswers = [...answers];
@@ -238,7 +231,7 @@ export default function QuizClient() {
   const solvedQuestions = answers.filter((ans) => ans !== -1).length;
   const unsolvedQuestions = totalQuestions - solvedQuestions;
 
-  if (!isQuizReady) {
+  if (loading || !isQuizReady) {
     return (
       <div className={styles.wrapper}>
         <p>Loading quiz...</p>

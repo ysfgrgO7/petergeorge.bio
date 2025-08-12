@@ -3,16 +3,16 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 
 /**
  * Fetches the progress for a specific lecture for a given student.
- * The progress document is stored at `students/{studentCode}/progress/{year}_{courseId}_{lectureId}`.
+ * The progress document is stored at `students/{uid}/progress/{year}_{courseId}_{lectureId}`.
  *
- * @param studentCode The unique code for the student.
+ * @param uid The unique ID for the student (Firebase Auth UID).
  * @param year The academic year of the course (e.g., "year1", "year3").
  * @param courseId The ID of the course.
  * @param lectureId The ID of the lecture.
  * @returns A Promise that resolves to the lecture progress data, or { quizCompleted: false } if not found.
  */
 export async function getLectureProgress(
-  studentCode: string,
+  uid: string,
   year: string,
   courseId: string,
   lectureId: string
@@ -21,9 +21,9 @@ export async function getLectureProgress(
   const docRef = doc(
     db,
     "students",
-    studentCode,
+    uid, // Use uid instead of studentCode
     "progress",
-    `${year}_${courseId}_${lectureId}` // Use year, courseId, and lectureId for the progress document ID
+    `${year}_${courseId}_${lectureId}`
   );
   const snap = await getDoc(docRef);
   return snap.exists()
@@ -33,9 +33,9 @@ export async function getLectureProgress(
 
 /**
  * Marks a specific quiz as complete for a student and saves their score.
- * The progress document is stored at `students/{studentCode}/progress/{year}_{courseId}_{lectureId}`.
+ * The progress document is stored at `students/{uid}/progress/{year}_{courseId}_{lectureId}`.
  *
- * @param studentCode The unique code for the student.
+ * @param uid The unique ID for the student (Firebase Auth UID).
  * @param year The academic year of the course (e.g., "year1", "year3").
  * @param courseId The ID of the course.
  * @param lectureId The ID of the lecture.
@@ -44,14 +44,13 @@ export async function getLectureProgress(
  * @returns A Promise that resolves when the progress is successfully marked.
  */
 export async function markQuizComplete(
-  studentCode: string,
+  uid: string,
   year: string,
   courseId: string,
   lectureId: string,
-  score: number, // New parameter for the score
-  totalQuestions: number // New parameter for the total questions
+  score: number,
+  totalQuestions: number
 ) {
-  // Defensive checks to ensure score and totalQuestions are valid numbers
   if (typeof score !== "number" || isNaN(score)) {
     console.error("markQuizComplete received an invalid score:", score);
     throw new Error("Invalid score provided. Score must be a number.");
@@ -70,17 +69,17 @@ export async function markQuizComplete(
   const docRef = doc(
     db,
     "students",
-    studentCode,
+    uid, // Use uid instead of studentCode
     "progress",
-    `${year}_${courseId}_${lectureId}` // Use year, courseId, and lectureId for the progress document ID
+    `${year}_${courseId}_${lectureId}`
   );
   await setDoc(
     docRef,
     {
       quizCompleted: true,
-      score: score, // Save the actual score
-      totalQuestions: totalQuestions, // Save the total questions
+      score: score,
+      totalQuestions: totalQuestions,
     },
-    { merge: true } // Use merge: true to update existing fields without overwriting the entire document
+    { merge: true }
   );
 }
