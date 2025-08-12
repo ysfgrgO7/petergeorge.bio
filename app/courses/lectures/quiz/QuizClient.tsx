@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { markQuizComplete } from "@/lib/studentProgress";
-import styles from "../courses.module.css";
+import styles from "../../courses.module.css";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 
 interface QuizQuestion extends DocumentData {
