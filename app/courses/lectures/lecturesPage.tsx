@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense, useCallback } from "react";
 import {
   collection,
   getDocs,
@@ -8,10 +8,11 @@ import {
   query,
   orderBy,
   where,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getLectureProgress } from "@/lib/studentProgress";
+import { getLectureProgress, unlockLecture } from "@/lib/studentProgress";
 import styles from "../courses.module.css";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -37,9 +38,10 @@ interface ProgressData {
   quizCompleted?: boolean;
   score?: number;
   totalQuestions?: number;
+  unlocked?: boolean;
 }
 
-export default function LecturesPage() {
+function LecturesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -52,24 +54,26 @@ export default function LecturesPage() {
     Record<string, ProgressData | undefined>
   >({});
   const [loadingLectures, setLoadingLectures] = useState(true);
+  const [accessCode, setAccessCode] = useState("");
+  const [showCodeInput, setShowCodeInput] = useState<string | null>(null);
+  const [unlocking, setUnlocking] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (!currentUser) {
         router.push("/login");
         return;
       }
       setUser(currentUser);
     });
-
     return () => unsubscribe();
   }, [router]);
 
   useEffect(() => {
     const fetchLectures = async () => {
       if (!courseId || !year) {
-        console.error("Missing courseId or year in URL");
         setLoadingLectures(false);
         return;
       }
@@ -102,6 +106,7 @@ export default function LecturesPage() {
             return lectureData;
           })
         );
+
         setCourseLectures(fetchedLectures);
       } catch (error) {
         console.error("Error fetching lectures:", error);
@@ -128,9 +133,10 @@ export default function LecturesPage() {
 
       allProgress.forEach((progress, index) => {
         const lecture = courseLectures[index];
-        const key = `${courseId}_${lecture.id}`;
+        const key = `${year}_${courseId}_${lecture.id}`;
         map[key] = progress;
       });
+
       setProgressMap(map);
     };
 
@@ -139,13 +145,77 @@ export default function LecturesPage() {
 
   const quizzesCompleted = courseLectures.filter(
     (lecture) =>
-      lecture.hasQuiz && progressMap[`${courseId}_${lecture.id}`]?.quizCompleted
+      lecture.hasQuiz &&
+      progressMap[`${year}_${courseId}_${lecture.id}`]?.quizCompleted
   ).length;
   const totalQuizzes = courseLectures.filter(
     (lecture) => lecture.hasQuiz
   ).length;
   const progressPercentage =
     totalQuizzes > 0 ? (quizzesCompleted / totalQuizzes) * 100 : 0;
+
+  const handleCodeSubmit = useCallback(
+    async (lectureId: string) => {
+      if (!user || !accessCode) {
+        setErrorMessage("Please enter a code.");
+        return;
+      }
+
+      setUnlocking(true);
+      setErrorMessage("");
+
+      try {
+        const codesRef = collection(db, `accessCodes`);
+        const q = query(codesRef, where("code", "==", accessCode));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          setErrorMessage("Invalid or already used code.");
+          setUnlocking(false);
+          return;
+        }
+
+        const codeDoc = querySnapshot.docs[0];
+        const codeDocData = codeDoc.data();
+        const codeDocRef = codeDoc.ref;
+
+        if (codeDocData?.isUsed) {
+          setErrorMessage("Invalid or already used code.");
+          setUnlocking(false);
+          return;
+        }
+
+        await updateDoc(codeDocRef, {
+          isUsed: true,
+          usedBy: user.uid,
+          usedAt: new Date(),
+          lectureId,
+          courseId,
+          year,
+        });
+
+        // ✅ Save unlocked flag in correct path
+        await unlockLecture(user.uid, year, courseId, lectureId);
+
+        setProgressMap((prev) => ({
+          ...prev,
+          [`${year}_${courseId}_${lectureId}`]: {
+            ...(prev[`${year}_${courseId}_${lectureId}`] || {}),
+            unlocked: true,
+          },
+        }));
+
+        setShowCodeInput(null);
+        setAccessCode("");
+      } catch (error) {
+        console.error("Error unlocking lecture:", error);
+        setErrorMessage("An error occurred. Please try again.");
+      } finally {
+        setUnlocking(false);
+      }
+    },
+    [user, accessCode, courseId, year]
+  );
 
   return (
     <div className={styles.wrapper}>
@@ -176,22 +246,24 @@ export default function LecturesPage() {
       ) : (
         <div className={styles.lectureList}>
           {courseLectures.map((lecture, index) => {
-            const key = `${courseId}_${lecture.id}`;
+            const key = `${year}_${courseId}_${lecture.id}`;
             const progress = progressMap[key];
 
             const previousLecture = courseLectures[index - 1];
             const previousQuizIsCompleted =
               !previousLecture ||
               !previousLecture.hasQuiz ||
-              progressMap[`${courseId}_${previousLecture.id}`]?.quizCompleted;
+              progressMap[`${year}_${courseId}_${previousLecture.id}`]
+                ?.quizCompleted;
+            const isUnlockedByCode = progress?.unlocked;
 
-            const isLocked = index > 0 && !previousQuizIsCompleted;
+            const isLocked = !isUnlockedByCode || !previousQuizIsCompleted;
 
-            // Determine the URL based on quiz completion
-            const lectureUrl =
-              lecture.hasQuiz && !progress?.quizCompleted
-                ? `/courses/lectures/quiz?year=${year}&courseId=${courseId}&lectureId=${lecture.id}`
-                : `/courses/lectures/lecture?year=${year}&courseId=${courseId}&lectureId=${lecture.id}&odyseeName=${lecture.odyseeName}&odyseeId=${lecture.odyseeId}&title=${lecture.title}`;
+            const lectureUrl = isLocked
+              ? "#"
+              : lecture.hasQuiz && !progress?.quizCompleted
+              ? `/courses/lectures/quiz?year=${year}&courseId=${courseId}&lectureId=${lecture.id}`
+              : `/courses/lectures/lecture?year=${year}&courseId=${courseId}&lectureId=${lecture.id}&odyseeName=${lecture.odyseeName}&odyseeId=${lecture.odyseeId}&title=${lecture.title}`;
 
             return (
               <div
@@ -204,34 +276,61 @@ export default function LecturesPage() {
                   {isLocked ? <IoLockClosed /> : <IoLockOpen />} Lecture{" "}
                   {index + 1}
                 </h3>
+
                 {isLocked ? (
-                  <p>Complete the quiz for the previous lecture to unlock.</p>
+                  <>
+                    <p>
+                      {previousQuizIsCompleted
+                        ? "Enter a code to unlock this lecture."
+                        : "Enter the Code or Complete the quiz for the previous lecture to unlock."}
+                    </p>
+                    {/* Only show "Unlock with Code" if the previous quiz is completed and the current lecture is not unlocked by a code */}
+                    {previousQuizIsCompleted && !isUnlockedByCode && (
+                      <button onClick={() => setShowCodeInput(lecture.id)}>
+                        Unlock with Code
+                      </button>
+                    )}
+                    {showCodeInput === lecture.id && (
+                      <div className={styles.codeInputContainer}>
+                        <input
+                          type="text"
+                          value={accessCode}
+                          onChange={(e) => setAccessCode(e.target.value)}
+                          placeholder="Enter code"
+                          disabled={unlocking}
+                        />
+                        <button
+                          onClick={() => handleCodeSubmit(lecture.id)}
+                          disabled={unlocking}
+                        >
+                          {unlocking ? "Unlocking..." : "Submit"}
+                        </button>
+                        {errorMessage && (
+                          <p className={styles.errorMessage}>{errorMessage}</p>
+                        )}
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <>
                     {lecture.hasQuiz && progress?.quizCompleted && (
                       <p className={styles.quizScore}>
-                        Quiz Completed: {progress.score} /{" "}
-                        {progress.totalQuestions}
+                        Quiz Completed: {progress?.score} /{" "}
+                        {progress?.totalQuestions}
                       </p>
                     )}
                     <div className={styles.buttonGroup}>
-                      <a
-                        href={lectureUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <button>
-                          {lecture.hasQuiz && !progress?.quizCompleted ? (
-                            <>
-                              <MdQuiz /> Take Quiz
-                            </>
-                          ) : (
-                            <>
-                              <FaPlay /> View Lecture
-                            </>
-                          )}
-                        </button>
-                      </a>
+                      <button onClick={() => router.push(lectureUrl)}>
+                        {lecture.hasQuiz && !progress?.quizCompleted ? (
+                          <>
+                            <MdQuiz /> Take Quiz
+                          </>
+                        ) : (
+                          <>
+                            <FaPlay /> View Lecture
+                          </>
+                        )}
+                      </button>
                       {lecture.homeworkLink && (
                         <a
                           href={lecture.homeworkLink}
@@ -252,5 +351,13 @@ export default function LecturesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LecturesPage() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <LecturesContent />
+    </Suspense>
   );
 }
