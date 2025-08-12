@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, ChangeEvent, FormEvent } from "react";
-import { getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth"; // Import signOut
+import { getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
@@ -38,14 +38,18 @@ export default function LoginPage() {
         password
       );
       const userId = userCredential.user.uid;
+      const userEmail = userCredential.user.email || "";
 
+      // 1️⃣ Check if the user is an admin
+      const adminRef = doc(db, "admins", userEmail);
+      const adminSnap = await getDoc(adminRef);
+      const maxDevices = adminSnap.exists() ? 6 : 2;
+
+      // 2️⃣ Fetch student data
       const studentRef = doc(db, "students", userId);
       const studentSnap = await getDoc(studentRef);
       if (!studentSnap.exists()) {
-        // Correctly handle the case where student data is missing.
-        // It's crucial to sign out the user to prevent them from
-        // being "partially" logged in.
-        await signOut(auth); // <-- Add this line to sign out the user
+        await signOut(auth);
         throw new Error("Student data not found. Contact support.");
       }
 
@@ -53,10 +57,10 @@ export default function LoginPage() {
       const devices: string[] = studentData?.devices || [];
       const deviceId = getDeviceId();
 
+      // 3️⃣ Device limit check
       if (!devices.includes(deviceId)) {
-        if (devices.length >= 2) {
-          // Same as above, sign out if the device limit is reached.
-          await signOut(auth); // <-- Add this line
+        if (devices.length >= maxDevices) {
+          await signOut(auth);
           throw new Error("Device limit reached. Contact support.");
         }
         await updateDoc(studentRef, {
