@@ -14,7 +14,11 @@ import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getLectureProgress } from "@/lib/studentProgress";
 import styles from "../courses.module.css";
 import { useRouter, useSearchParams } from "next/navigation";
-import { IoLockClosed, IoLockOpen, IoChevronBackCircleSharp  } from "react-icons/io5";
+import {
+  IoLockClosed,
+  IoLockOpen,
+  IoChevronBackCircleSharp,
+} from "react-icons/io5";
 import { MdQuiz } from "react-icons/md";
 import { FaPlay } from "react-icons/fa";
 
@@ -23,6 +27,7 @@ interface Lecture extends DocumentData {
   title: string;
   odyseeName: string;
   odyseeId: string;
+  homeworkLink?: string;
   order: number;
   hasQuiz?: boolean;
   isHidden?: boolean;
@@ -209,23 +214,36 @@ export default function LecturesPage() {
                         {progress.totalQuestions}
                       </p>
                     )}
-                    <a
-                      href={lectureUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <button>
-                        {lecture.hasQuiz && !progress?.quizCompleted ? (
-                          <>
-                            <MdQuiz /> Take Quiz
-                          </>
-                        ) : (
-                          <>
-                            <FaPlay /> View Lecture
-                          </>
-                        )}
-                      </button>
-                    </a>
+                    <div className={styles.buttonGroup}>
+                      <a
+                        href={lectureUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <button>
+                          {lecture.hasQuiz && !progress?.quizCompleted ? (
+                            <>
+                              <MdQuiz /> Take Quiz
+                            </>
+                          ) : (
+                            <>
+                              <FaPlay /> View Lecture
+                            </>
+                          )}
+                        </button>
+                      </a>
+                      {lecture.homeworkLink && (
+                        <a
+                          href={lecture.homeworkLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <button>
+                            <FaPlay /> Watch H.w
+                          </button>
+                        </a>
+                      )}
+                    </div>
                   </>
                 )}
               </div>

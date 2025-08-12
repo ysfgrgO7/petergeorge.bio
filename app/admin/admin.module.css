@@ -87,9 +87,13 @@
   border-radius: 6px;
   cursor: pointer;
 }
+.lectureActions {
+  gap: 0.5rem;
+}
 
 .card button,
 .wrapper button,
+.lectureActions button,
 .lecturePanel button {
   padding: 0.4rem 1rem;
   background-color: var(--green);
@@ -119,6 +123,7 @@
 .form button:hover,
 .card button:hover,
 .lecturePanel button:hover,
+.lectureActions button:hover,
 .tabs button:hover {
   filter: brightness(1.2);
 }

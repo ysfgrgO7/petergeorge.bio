@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation"; // Import useRouter
-import { onAuthStateChanged } from "firebase/auth"; // Import onAuthStateChanged
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged } from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -16,7 +16,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase"; // Import auth from firebase.ts
+import { db, auth } from "@/lib/firebase";
 import styles from "./admin.module.css";
 import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
 
@@ -92,7 +92,6 @@ export default function AdminDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
 
-  const [showHidden, setShowHidden] = useState(false); // New state for showing hidden lectures
   const [cardsDirection, setCardsDirection] =
     useState<React.CSSProperties["flexDirection"]>("column-reverse"); // State for card direction
 
@@ -495,69 +494,36 @@ export default function AdminDashboard() {
                 </button>
 
                 <h3 style={{ marginTop: "1.5rem" }}>Existing Lectures</h3>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    marginBottom: "1rem",
-                  }}
-                >
-                  <label htmlFor="show-hidden-toggle">
-                    Show Hidden Lectures
-                  </label>
-                  <input
-                    id="show-hidden-toggle"
-                    type="checkbox"
-                    checked={showHidden}
-                    onChange={(e) => setShowHidden(e.target.checked)}
-                  />
-                </div>
                 {loadingLectures.has(course.id) ? (
                   <p>Loading lectures...</p>
                 ) : courseLectures[course.id] &&
                   courseLectures[course.id].length > 0 ? (
                   <ul className={styles.lectureList}>
-                    {courseLectures[course.id]
-                      .filter((lecture) => showHidden || !lecture.isHidden)
-                      .map((lecture: Lecture) => (
-                        <li key={lecture.id}>
-                          <span
-                            className={
-                              lecture.isHidden ? styles.hiddenLecture : ""
+                    {courseLectures[course.id].map((lecture: Lecture) => (
+                      <li key={lecture.id}>
+                        <span
+                          className={
+                            lecture.isHidden ? styles.hiddenLecture : ""
+                          }
+                        >
+                          {lecture.title} ({lecture.order + 1}) -{" "}
+                          <strong>
+                            {lecture.isHidden ? "Hidden" : "Visible"}
+                          </strong>
+                        </span>
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `/admin/lectures?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}`
+                              )
                             }
                           >
-                            {lecture.title} ({lecture.order + 1})
-                          </span>
-                          <div style={{ display: "flex", gap: "0.5rem" }}>
-                            <button
-                              onClick={() =>
-                                handleToggleLectureVisibility(
-                                  course.id,
-                                  lecture.id,
-                                  lecture.isHidden || false
-                                )
-                              }
-                            >
-                              {lecture.isHidden ? "Show" : "Hide"}
-                            </button>
-                            <button
-                              onClick={() =>
-                                (window.location.href = `/admin/quiz?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}`)
-                              }
-                            >
-                              Manage Quiz
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleDeleteLecture(course.id, lecture.id)
-                              }
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </li>
-                      ))}
+                            Manage Lecture
+                          </button>
+                        </div>
+                      </li>
+                    ))}
                   </ul>
                 ) : (
                   <p>No lectures added yet for this course.</p>
