@@ -8,9 +8,12 @@ import {
   DocumentData,
   doc,
   getDoc,
+  setDoc,
+  deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { markQuizComplete } from "@/lib/studentProgress";
+import { markQuizComplete, unlockLecture } from "@/lib/studentProgress";
 import styles from "../../courses.module.css";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 
@@ -63,13 +66,7 @@ export default function QuizClient() {
   const [score, setScore] = useState<number | null>(null);
   const [showResults, setShowResults] = useState(false);
 
-  // --- Handle quiz submission logic
   const handleSubmit = useCallback(async () => {
-    if (quizSubmitted && showResults) {
-      router.push("/courses");
-      return;
-    }
-
     if (quizSubmitted) return;
     setQuizSubmitted(true);
 
@@ -91,28 +88,48 @@ export default function QuizClient() {
     setScore(correctAnswersCount);
     setShowResults(true);
 
+    const requiredScore = Math.ceil(currentTotalQuestions / 2 + 1);
+
+    const quizStateDocRef = doc(
+      db,
+      `studentProgress/${user.uid}/quizAttempts/${lectureId}`
+    );
+
+    // 🌟 Unified Logic: Attempt to delete the timer document immediately 🌟
     try {
-      await markQuizComplete(
-        user.uid, // Use user.uid here instead of studentCode
-        year,
-        courseId,
-        lectureId,
-        correctAnswersCount,
-        currentTotalQuestions
-      );
-      setModalMessage(
-        `Quiz completed! You scored ${correctAnswersCount} out of ${currentTotalQuestions}. Video unlocked! 🎉`
-      );
-      setShowModal(true);
-    } catch (error: unknown) {
-      console.error("Error completing quiz:", error);
-      setModalMessage("Failed to complete quiz. " + (error as Error).message);
-      setShowModal(true);
-      setQuizSubmitted(false);
+      await deleteDoc(quizStateDocRef);
+    } catch (error) {
+      console.error("Error deleting quiz attempt document:", error);
     }
+
+    if (correctAnswersCount >= requiredScore) {
+      try {
+        await markQuizComplete(
+          user.uid,
+          year,
+          courseId,
+          lectureId,
+          correctAnswersCount,
+          currentTotalQuestions
+        );
+        await unlockLecture(user.uid, year, courseId, lectureId);
+        setModalMessage(
+          `Quiz completed! You scored ${correctAnswersCount} out of ${currentTotalQuestions}. Video unlocked! 🎉`
+        );
+      } catch (error: unknown) {
+        console.error("Error completing quiz:", error);
+        setModalMessage("Failed to complete quiz. " + (error as Error).message);
+      }
+    } else {
+      setModalMessage(
+        `You failed the quiz with a score of ${correctAnswersCount} out of ${currentTotalQuestions}. You need at least ${requiredScore} correct answers to pass. Please try again.`
+      );
+    }
+
+    setShowModal(true);
+    setQuizSubmitted(false);
   }, [
     quizSubmitted,
-    showResults,
     questions,
     answers,
     user,
@@ -122,7 +139,6 @@ export default function QuizClient() {
     router,
   ]);
 
-  // --- Fetch quiz data and user info
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -131,7 +147,6 @@ export default function QuizClient() {
         return;
       }
       setUser(currentUser);
-      setLoading(false);
 
       if (!year || !courseId || !lectureId) {
         console.error(
@@ -141,13 +156,12 @@ export default function QuizClient() {
           "Missing quiz details. Please navigate from the courses page."
         );
         setShowModal(true);
+        setLoading(false);
         return;
       }
 
-      // Fetch quiz data after user is authenticated
       const fetchQuizData = async () => {
         try {
-          // Fetch quiz duration
           const settingsDocRef = doc(
             db,
             `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
@@ -157,9 +171,40 @@ export default function QuizClient() {
           if (docSnap.exists() && typeof docSnap.data().duration === "number") {
             durationMinutes = docSnap.data().duration;
           }
-          setTimeLeft(durationMinutes * 60);
+          const durationSeconds = durationMinutes * 60;
 
-          // Fetch quiz questions
+          const quizStateDocRef = doc(
+            db,
+            `studentProgress/${currentUser.uid}/quizAttempts/${lectureId}`
+          );
+          const quizStateDocSnap = await getDoc(quizStateDocRef);
+
+          if (quizStateDocSnap.exists()) {
+            const data = quizStateDocSnap.data();
+            const startTime = data.startTime.toDate();
+            const elapsedTime = Math.floor(
+              (Date.now() - startTime.getTime()) / 1000
+            );
+            const remainingTime = durationSeconds - elapsedTime;
+
+            if (remainingTime <= 0) {
+              setModalMessage("Time's up! The quiz has already ended.");
+              setShowModal(true);
+              setLoading(false);
+              setQuizSubmitted(true);
+              setShowResults(true);
+              setScore(0);
+              return;
+            }
+            setTimeLeft(remainingTime);
+          } else {
+            await setDoc(quizStateDocRef, {
+              startTime: serverTimestamp(),
+              duration: durationSeconds,
+            });
+            setTimeLeft(durationSeconds);
+          }
+
           const quizRef = collection(
             db,
             `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
@@ -171,10 +216,12 @@ export default function QuizClient() {
           setQuestions(fetchedQuestions);
           setAnswers(new Array(fetchedQuestions.length).fill(-1));
           setIsQuizReady(true);
+          setLoading(false);
         } catch (error) {
           console.error("Error fetching quiz data:", error);
           setModalMessage("Failed to load quiz. Please try again later.");
           setShowModal(true);
+          setLoading(false);
         }
       };
 
@@ -184,7 +231,6 @@ export default function QuizClient() {
     return () => unsubscribe();
   }, [year, courseId, lectureId, router]);
 
-  // --- Timer logic
   useEffect(() => {
     if (!isQuizReady || quizSubmitted || showResults || loading) return;
 
@@ -192,11 +238,9 @@ export default function QuizClient() {
       setTimeLeft((prevTime) => {
         if (prevTime <= 1) {
           clearInterval(timer);
-          if (!quizSubmitted) {
-            handleSubmit();
-            setModalMessage("Time's up! Your quiz has been submitted.");
-            setShowModal(true);
-          }
+          handleSubmit();
+          setModalMessage("Time's up! Your quiz has been submitted.");
+          setShowModal(true);
           return 0;
         }
         return prevTime - 1;
@@ -204,14 +248,7 @@ export default function QuizClient() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [
-    timeLeft,
-    isQuizReady,
-    quizSubmitted,
-    showResults,
-    handleSubmit,
-    loading,
-  ]);
+  }, [isQuizReady, quizSubmitted, showResults, handleSubmit, loading]);
 
   const handleChange = (qIndex: number, optionIndex: number) => {
     const updatedAnswers = [...answers];
@@ -231,10 +268,29 @@ export default function QuizClient() {
   const solvedQuestions = answers.filter((ans) => ans !== -1).length;
   const unsolvedQuestions = totalQuestions - solvedQuestions;
 
-  if (loading || !isQuizReady) {
+  if (loading) {
     return (
       <div className={styles.wrapper}>
         <p>Loading quiz...</p>
+      </div>
+    );
+  }
+
+  if (questions.length === 0) {
+    return (
+      <div className={styles.wrapper}>
+        <h1>Lecture Quiz</h1>
+        <hr className={styles.titleHr} />
+        <p>No quiz questions found for this lecture.</p>
+        {showModal && (
+          <MessageModal
+            message={modalMessage}
+            onClose={() => {
+              setShowModal(false);
+              router.push(`/courses?year=${year}`);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -243,10 +299,6 @@ export default function QuizClient() {
     <div className={styles.wrapper}>
       <h1>Lecture Quiz</h1>
       <hr className={styles.titleHr} />
-
-      {questions.length === 0 && (
-        <p>No quiz questions found for this lecture.</p>
-      )}
 
       {questions.length > 0 && !showResults && (
         <div className={styles.quizSummaryFloating}>
