@@ -250,6 +250,13 @@ function LecturesContent() {
             const progress = progressMap[key];
 
             const previousLecture = courseLectures[index - 1];
+
+            // 💡 NEW LOGIC: check if the previous lecture itself is unlocked
+            const isPreviousLectureUnlocked =
+              !previousLecture ||
+              progressMap[`${year}_${courseId}_${previousLecture.id}`]
+                ?.unlocked;
+
             const previousQuizIsCompleted =
               !previousLecture ||
               !previousLecture.hasQuiz ||
@@ -257,7 +264,10 @@ function LecturesContent() {
                 ?.quizCompleted;
             const isUnlockedByCode = progress?.unlocked;
 
+            // 💡 NEW LOGIC: A lecture is locked if it's not unlocked by a code OR if the previous one isn't fully completed
             const isLocked = !isUnlockedByCode || !previousQuizIsCompleted;
+            const canUnlockWithCode =
+              isPreviousLectureUnlocked && !isUnlockedByCode;
 
             const lectureUrl = isLocked
               ? "#"
@@ -282,10 +292,10 @@ function LecturesContent() {
                     <p>
                       {previousQuizIsCompleted
                         ? "Enter a code to unlock this lecture."
-                        : "Enter the Code or Complete the quiz for the previous lecture to unlock."}
+                        : "Complete the quiz for the previous lecture to unlock."}
                     </p>
-                    {/* Only show "Unlock with Code" if the previous quiz is completed and the current lecture is not unlocked by a code */}
-                    {previousQuizIsCompleted && !isUnlockedByCode && (
+                    {/* Only show "Unlock with Code" if the previous lecture is completely unlocked */}
+                    {canUnlockWithCode && (
                       <button onClick={() => setShowCodeInput(lecture.id)}>
                         Unlock with Code
                       </button>
