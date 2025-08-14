@@ -16,6 +16,7 @@ import { db } from "@/lib/firebase";
 import { markQuizComplete, unlockLecture } from "@/lib/studentProgress";
 import styles from "../../courses.module.css";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import MessageModal from "@/app/MessageModal";
 
 interface QuizQuestion extends DocumentData {
   question: string;
@@ -23,27 +24,6 @@ interface QuizQuestion extends DocumentData {
   correctAnswerIndex: number;
   imageUrl?: string;
 }
-
-interface MessageModalProps {
-  message: string;
-  onClose: () => void;
-}
-
-const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
-        <p className="text-lg font-semibold mb-4">{message}</p>
-        <button
-          onClick={onClose}
-          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-        >
-          OK
-        </button>
-      </div>
-    </div>
-  );
-};
 
 export default function QuizClient() {
   const params = useSearchParams();

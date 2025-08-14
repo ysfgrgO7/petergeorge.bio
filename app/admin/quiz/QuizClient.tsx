@@ -14,28 +14,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import styles from "../admin.module.css";
-
-// Re-using the MessageModalProps interface and MessageModal component
-interface MessageModalProps {
-  message: string;
-  onClose: () => void;
-}
-
-const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
-        <p className="text-lg font-semibold mb-4">{message}</p>
-        <button
-          onClick={onClose}
-          className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-        >
-          OK
-        </button>
-      </div>
-    </div>
-  );
-};
+import MessageModal from "@/app/MessageModal";
 
 // Interface for existing quiz question data
 interface ExistingQuiz extends DocumentData {
