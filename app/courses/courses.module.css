@@ -123,13 +123,13 @@
 
 .quizSummaryFloating {
   position: fixed; /* Keep it in place while scrolling */
+  bottom: 100px; /* Adjust as needed */
+  right: 10px; /* Distance from the right edge */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   height: 75%;
   width: 200px; /* Width of the floating window */
-  top: 100px; /* Adjust as needed */
-  right: 10px; /* Distance from the right edge */
   background-color: var(--white); /* Light background */
   filter: brightness(0.95);
   padding: 1.5rem;

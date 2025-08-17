@@ -220,7 +220,12 @@ export default function Navbar({
                   : ""
               }`}
       >
-        <div className={styles.logoContainer}>
+        <button
+          className={styles.logoContainer}
+          style={{ backgroundColor: "transparent", color: "var(--white)", border: "none" }}
+          onClick={() => router.push("/")}
+          title="Home"
+        >
           <Image
             src="/Logo.png"
             alt="LOGO"
@@ -229,7 +234,7 @@ export default function Navbar({
             style={{ marginBottom: "1rem" }}
           />
           {!isCollapsed && <div className={styles.logo}>Master Biology</div>}
-        </div>
+        </button>
 
         {isLoggedIn ? (
           <>
@@ -259,7 +264,15 @@ export default function Navbar({
             </ul>
 
             {!isCollapsed && userName && (
-              <div style={{ display: "flex", alignItems: "center", gap: "4px", paddingLeft: "10px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  paddingLeft: "10px",
+                  paddingBottom: "10px",
+                  gap: "10px",
+                }}
+              >
                 <CgProfile className={styles.icon} />
                 {userName}
               </div>
@@ -268,9 +281,16 @@ export default function Navbar({
             <button
               onClick={toggleDesktopSidebar}
               className={styles.collapseToggle}
+              style={{
+                gap: "9px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
               aria-label="Toggle sidebar"
               title="Toggle sidebar"
             >
+              {isCollapsed ? "" : <strong>Collapse</strong>}
               {isCollapsed ? (
                 <MdChevronRight size={24} />
               ) : (
@@ -280,9 +300,11 @@ export default function Navbar({
 
             <button
               onClick={handleLogout}
+              style={{ gap: "9px" }}
               className={styles.logout}
               title="Log out"
             >
+              {isCollapsed ? "" : <strong>Log Out</strong>}
               <MdLogout size={24} />
             </button>
           </>

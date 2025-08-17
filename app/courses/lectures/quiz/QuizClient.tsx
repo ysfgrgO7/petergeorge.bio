@@ -268,15 +268,6 @@ export default function QuizClient() {
         <h1>Lecture Quiz</h1>
         <hr className={styles.titleHr} />
         <p>No quiz questions found for this lecture.</p>
-        {showModal && (
-          <MessageModal
-            message={modalMessage}
-            onClose={() => {
-              setShowModal(false);
-              router.push(`/courses?year=${year}`);
-            }}
-          />
-        )}
       </div>
     );
   }
@@ -285,6 +276,35 @@ export default function QuizClient() {
     <div className={styles.wrapper}>
       <h1>Lecture Quiz</h1>
       <hr className={styles.titleHr} />
+
+      {questions.length > 0 && !showResults && (
+        <div className={styles.quizSummaryFloating}>
+          <div>
+            <h2>Quiz Summary</h2>
+            <p>
+              Time Left: <strong>{formatTime(timeLeft)}</strong>
+            </p>
+            <p>
+              Total Questions: <strong>{totalQuestions}</strong>
+            </p>
+            <p>
+              Solved: <strong>{solvedQuestions}</strong>
+            </p>
+            <p>
+              Unsolved: <strong>{unsolvedQuestions}</strong>
+            </p>
+            <hr className={styles.titleHr} />
+          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={quizSubmitted}
+            style={{ textAlign: "center" }}
+          >
+            {quizSubmitted ? "Submitting..." : "Submit Quiz"}
+          </button>
+        </div>
+      )}
+      <hr className={styles.summaryHr} />
 
       {showResults ? (
         <div>
@@ -316,34 +336,6 @@ export default function QuizClient() {
       ) : (
         questions.map((q, i) => (
           <div key={i} className={styles.question}>
-            {questions.length > 0 && !showResults && (
-              <div className={styles.quizSummaryFloating}>
-                <div>
-                  <h2>Quiz Summary</h2>
-                  <p>
-                    Time Left: <strong>{formatTime(timeLeft)}</strong>
-                  </p>
-                  <p>
-                    Total Questions: <strong>{totalQuestions}</strong>
-                  </p>
-                  <p>
-                    Solved: <strong>{solvedQuestions}</strong>
-                  </p>
-                  <p>
-                    Unsolved: <strong>{unsolvedQuestions}</strong>
-                  </p>
-                  <hr className={styles.titleHr} />
-                </div>
-                <button
-                  onClick={handleSubmit}
-                  disabled={quizSubmitted}
-                  style={{ textAlign: "center" }}
-                >
-                  {quizSubmitted ? "Submitting..." : "Submit Quiz"}
-                </button>
-              </div>
-            )}
-            <hr className={styles.summaryHr} />
             <p>
               <strong>
                 Q{i + 1}: {q.question}{" "}

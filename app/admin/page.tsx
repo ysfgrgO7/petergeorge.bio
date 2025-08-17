@@ -437,7 +437,10 @@ export default function AdminDashboard() {
       <section>
         <h2>Generate Universal Lecture Code</h2>
         <p>This code will unlock a single, locked lecture for one user.</p>
-        <div className={styles.form} style={{ flexDirection: "row", gap: "1rem", alignItems: "center" }}>
+        <div
+          className={styles.form}
+          style={{ flexDirection: "row", gap: "1rem", alignItems: "center" }}
+        >
           <button onClick={handleGenerateUniversalCode}>
             Generate New Universal Code
           </button>

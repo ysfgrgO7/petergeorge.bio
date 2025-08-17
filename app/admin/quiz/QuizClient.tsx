@@ -371,6 +371,7 @@ export default function QuizBuilder() {
         <p>No questions added yet.</p>
       )}
       <hr style={{ margin: "2rem 0" }} />
+
       {showModal && (
         <MessageModal
           message={modalMessage}
