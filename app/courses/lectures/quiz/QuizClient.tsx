@@ -69,21 +69,15 @@ export default function QuizClient() {
     setShowResults(true);
 
     const requiredScore = Math.ceil(currentTotalQuestions / 2 + 1);
-
     const quizStateDocRef = doc(
       db,
       `studentProgress/${user.uid}/quizAttempts/${lectureId}`
     );
 
-    // 🌟 Unified Logic: Attempt to delete the timer document immediately 🌟
-    try {
-      await deleteDoc(quizStateDocRef);
-    } catch (error) {
-      console.error("Error deleting quiz attempt document:", error);
-    }
-
     if (correctAnswersCount >= requiredScore) {
+      // User passed: delete the timer document and update progress
       try {
+        await deleteDoc(quizStateDocRef);
         await markQuizComplete(
           user.uid,
           year,
@@ -101,9 +95,21 @@ export default function QuizClient() {
         setModalMessage("Failed to complete quiz. " + (error as Error).message);
       }
     } else {
-      setModalMessage(
-        `You failed the quiz with a score of ${correctAnswersCount} out of ${currentTotalQuestions}. You need at least ${requiredScore} correct answers to pass. Please try again.`
-      );
+      // User failed: delete the timer document to allow a new attempt
+      try {
+        await deleteDoc(quizStateDocRef);
+        setModalMessage(
+          `You failed the quiz with a score of ${correctAnswersCount} out of ${currentTotalQuestions}. You need at least ${requiredScore} correct answers to pass. Please Retake it.`
+        );
+      } catch (error) {
+        console.error(
+          "Error deleting quiz attempt document after failure:",
+          error
+        );
+        setModalMessage(
+          "Quiz failed, but there was an error resetting your progress. Please try again."
+        );
+      }
     }
 
     setShowModal(true);
@@ -168,15 +174,16 @@ export default function QuizClient() {
             const remainingTime = durationSeconds - elapsedTime;
 
             if (remainingTime <= 0) {
-              setModalMessage("Time's up! The quiz has already ended.");
+              // Time has expired, delete the old document to start a new quiz
+              await deleteDoc(quizStateDocRef);
+              setModalMessage(
+                "Your previous quiz session expired. Starting a new quiz now."
+              );
               setShowModal(true);
-              setLoading(false);
-              setQuizSubmitted(true);
-              setShowResults(true);
-              setScore(0);
-              return;
+              setTimeLeft(durationSeconds); // Reset timer for a new attempt
+            } else {
+              setTimeLeft(remainingTime);
             }
-            setTimeLeft(remainingTime);
           } else {
             await setDoc(quizStateDocRef, {
               startTime: serverTimestamp(),
@@ -195,6 +202,7 @@ export default function QuizClient() {
           );
           setQuestions(fetchedQuestions);
           setAnswers(new Array(fetchedQuestions.length).fill(-1));
+
           setIsQuizReady(true);
           setLoading(false);
         } catch (error) {
@@ -212,8 +220,7 @@ export default function QuizClient() {
   }, [year, courseId, lectureId, router]);
 
   useEffect(() => {
-    if (!isQuizReady || quizSubmitted || showResults || loading) return;
-
+    if (!isQuizReady || quizSubmitted || showResults) return;
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 1) {
@@ -228,8 +235,7 @@ export default function QuizClient() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isQuizReady, quizSubmitted, showResults, handleSubmit, loading]);
-
+  }, [isQuizReady, quizSubmitted, showResults, handleSubmit]); // Remove loading from dependencies
   const handleChange = (qIndex: number, optionIndex: number) => {
     const updatedAnswers = [...answers];
     updatedAnswers[qIndex] = optionIndex;
@@ -280,39 +286,25 @@ export default function QuizClient() {
       <h1>Lecture Quiz</h1>
       <hr className={styles.titleHr} />
 
-      {questions.length > 0 && !showResults && (
-        <div className={styles.quizSummaryFloating}>
-          <h2>Quiz Summary</h2>
-          <p>
-            Time Left: <strong>{formatTime(timeLeft)}</strong>
-          </p>
-          <p>
-            Total Questions: <strong>{totalQuestions}</strong>
-          </p>
-          <p>
-            Solved: <strong>{solvedQuestions}</strong>
-          </p>
-          <p>
-            Unsolved: <strong>{unsolvedQuestions}</strong>
-          </p>
-          <hr className={styles.titleHr} />
-          <button
-            onClick={handleSubmit}
-            className="mt-8 px-6 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out"
-            disabled={quizSubmitted}
-          >
-            {quizSubmitted ? "Submitting..." : "Submit Quiz"}
-          </button>
-        </div>
-      )}
-      <hr className={styles.summaryHr} />
-
       {showResults ? (
-        <div className={styles.quizResults}>
+        <div>
           <h2>Quiz Results</h2>
-          <p>
-            You scored <strong>{score}</strong> out of{" "}
-            <strong>{totalQuestions}</strong> questions correctly!
+          <p style={{ marginBottom: "10px" }}>
+            You scored{" "}
+            <strong
+              style={{
+                color: "var(--white)",
+                padding: "7px",
+                borderRadius: "5px",
+                backgroundColor:
+                  score !== null && score >= Math.ceil(questions.length / 2 + 1)
+                    ? "var(--green)"
+                    : "var(--red)",
+              }}
+            >
+              {score}/{totalQuestions}
+            </strong>{" "}
+            questions correctly!
           </p>
           <button
             onClick={() => router.push("/courses")}
@@ -324,6 +316,34 @@ export default function QuizClient() {
       ) : (
         questions.map((q, i) => (
           <div key={i} className={styles.question}>
+            {questions.length > 0 && !showResults && (
+              <div className={styles.quizSummaryFloating}>
+                <div>
+                  <h2>Quiz Summary</h2>
+                  <p>
+                    Time Left: <strong>{formatTime(timeLeft)}</strong>
+                  </p>
+                  <p>
+                    Total Questions: <strong>{totalQuestions}</strong>
+                  </p>
+                  <p>
+                    Solved: <strong>{solvedQuestions}</strong>
+                  </p>
+                  <p>
+                    Unsolved: <strong>{unsolvedQuestions}</strong>
+                  </p>
+                  <hr className={styles.titleHr} />
+                </div>
+                <button
+                  onClick={handleSubmit}
+                  disabled={quizSubmitted}
+                  style={{ textAlign: "center" }}
+                >
+                  {quizSubmitted ? "Submitting..." : "Submit Quiz"}
+                </button>
+              </div>
+            )}
+            <hr className={styles.summaryHr} />
             <p>
               <strong>
                 Q{i + 1}: {q.question}{" "}

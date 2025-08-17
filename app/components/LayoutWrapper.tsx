@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Navbar from "./navbar";
 
@@ -26,10 +27,14 @@ export default function LayoutWrapper({
     return () => window.removeEventListener("resize", updatePadding);
   }, [isCollapsed]);
 
+  const pathname = usePathname();
+  const isQuizPage = pathname.includes("/courses/lectures/quiz"); // Adjust the path as needed
   return (
     <>
       {/* Pass the state down to Navbar */}
-      <Navbar onCollapse={setIsCollapsed} isCollapsed={isCollapsed} />
+      {!isQuizPage && (
+        <Navbar onCollapse={setIsCollapsed} isCollapsed={isCollapsed} />
+      )}
       {children}
     </>
   );

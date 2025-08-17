@@ -55,6 +55,7 @@
   font-size: 0.9rem;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   padding: 0.4rem 1rem;
   background-color: var(--green);
@@ -122,6 +123,9 @@
 
 .quizSummaryFloating {
   position: fixed; /* Keep it in place while scrolling */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   height: 75%;
   width: 200px; /* Width of the floating window */
   top: 100px; /* Adjust as needed */
