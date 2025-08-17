@@ -4,11 +4,18 @@ import Link from "next/link";
 import Image from "next/image";
 import styles from "./components.module.css";
 import { usePathname, useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase"; // Import db here
+import { auth, db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore"; // Import doc and getDoc
-import { FaWallet } from "react-icons/fa";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  query,
+  where,
+  DocumentData,
+} from "firebase/firestore";
 import {
   MdHome,
   MdMenuBook,
@@ -17,54 +24,160 @@ import {
   MdLogin,
   MdLogout,
   MdMenu,
-  MdChevronLeft, // Icon for collapsing
-  MdChevronRight, // Icon for expanding
+  MdChevronLeft,
+  MdChevronRight,
 } from "react-icons/md";
+import { CgProfile } from "react-icons/cg";
 
-// The Navbar now receives the collapsed state from the parent
 export default function Navbar({
   onCollapse,
-  isCollapsed, // Add this prop to receive the collapsed state
+  isCollapsed,
 }: {
   onCollapse: (collapsed: boolean) => void;
-  isCollapsed: boolean; // Add this prop type
+  isCollapsed: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false); // New state for admin status
+  const [isAdmin, setIsAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userName, setUserName] = useState("");
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= 768) {
-        // Only set the parent's state if we are transitioning to a mobile view
-        if (isCollapsed) {
-          onCollapse(false);
-        }
+      if (typeof window !== "undefined" && window.innerWidth <= 768) {
+        if (isCollapsed) onCollapse(false);
       }
     };
-
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [isCollapsed, onCollapse]); // Add isCollapsed and onCollapse to the dependency array
+  }, [isCollapsed, onCollapse]);
 
   useEffect(() => {
-    setSidebarOpen(false); // Close sidebar on route change
+    setSidebarOpen(false);
   }, [pathname]);
 
-  // Combined useEffect for auth and admin check
+  // ---- Helpers to resolve a display name from multiple possible locations ----
+  const pickName = (data: DocumentData | undefined, user: User) => {
+    const first =
+      data?.firstName ??
+      data?.givenName ??
+      data?.name?.first ??
+      data?.first ??
+      "";
+    const last =
+      data?.secondName ??
+      data?.lastName ??
+      data?.familyName ??
+      data?.surname ??
+      data?.name?.last ??
+      data?.last ??
+      "";
+    const full =
+      data?.fullName ??
+      data?.displayName ??
+      data?.name ??
+      (first || last ? [first, last].filter(Boolean).join(" ") : "");
+
+    if (full) return String(full).trim();
+    if (user.displayName) return user.displayName;
+    if (user.email) return user.email.split("@")[0];
+    return "";
+  };
+
+  const tryDoc = async (path: [string, string]) => {
+    try {
+      const snap = await getDoc(doc(db, path[0], path[1]));
+      return snap.exists() ? snap.data() : undefined;
+    } catch (e) {
+      // Likely a permissions issue; just skip
+      console.warn("Firestore read blocked for", path.join("/"));
+      return undefined;
+    }
+  };
+
+  const tryQuery = async (
+    coll: string,
+    field: "uid" | "email",
+    value: string
+  ) => {
+    try {
+      const q = query(collection(db, coll), where(field, "==", value));
+      const res = await getDocs(q);
+      if (!res.empty) return res.docs[0].data();
+    } catch (e) {
+      console.warn("Firestore query blocked for", coll, field);
+    }
+    return undefined;
+  };
+
+  const resolveDisplayName = async (user: User) => {
+    // 1) Auth profile
+    if (user.displayName && user.displayName.trim()) return user.displayName;
+
+    // 2) users/{uid} -> users/{email}
+    const fromUsersByUid = await tryDoc(["users", user.uid]);
+    if (fromUsersByUid) return pickName(fromUsersByUid, user);
+
+    if (user.email) {
+      const fromUsersByEmail = await tryDoc(["users", user.email]);
+      if (fromUsersByEmail) return pickName(fromUsersByEmail, user);
+    }
+
+    // 3) students/{uid} -> students/{email}
+    const fromStudentsByUid = await tryDoc(["students", user.uid]);
+    if (fromStudentsByUid) return pickName(fromStudentsByUid, user);
+
+    if (user.email) {
+      const fromStudentsByEmail = await tryDoc(["students", user.email]);
+      if (fromStudentsByEmail) return pickName(fromStudentsByEmail, user);
+    }
+
+    // 4) Query users by fields if doc IDs are custom
+    const byUidField = await tryQuery("users", "uid", user.uid);
+    if (byUidField) return pickName(byUidField, user);
+
+    if (user.email) {
+      const byEmailField = await tryQuery("users", "email", user.email);
+      if (byEmailField) return pickName(byEmailField, user);
+    }
+
+    // 5) Fallback to email prefix
+    return user.email ? user.email.split("@")[0] : "";
+  };
+
+  // ---- Main auth listener ----
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoggedIn(!!user);
 
-      if (user && user.email) {
-        // Check if the user is an admin
-        const adminDocRef = doc(db, "admins", user.email);
-        const adminDocSnap = await getDoc(adminDocRef);
-        setIsAdmin(adminDocSnap.exists());
+      if (!user) {
+        setIsAdmin(false);
+        setUserName("");
+        return;
+      }
+
+      // Admin check (unchanged)
+      if (user.email) {
+        try {
+          const adminSnap = await getDoc(doc(db, "admins", user.email));
+          setIsAdmin(adminSnap.exists());
+        } catch {
+          setIsAdmin(false);
+        }
       } else {
         setIsAdmin(false);
+      }
+
+      // Student name resolution
+      try {
+        const name = await resolveDisplayName(user);
+        setUserName(name);
+        // Debugging insight
+        console.log("Resolved student name:", name);
+      } catch (e) {
+        console.error("Failed to resolve display name", e);
+        setUserName("");
       }
     });
     return () => unsubscribe();
@@ -75,15 +188,8 @@ export default function Navbar({
     router.push("/login");
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
-  // Toggles the desktop/tablet sidebar collapse
-  const toggleDesktopSidebar = () => {
-    // Call the parent's state setter directly
-    onCollapse(!isCollapsed);
-  };
+  const toggleSidebar = () => setSidebarOpen((s) => !s);
+  const toggleDesktopSidebar = () => onCollapse(!isCollapsed);
 
   return (
     <>
@@ -130,36 +236,40 @@ export default function Navbar({
             <ul className={styles.links}>
               <li className={pathname === "/" ? styles.active : ""}>
                 <Link href="/" onClick={toggleSidebar}>
-                  {" "}
-                  {/* Keep mobile toggle */}
                   <MdHome className={styles.icon} />
-                  {!isCollapsed && <span>Home</span>}{" "}
-                  {/* Conditionally show text */}
+                  {!isCollapsed && <span>Home</span>}
                 </Link>
               </li>
 
               <li className={pathname === "/courses" ? styles.active : ""}>
                 <Link href="/courses" onClick={toggleSidebar}>
                   <MdMenuBook className={styles.icon} />
-                  {!isCollapsed && <span>Courses</span>}{" "}
-                  {/* Conditionally show text */}
+                  {!isCollapsed && <span>Courses</span>}
                 </Link>
               </li>
 
-              {/* Conditionally render the admin link */}
               {isAdmin && (
                 <li className={pathname === "/admin" ? styles.active : ""}>
                   <Link href="/admin" onClick={toggleSidebar}>
                     <MdAdminPanelSettings className={styles.icon} />
-                    {!isCollapsed && <span>Admin</span>}{" "}
-                    {/* Conditionally show text */}
+                    {!isCollapsed && <span>Admin</span>}
                   </Link>
                 </li>
               )}
             </ul>
+
+            {!isCollapsed && userName && (
+              <div style={{ display: "flex", alignItems: "center", gap: "4px", paddingLeft: "10px" }}>
+                <CgProfile className={styles.icon} />
+                {userName}
+              </div>
+            )}
+
             <button
               onClick={toggleDesktopSidebar}
               className={styles.collapseToggle}
+              aria-label="Toggle sidebar"
+              title="Toggle sidebar"
             >
               {isCollapsed ? (
                 <MdChevronRight size={24} />
@@ -167,7 +277,12 @@ export default function Navbar({
                 <MdChevronLeft size={24} />
               )}
             </button>
-            <button onClick={handleLogout} className={styles.logout}>
+
+            <button
+              onClick={handleLogout}
+              className={styles.logout}
+              title="Log out"
+            >
               <MdLogout size={24} />
             </button>
           </>
@@ -176,15 +291,13 @@ export default function Navbar({
             <li className={pathname === "/register" ? styles.active : ""}>
               <Link href="/register" onClick={toggleSidebar}>
                 <MdAppRegistration className={styles.icon} />
-                {!isCollapsed && <span>Register</span>}{" "}
-                {/* Conditionally show text */}
+                {!isCollapsed && <span>Register</span>}
               </Link>
             </li>
             <li className={pathname === "/login" ? styles.active : ""}>
               <Link href="/login" onClick={toggleSidebar}>
                 <MdLogin className={styles.icon} />
-                {!isCollapsed && <span>Login</span>}{" "}
-                {/* Conditionally show text */}
+                {!isCollapsed && <span>Login</span>}
               </Link>
             </li>
           </ul>
