@@ -73,6 +73,7 @@ export default function AdminDashboard() {
 
   const [cardsDirection, setCardsDirection] =
     useState<React.CSSProperties["flexDirection"]>("column-reverse"); // State for card direction
+  const [generatedCode, setGeneratedCode] = useState<string>("");
 
   // Admin Check Logic
   useEffect(() => {
@@ -352,6 +353,7 @@ export default function AdminDashboard() {
         isUsed: false,
       });
 
+      setGeneratedCode(newCode); // Set the generated code in state
       setModalMessage(`Universal one-time use code generated: ${newCode}`);
       setShowModal(true);
     } catch (error) {
@@ -435,10 +437,17 @@ export default function AdminDashboard() {
       <section>
         <h2>Generate Universal Lecture Code</h2>
         <p>This code will unlock a single, locked lecture for one user.</p>
-        <div className={styles.form}>
+        <div className={styles.form} style={{ flexDirection: "row", gap: "1rem", alignItems: "center" }}>
           <button onClick={handleGenerateUniversalCode}>
             Generate New Universal Code
           </button>
+          <input
+            type="text"
+            readOnly
+            value={generatedCode}
+            placeholder="Generated code will appear here"
+            className={styles.generatedCodeInput}
+          />
         </div>
       </section>
 
