@@ -173,45 +173,47 @@ export default function LecturePage() {
           )}
 
           <div className={styles.quizSummaryFloating}>
-            <p>
-              <strong>Course:</strong> {courseTitle || "N/A"}
-            </p>
-            <hr className={styles.divider} />
-            {progress?.quizCompleted && (
+            <div>
               <p>
-                <strong>Quiz Mark:</strong> {progress.score} /{" "}
-                {progress.totalQuestions}
+                <strong>Course:</strong> {courseTitle || "N/A"}
               </p>
-            )}
-
-            <hr className={styles.divider} />
-            <p>
-              <strong>Extra Links</strong>
-            </p>
-            <ul className={styles.linkList}>
-              {links.length > 0 ? (
-                links.map((link) => (
-                  <li
-                    key={link.id}
-                    style={{
-                      color: "var(--blue)",
-                      textDecoration: "underline",
-                      listStyle: "none",
-                    }}
-                  >
-                    <a
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {link.text}
-                    </a>
-                  </li>
-                ))
-              ) : (
-                <li>No extra links found.</li>
+              <hr className={styles.divider} />
+              {progress?.quizCompleted && (
+                <p>
+                  <strong>Quiz Mark:</strong> {progress.score} /{" "}
+                  {progress.totalQuestions}
+                </p>
               )}
-            </ul>
+
+              <hr className={styles.divider} />
+              <p>
+                <strong>Extra Links</strong>
+              </p>
+              <ul className={styles.linkList}>
+                {links.length > 0 ? (
+                  links.map((link) => (
+                    <li
+                      key={link.id}
+                      style={{
+                        color: "var(--blue)",
+                        textDecoration: "underline",
+                        listStyle: "none",
+                      }}
+                    >
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {link.text}
+                      </a>
+                    </li>
+                  ))
+                ) : (
+                  <li>No extra links found.</li>
+                )}
+              </ul>
+            </div>
           </div>
         </>
       )}
