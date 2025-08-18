@@ -50,7 +50,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border-radius: 10px;
+  border-radius: var(--border-radius);
   width: 100%;
   transition: transform 0.3s ease;
 }
@@ -189,8 +189,6 @@
   gap: 0.5rem;
   padding: 5px;
   align-items: center;
-  background-color: var(--black);
-  border-radius: 20px;
 }
 
 .socialMedia a {
@@ -249,7 +247,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    border-radius: 10px;
+    border-radius: var(--border-radius);
     width: 100%;
   }
 

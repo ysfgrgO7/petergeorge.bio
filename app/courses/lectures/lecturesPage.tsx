@@ -301,7 +301,15 @@ function LecturesContent() {
                       </button>
                     )}
                     {showCodeInput === lecture.id && (
-                      <div className={styles.codeInputContainer}>
+                      <div
+                        style={{
+                          paddingTop: "10px",
+                          display: "flex",
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
                         <input
                           type="text"
                           value={accessCode}
@@ -318,6 +326,7 @@ function LecturesContent() {
                         {errorMessage && (
                           <p className={styles.errorMessage}>{errorMessage}</p>
                         )}
+                        To get Codes send 150egp via Vodafone Cash
                       </div>
                     )}
                   </>

@@ -10,17 +10,6 @@
   margin-bottom: 2rem;
 }
 
-.form input,
-.wrapper input,
-.form textarea,
-.form select {
-  padding: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--white);
-  background-color: var(--white);
-  filter: brightness(1.1);
-}
-
 .cards {
   display: flex;
   flex-direction: column-reverse;
@@ -30,7 +19,7 @@
 
 .card {
   padding: 0.5rem;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   box-shadow: 0px 0px 9px 1px var(--black);
   background-color: var(--white);
   filter: brightness(0.95);
@@ -45,14 +34,6 @@
   margin-top: 0.5rem;
   padding: 0.5rem;
   border-top: 2px solid var(--black);
-}
-
-.lecturePanel input {
-  padding: 0.5rem;
-  margin-right: 0.5rem;
-  margin-bottom: 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--dark);
 }
 
 .lectureList {
@@ -84,7 +65,7 @@
   background-color: var(--green);
   color: var(--white);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--border-radius);
   cursor: pointer;
 }
 .lectureActions {
@@ -99,7 +80,7 @@
   background-color: var(--green);
   color: var(--white);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--border-radius);
   cursor: pointer;
 }
 
@@ -109,7 +90,7 @@
   background: var(--dark);
   color: var(--white);
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--border-radius);
 }
 
 .tabs .activeTab,

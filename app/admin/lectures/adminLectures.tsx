@@ -325,14 +325,7 @@ export default function LectureManagerPage() {
     <div className={styles.wrapper}>
       <button onClick={() => router.push("/admin")}>← Back to Dashboard</button>
       <h1>Managing: {lectureTitle}</h1>
-      <hr
-        style={{
-          margin: "1rem 0",
-          border: "none",
-          borderTop: "3px solid var(--black)",
-          borderRadius: "4px",
-        }}
-      />
+      <hr />
 
       <section className={styles.lectureActions}>
         <h2>Lecture Actions</h2>
@@ -346,14 +339,7 @@ export default function LectureManagerPage() {
         </div>
       </section>
 
-      <hr
-        style={{
-          margin: "1rem 0",
-          border: "none",
-          borderTop: "3px solid var(--black)",
-          borderRadius: "4px",
-        }}
-      />
+      <hr />
 
       <section>
         <h2>Main Lecture Odysee Link</h2>
@@ -384,14 +370,7 @@ export default function LectureManagerPage() {
         </div>
       </section>
 
-      <hr
-        style={{
-          margin: "1rem 0",
-          border: "none",
-          borderTop: "3px solid var(--black)",
-          borderRadius: "4px",
-        }}
-      />
+      <hr />
 
       {/* NEW SECTION FOR HOMEWORK VIDEOS */}
       <section>
@@ -428,14 +407,7 @@ export default function LectureManagerPage() {
         </ul>
       </section>
 
-      <hr
-        style={{
-          margin: "1rem 0",
-          border: "none",
-          borderTop: "3px solid var(--black)",
-          borderRadius: "4px",
-        }}
-      />
+      <hr />
 
       <section>
         <h2>Quizzes</h2>
@@ -450,14 +422,7 @@ export default function LectureManagerPage() {
         </button>
       </section>
 
-      <hr
-        style={{
-          margin: "1rem 0",
-          border: "none",
-          borderTop: "3px solid var(--black)",
-          borderRadius: "4px",
-        }}
-      />
+      <hr />
 
       <section>
         <h2>Add Extra Links</h2>

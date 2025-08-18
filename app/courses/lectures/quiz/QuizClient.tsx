@@ -25,6 +25,16 @@ interface QuizQuestion extends DocumentData {
   imageUrl?: string;
 }
 
+// Function to shuffle an array using the Fisher-Yates algorithm
+function shuffleArray<T>(array: T[]): T[] {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+}
+
 export default function QuizClient() {
   const params = useSearchParams();
   const router = useRouter();
@@ -126,6 +136,26 @@ export default function QuizClient() {
   ]);
 
   useEffect(() => {
+    const blockContextMenu = (e: MouseEvent) => e.preventDefault();
+    const blockKeys = (e: KeyboardEvent) => {
+      if (
+        e.key === "PrintScreen" ||
+        (e.ctrlKey && e.key === "c") || // Copy
+        (e.ctrlKey && e.key === "u") || // View source
+        (e.ctrlKey && e.shiftKey && e.key === "I") // DevTools
+      ) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("contextmenu", blockContextMenu);
+    window.addEventListener("keydown", blockKeys);
+    return () => {
+      document.removeEventListener("contextmenu", blockContextMenu);
+      window.removeEventListener("keydown", blockKeys);
+    };
+  }, []);
+
+  useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
@@ -197,11 +227,15 @@ export default function QuizClient() {
             `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
           );
           const snapshot = await getDocs(quizRef);
-          const fetchedQuestions: QuizQuestion[] = snapshot.docs.map(
-            (doc) => doc.data() as QuizQuestion
-          );
-          setQuestions(fetchedQuestions);
-          setAnswers(new Array(fetchedQuestions.length).fill(-1));
+          const fetchedQuestions: QuizQuestion[] = snapshot.docs.map((doc) =>
+            doc.data()
+          ) as QuizQuestion[];
+
+          // Shuffle the questions before setting the state
+          const shuffledQuestions = shuffleArray(fetchedQuestions);
+
+          setQuestions(shuffledQuestions);
+          setAnswers(new Array(shuffledQuestions.length).fill(-1));
 
           setIsQuizReady(true);
           setLoading(false);
@@ -266,7 +300,7 @@ export default function QuizClient() {
     return (
       <div className={styles.wrapper}>
         <h1>Lecture Quiz</h1>
-        <hr className={styles.titleHr} />
+        <hr />
         <p>No quiz questions found for this lecture.</p>
       </div>
     );
@@ -275,7 +309,7 @@ export default function QuizClient() {
   return (
     <div className={styles.wrapper}>
       <h1>Lecture Quiz</h1>
-      <hr className={styles.titleHr} />
+      <hr />
 
       {questions.length > 0 && !showResults && (
         <div className={styles.quizSummaryFloating}>
@@ -293,7 +327,7 @@ export default function QuizClient() {
             <p>
               Unsolved: <strong>{unsolvedQuestions}</strong>
             </p>
-            <hr className={styles.titleHr} />
+            <hr />
           </div>
           <button
             onClick={handleSubmit}
@@ -366,6 +400,10 @@ export default function QuizClient() {
                   type="radio"
                   name={`q-${i}`}
                   checked={answers[i] === j}
+                  style={{
+                    marginRight: "0.2rem",
+                    visibility: "hidden",
+                  }}
                   onChange={() => handleChange(i, j)}
                 />
                 {opt}

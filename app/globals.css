@@ -10,6 +10,13 @@
   --green: #749f6e;
   --red: #976061;
   --magenta: #836e9f;
+  --border-radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
 html,
@@ -29,10 +36,25 @@ body {
   min-height: 100vh;
 }
 
-* {
+textarea,
+input,
+select {
+  display: flex;
+  padding: 10px;
+  text-align: left;
+  justify-content: left;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--dark);
   box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+  background-color: var(--white);
+  filter: brightness(1.05);
+}
+
+hr {
+  margin: 1rem 0;
+  border: none;
+  border-top: 3px solid var(--black);
+  border-radius: 5px;
 }
 
 a {

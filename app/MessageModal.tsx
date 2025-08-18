@@ -25,7 +25,7 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
           backgroundColor: "var(--green)",
           color: "var(--white)",
           padding: "10px",
-          borderRadius: "10px",
+          borderRadius: "var(--border-radius)",
           right: 0,
         }}
       >

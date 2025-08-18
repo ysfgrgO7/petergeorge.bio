@@ -295,7 +295,7 @@ export default function QuizBuilder() {
         )}
       </div>
 
-      <hr style={{ margin: "2rem 0" }} />
+      <hr />
 
       {/* Add Question Section */}
       <h2>Add New Question</h2>
@@ -347,7 +347,7 @@ export default function QuizBuilder() {
         </button>
       </div>
 
-      <hr style={{ margin: "2rem 0" }} />
+      <hr />
 
       <h2>Existing Questions</h2>
       {existingQuizzes.length > 0 ? (
@@ -370,7 +370,7 @@ export default function QuizBuilder() {
       ) : (
         <p>No questions added yet.</p>
       )}
-      <hr style={{ margin: "2rem 0" }} />
+      <hr />
 
       {showModal && (
         <MessageModal

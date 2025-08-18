@@ -388,14 +388,7 @@ export default function AdminDashboard() {
   return (
     <div className={styles.wrapper}>
       <h1>Admin Dashboard</h1>
-      <hr
-        style={{
-          margin: "1rem 0",
-          border: "none",
-          borderTop: "3px solid var(--black)",
-          borderRadius: "4px",
-        }}
-      />
+      <hr />
       <h1>Create Course</h1>
       <div className={styles.form}>
         <input
@@ -424,14 +417,7 @@ export default function AdminDashboard() {
         <button onClick={handleCreate}>Create Course</button>
       </div>
 
-      <hr
-        style={{
-          margin: "1rem 0",
-          border: "none",
-          borderTop: "3px solid var(--black)",
-          borderRadius: "4px",
-        }}
-      />
+      <hr />
 
       {/* NEW: Section for generating a universal code */}
       <section>
@@ -454,14 +440,7 @@ export default function AdminDashboard() {
         </div>
       </section>
 
-      <hr
-        style={{
-          margin: "1rem 0",
-          border: "none",
-          borderTop: "3px solid var(--black)",
-          borderRadius: "4px",
-        }}
-      />
+      <hr />
 
       <h1>Existing Courses</h1>
       <div className={styles.tabs}>

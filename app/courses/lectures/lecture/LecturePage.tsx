@@ -146,7 +146,7 @@ export default function LecturePage() {
             />
           </div>
 
-          <hr className={styles.divider} />
+          <hr />
 
           {homeworkVideos.length > 0 && (
             <>
@@ -168,7 +168,7 @@ export default function LecturePage() {
                   </div>
                 ))}
               </section>
-              <hr className={styles.divider} />
+              <hr />
             </>
           )}
 
@@ -177,7 +177,7 @@ export default function LecturePage() {
               <p>
                 <strong>Course:</strong> {courseTitle || "N/A"}
               </p>
-              <hr className={styles.divider} />
+              <hr />
               {progress?.quizCompleted && (
                 <p>
                   <strong>Quiz Mark:</strong> {progress.score} /{" "}
@@ -185,7 +185,7 @@ export default function LecturePage() {
                 </p>
               )}
 
-              <hr className={styles.divider} />
+              <hr />
               <p>
                 <strong>Extra Links</strong>
               </p>
