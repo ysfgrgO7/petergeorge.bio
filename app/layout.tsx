@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import LayoutWrapper from "@/app/components/LayoutWrapper";
-import Footer from "@/app/components/footer";
 import DisableRightClick from "@/app/components/disableRightClicks";
 
 const poppins = Poppins({
@@ -29,7 +28,6 @@ export default function RootLayout({
       <body className={poppins.className}>
         <DisableRightClick /> {/* 👈 Inject client logic */}
         <LayoutWrapper>{children}</LayoutWrapper>
-        <Footer />
       </body>
     </html>
   );
