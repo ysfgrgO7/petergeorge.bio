@@ -81,7 +81,10 @@ export default function QuizClient() {
     const requiredScore = Math.ceil(currentTotalQuestions / 2 + 1);
     const quizStateDocRef = doc(
       db,
-      `studentProgress/${user.uid}/quizAttempts/${lectureId}`
+      "students",
+      user.uid,
+      "quizAttempts",
+      lectureId
     );
 
     if (correctAnswersCount >= requiredScore) {
@@ -191,7 +194,10 @@ export default function QuizClient() {
 
           const quizStateDocRef = doc(
             db,
-            `studentProgress/${currentUser.uid}/quizAttempts/${lectureId}`
+            "students",
+            currentUser.uid,
+            "quizAttempts",
+            lectureId
           );
           const quizStateDocSnap = await getDoc(quizStateDocRef);
 
