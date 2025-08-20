@@ -27,19 +27,6 @@
   margin-bottom: 15px;
 }
 
-.form button {
-  padding: 10px;
-  background-color: var(--green);
-  color: var(--white);
-  border: none;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-}
-
-.form button:hover {
-  filter: brightness(1.2);
-}
-
 /* Sections */
 .splitContainer {
   flex-direction: column;

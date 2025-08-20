@@ -62,6 +62,19 @@ a {
   text-decoration: none;
 }
 
+button {
+  padding: 0.6rem 1rem;
+  background-color: var(--green);
+  color: var(--white);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.2);
+}
+
 @media (max-width: 768px) {
   html,
   body {

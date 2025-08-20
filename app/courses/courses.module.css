@@ -41,28 +41,6 @@
   visibility: hidden !important;
 }
 
-.wrapper button {
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0.4rem 1rem;
-  background-color: var(--green);
-  color: var(--white);
-  border: none;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.courseDetail button:hover,
-.wrapper button:hover,
-.courseCard button:hover {
-  filter: brightness(1.2);
-}
-
 .question {
   font-size: 1.3rem;
   margin: 2rem 0rem;
