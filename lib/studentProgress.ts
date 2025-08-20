@@ -2,9 +2,35 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 /**
+ * Helper function to fetch a lecture's title.
+ */
+export async function getLectureTitle(
+  year: string,
+  courseId: string,
+  lectureId: string
+): Promise<string> {
+  const lectureDocRef = doc(
+    db,
+    "years",
+    year,
+    "courses",
+    courseId,
+    "lectures",
+    lectureId
+  );
+  const lectureSnap = await getDoc(lectureDocRef);
+
+  if (lectureSnap.exists()) {
+    const lectureData = lectureSnap.data();
+    return lectureData.title || "Untitled Lecture";
+  }
+  return "Unknown Lecture";
+}
+
+/**
  * Fetches the progress for a specific lecture for a given student.
- * The progress document is stored at:
- *    students/{uid}/progress/{year}_{courseId}_{lectureId}
+ * Stored at:
+ * students/{uid}/progress/{year}_{courseId}_{lectureId}
  */
 export async function getLectureProgress(
   uid: string,

@@ -28,6 +28,7 @@ import {
   MdChevronRight,
 } from "react-icons/md";
 import { CgProfile } from "react-icons/cg";
+import { GiProgression } from "react-icons/gi";
 
 export default function Navbar({
   onCollapse,
@@ -40,6 +41,7 @@ export default function Navbar({
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userName, setUserName] = useState("");
 
@@ -183,6 +185,42 @@ export default function Navbar({
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsLoggedIn(!!user);
+
+      if (!user) {
+        setIsSuperAdmin(false);
+        setUserName("");
+        return;
+      }
+
+      // Super Admin check
+      if (user.email) {
+        try {
+          const adminSnap = await getDoc(doc(db, "superAdmins", user.email));
+          setIsSuperAdmin(adminSnap.exists());
+        } catch {
+          setIsSuperAdmin(false);
+        }
+      } else {
+        setIsSuperAdmin(false);
+      }
+
+      // Student name resolution
+      try {
+        const name = await resolveDisplayName(user);
+        setUserName(name);
+        // Debugging insight
+        console.log("Resolved student name:", name);
+      } catch (e) {
+        console.error("Failed to resolve display name", e);
+        setUserName("");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/login");
@@ -222,7 +260,11 @@ export default function Navbar({
       >
         <button
           className={styles.logoContainer}
-          style={{ backgroundColor: "transparent", color: "var(--white)", border: "none" }}
+          style={{
+            backgroundColor: "transparent",
+            color: "var(--white)",
+            border: "none",
+          }}
           onClick={() => router.push("/")}
           title="Home"
         >
@@ -253,11 +295,27 @@ export default function Navbar({
                 </Link>
               </li>
 
+              <li className={pathname === "/progress" ? styles.active : ""}>
+                <Link href="/progress" onClick={toggleSidebar}>
+                  <GiProgression className={styles.icon} />
+                  {!isCollapsed && <span>Progress</span>}
+                </Link>
+              </li>
+
               {isAdmin && (
                 <li className={pathname === "/admin" ? styles.active : ""}>
                   <Link href="/admin" onClick={toggleSidebar}>
                     <MdAdminPanelSettings className={styles.icon} />
                     {!isCollapsed && <span>Admin</span>}
+                  </Link>
+                </li>
+              )}
+
+              {isSuperAdmin && (
+                <li className={pathname === "/students" ? styles.active : ""}>
+                  <Link href="/students" onClick={toggleSidebar}>
+                    <CgProfile className={styles.icon} />
+                    {!isCollapsed && <span>Students</span>}
                   </Link>
                 </li>
               )}
