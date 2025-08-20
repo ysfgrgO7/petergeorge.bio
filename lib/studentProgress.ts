@@ -57,7 +57,7 @@ export async function getLectureProgress(
 }
 
 /**
- * Marks a specific quiz as complete for a student and saves their score.
+ * Marks a specific quiz as complete for a student, saves their score,
  */
 export async function markQuizComplete(
   uid: string,

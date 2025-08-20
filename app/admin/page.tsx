@@ -504,12 +504,14 @@ export default function AdminDashboard() {
                   placeholder="Lecture title"
                   value={lectureTitle}
                   onChange={(e) => setLectureTitle(e.target.value)}
+                  style={{ marginBottom: "10px" }}
                 />
                 <input
                   type="text"
                   placeholder="Odysee link"
                   value={odyseeLink}
                   onChange={(e) => setOdyseeLink(e.target.value)}
+                  style={{ marginBottom: "10px" }}
                 />
                 <button onClick={() => handleAddLecture(course.id)}>
                   Add Lecture

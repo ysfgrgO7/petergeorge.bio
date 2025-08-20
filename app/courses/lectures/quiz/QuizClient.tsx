@@ -19,11 +19,30 @@ import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import MessageModal from "@/app/MessageModal";
 
 interface QuizQuestion extends DocumentData {
+  id: string; // Add question ID for better tracking
   question: string;
-  options: string[];
-  correctAnswerIndex: number;
+  type: "mcq" | "essay";
+  options?: string[];
+  correctAnswerIndex?: number;
   imageUrl?: string;
 }
+
+interface SubmittedMCQAnswer {
+  question: string;
+  type: "mcq";
+  selectedIndex: number;
+  selectedText: string | null;
+  correctAnswer: string;
+  isCorrect: boolean;
+}
+
+interface SubmittedEssayAnswer {
+  question: string;
+  type: "essay";
+  answerText: string;
+}
+
+type SubmittedAnswer = SubmittedMCQAnswer | SubmittedEssayAnswer;
 
 // Function to shuffle an array using the Fisher-Yates algorithm
 function shuffleArray<T>(array: T[]): T[] {
@@ -43,7 +62,8 @@ export default function QuizClient() {
   const lectureId = params.get("lectureId");
 
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [answers, setAnswers] = useState<number[]>([]);
+  const [mcqAnswers, setMcqAnswers] = useState<number[]>([]);
+  const [essayAnswers, setEssayAnswers] = useState<Record<string, string>>({});
   const [user, setUser] = useState<User | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
@@ -68,17 +88,68 @@ export default function QuizClient() {
     }
 
     let correctAnswersCount = 0;
-    questions.forEach((q, i) => {
-      if (answers[i] === q.correctAnswerIndex) {
-        correctAnswersCount++;
+    const submittedMCQAnswers: SubmittedMCQAnswer[] = [];
+    const submittedEssayAnswers: SubmittedEssayAnswer[] = [];
+    let totalMCQQuestions = 0;
+    let mcqQuestionIndex = 0;
+
+    questions.forEach((q) => {
+      if (q.type === "mcq") {
+        totalMCQQuestions++;
+        const isCorrect = mcqAnswers[mcqQuestionIndex] === q.correctAnswerIndex;
+        if (isCorrect) {
+          correctAnswersCount++;
+        }
+        submittedMCQAnswers.push({
+          question: q.question,
+          type: "mcq",
+          selectedIndex: mcqAnswers[mcqQuestionIndex],
+          selectedText:
+            mcqAnswers[mcqQuestionIndex] !== -1
+              ? q.options![mcqAnswers[mcqQuestionIndex]]
+              : null,
+          correctAnswer: q.options![q.correctAnswerIndex!],
+          isCorrect,
+        });
+        mcqQuestionIndex++;
+      } else {
+        submittedEssayAnswers.push({
+          question: q.question,
+          type: "essay",
+          answerText: essayAnswers[q.id] || "",
+        });
       }
     });
 
-    const currentTotalQuestions = questions.length;
     setScore(correctAnswersCount);
     setShowResults(true);
 
-    const requiredScore = Math.ceil(currentTotalQuestions / 2 + 1);
+    const attemptRef = doc(
+      db,
+      "students",
+      user.uid,
+      "progress",
+      `${year}_${courseId}_${lectureId}`
+    );
+
+    await setDoc(
+      attemptRef,
+      {
+        year,
+        courseId,
+        lectureId,
+        score: correctAnswersCount,
+        total: totalMCQQuestions,
+        answers: {
+          mcq: submittedMCQAnswers,
+          essay: submittedEssayAnswers,
+        },
+        completedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    const requiredScore = Math.floor(totalMCQQuestions / 2) + 1;
     const quizStateDocRef = doc(
       db,
       "students",
@@ -88,7 +159,6 @@ export default function QuizClient() {
     );
 
     if (correctAnswersCount >= requiredScore) {
-      // User passed: delete the timer document and update progress
       try {
         await deleteDoc(quizStateDocRef);
         await markQuizComplete(
@@ -97,22 +167,28 @@ export default function QuizClient() {
           courseId,
           lectureId,
           correctAnswersCount,
-          currentTotalQuestions
+          totalMCQQuestions
         );
         await unlockLecture(user.uid, year, courseId, lectureId);
         setModalMessage(
-          `Quiz completed! You scored ${correctAnswersCount} out of ${currentTotalQuestions}. Video unlocked! 🎉`
+          `Quiz completed! You scored ${correctAnswersCount} out of ${totalMCQQuestions} on the multiple-choice questions. Video unlocked! 🎉`
         );
+        if (submittedEssayAnswers.length > 0) {
+          setModalMessage(
+            (prev) =>
+              prev +
+              " Your essay questions will be graded separately. Check Your Progress page for updates."
+          );
+        }
       } catch (error: unknown) {
         console.error("Error completing quiz:", error);
         setModalMessage("Failed to complete quiz. " + (error as Error).message);
       }
     } else {
-      // User failed: delete the timer document to allow a new attempt
       try {
         await deleteDoc(quizStateDocRef);
         setModalMessage(
-          `You failed the quiz with a score of ${correctAnswersCount} out of ${currentTotalQuestions}. You need at least ${requiredScore} correct answers to pass. Please Retake it.`
+          `You failed the quiz with a score of ${correctAnswersCount} out of ${totalMCQQuestions}.`
         );
       } catch (error) {
         console.error(
@@ -120,7 +196,7 @@ export default function QuizClient() {
           error
         );
         setModalMessage(
-          "Quiz failed, but there was an error resetting your progress. Please try again."
+          "Quiz failed, but there was an error resetting your progress."
         );
       }
     }
@@ -130,7 +206,8 @@ export default function QuizClient() {
   }, [
     quizSubmitted,
     questions,
-    answers,
+    mcqAnswers,
+    essayAnswers,
     user,
     year,
     courseId,
@@ -143,9 +220,9 @@ export default function QuizClient() {
     const blockKeys = (e: KeyboardEvent) => {
       if (
         e.key === "PrintScreen" ||
-        (e.ctrlKey && e.key === "c") || // Copy
-        (e.ctrlKey && e.key === "u") || // View source
-        (e.ctrlKey && e.shiftKey && e.key === "I") // DevTools
+        (e.ctrlKey && e.key === "c") ||
+        (e.ctrlKey && e.key === "u") ||
+        (e.ctrlKey && e.shiftKey && e.key === "I")
       ) {
         e.preventDefault();
       }
@@ -210,13 +287,12 @@ export default function QuizClient() {
             const remainingTime = durationSeconds - elapsedTime;
 
             if (remainingTime <= 0) {
-              // Time has expired, delete the old document to start a new quiz
               await deleteDoc(quizStateDocRef);
               setModalMessage(
                 "Your previous quiz session expired. Starting a new quiz now."
               );
               setShowModal(true);
-              setTimeLeft(durationSeconds); // Reset timer for a new attempt
+              setTimeLeft(durationSeconds);
             } else {
               setTimeLeft(remainingTime);
             }
@@ -232,16 +308,31 @@ export default function QuizClient() {
             db,
             `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
           );
-          const snapshot = await getDocs(quizRef);
-          const fetchedQuestions: QuizQuestion[] = snapshot.docs.map((doc) =>
-            doc.data()
-          ) as QuizQuestion[];
+          const essayRef = collection(
+            db,
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`
+          );
 
-          // Shuffle the questions before setting the state
-          const shuffledQuestions = shuffleArray(fetchedQuestions);
+          const quizSnapshot = await getDocs(quizRef);
+          const essaySnapshot = await getDocs(essayRef);
 
-          setQuestions(shuffledQuestions);
-          setAnswers(new Array(shuffledQuestions.length).fill(-1));
+          const mcqQuestions = quizSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            type: "mcq",
+          })) as QuizQuestion[];
+
+          const essayQuestions = essaySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            type: "essay",
+          })) as QuizQuestion[];
+
+          const shuffledMcqQuestions = shuffleArray(mcqQuestions);
+
+          setQuestions([...shuffledMcqQuestions, ...essayQuestions]);
+          setMcqAnswers(new Array(shuffledMcqQuestions.length).fill(-1));
+          setEssayAnswers({});
 
           setIsQuizReady(true);
           setLoading(false);
@@ -275,11 +366,19 @@ export default function QuizClient() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isQuizReady, quizSubmitted, showResults, handleSubmit]); // Remove loading from dependencies
-  const handleChange = (qIndex: number, optionIndex: number) => {
-    const updatedAnswers = [...answers];
+  }, [isQuizReady, quizSubmitted, showResults, handleSubmit]);
+
+  const handleMcqChange = (qIndex: number, optionIndex: number) => {
+    const updatedAnswers = [...mcqAnswers];
     updatedAnswers[qIndex] = optionIndex;
-    setAnswers(updatedAnswers);
+    setMcqAnswers(updatedAnswers);
+  };
+
+  const handleEssayChange = (questionId: string, answerText: string) => {
+    setEssayAnswers((prevState) => ({
+      ...prevState,
+      [questionId]: answerText,
+    }));
   };
 
   const formatTime = (seconds: number) => {
@@ -290,8 +389,17 @@ export default function QuizClient() {
       .padStart(2, "0")}`;
   };
 
+  const totalMCQQuestions = questions.filter((q) => q.type === "mcq").length;
+  const totalEssayQuestions = questions.filter(
+    (q) => q.type === "essay"
+  ).length;
+  const answeredMCQs = mcqAnswers.filter((ans) => ans !== -1).length;
+  const answeredEssays = Object.keys(essayAnswers).filter(
+    (key) => essayAnswers[key].trim() !== ""
+  ).length;
+
   const totalQuestions = questions.length;
-  const solvedQuestions = answers.filter((ans) => ans !== -1).length;
+  const solvedQuestions = answeredMCQs + answeredEssays;
   const unsolvedQuestions = totalQuestions - solvedQuestions;
 
   if (loading) {
@@ -357,15 +465,23 @@ export default function QuizClient() {
                 padding: "7px",
                 borderRadius: "5px",
                 backgroundColor:
-                  score !== null && score >= Math.ceil(questions.length / 2 + 1)
+                  score !== null &&
+                  score >= Math.floor(totalMCQQuestions / 2) + 1
                     ? "var(--green)"
                     : "var(--red)",
               }}
             >
-              {score}/{totalQuestions}
+              {score}/{totalMCQQuestions}
             </strong>{" "}
-            questions correctly!
+            questions correctly on the multiple-choice section!
           </p>
+          {totalEssayQuestions > 0 && (
+            <p style={{ marginBottom: "10px" }}>
+              Your {totalEssayQuestions}{" "}
+              {totalEssayQuestions > 1 ? "essay questions" : "essay question"}{" "}
+              will be graded separately. Check Your Progress page for updates.
+            </p>
+          )}
           <button
             onClick={() => router.push("/courses")}
             className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
@@ -374,50 +490,102 @@ export default function QuizClient() {
           </button>
         </div>
       ) : (
-        questions.map((q, i) => (
-          <div key={i} className={styles.question}>
-            <p>
-              <strong>
-                Q{i + 1}: {q.question}{" "}
-              </strong>
-            </p>
-            {q.imageUrl && (
-              <div className={styles.quizImageContainer}>
-                <img
-                  src={q.imageUrl}
-                  alt={`Question ${i + 1}`}
-                  className={styles.quizImage}
-                  onError={(e) => {
-                    const target = e.currentTarget as HTMLImageElement;
-                    target.src =
-                      "https://placehold.co/400x200/cccccc/000000?text=Image+Not+Found";
-                  }}
-                />
+        <>
+          {/* Render MCQ Questions */}
+          {questions
+            .filter((q) => q.type === "mcq")
+            .map((q, i) => (
+              <div key={q.id} className={styles.question}>
+                <p>
+                  <strong>
+                    Q{i + 1}: {q.question}{" "}
+                  </strong>
+                </p>
+                {q.imageUrl && (
+                  <div className={styles.quizImageContainer}>
+                    <img
+                      src={q.imageUrl}
+                      alt={`Question ${i + 1}`}
+                      className={styles.quizImage}
+                      onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        target.src =
+                          "https://placehold.co/400x200/cccccc/000000?text=Image+Not+Found";
+                      }}
+                    />
+                  </div>
+                )}
+                {q.options!.map((opt: string, j: number) => (
+                  <label
+                    key={j}
+                    className={`${styles.choices} ${
+                      mcqAnswers[i] === j ? styles.selectedChoice : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={`q-${i}`}
+                      checked={mcqAnswers[i] === j}
+                      style={{
+                        marginRight: "0.2rem",
+                        visibility: "hidden",
+                      }}
+                      onChange={() => handleMcqChange(i, j)}
+                    />
+                    {opt}
+                  </label>
+                ))}
+                <hr />
               </div>
-            )}
-            {q.options.map((opt: string, j: number) => (
-              <label
-                key={j}
-                className={`${styles.choices} ${
-                  answers[i] === j ? styles.selectedChoice : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name={`q-${i}`}
-                  checked={answers[i] === j}
-                  style={{
-                    marginRight: "0.2rem",
-                    visibility: "hidden",
-                  }}
-                  onChange={() => handleChange(i, j)}
-                />
-                {opt}
-              </label>
             ))}
-            <hr />
-          </div>
-        ))
+
+          {/* Render Essay Questions */}
+          {questions.filter((q) => q.type === "essay").length > 0 && (
+            <div className={styles.essayQuestionsSection}>
+              <h2>Essay Questions</h2>
+              <p>Please provide detailed answers in the boxes below.</p>
+              <hr />
+              {questions
+                .filter((q) => q.type === "essay")
+                .map((q, i) => (
+                  <div key={q.id} className={styles.question}>
+                    <p>
+                      <strong>
+                        Q{totalMCQQuestions + i + 1}: {q.question}{" "}
+                      </strong>
+                    </p>
+                    {q.imageUrl && (
+                      <div className={styles.quizImageContainer}>
+                        <img
+                          src={q.imageUrl}
+                          alt={`Question ${totalMCQQuestions + i + 1}`}
+                          className={styles.quizImage}
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.src =
+                              "https://placehold.co/400x200/cccccc/000000?text=Image+Not+Found";
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div className={styles.essayAnswerContainer}>
+                      <label htmlFor={`essay-${q.id}`}>Your Answer:</label>
+                      <textarea
+                        id={`essay-${q.id}`}
+                        className={styles.essayTextarea}
+                        value={essayAnswers[q.id] || ""}
+                        onChange={(e) =>
+                          handleEssayChange(q.id, e.target.value)
+                        }
+                        rows={8}
+                      ></textarea>
+                    </div>
+                    <hr />
+                  </div>
+                ))}
+            </div>
+          )}
+        </>
       )}
 
       {showModal && (
