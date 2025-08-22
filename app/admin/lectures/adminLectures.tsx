@@ -322,7 +322,7 @@ export default function LectureManagerPage() {
   }
 
   return (
-    <div className={styles.wrapper}>
+    <div className="wrapper">
       <button onClick={() => router.push("/admin")}>← Back to Dashboard</button>
       <h1>Managing: {lectureTitle}</h1>
       <hr />
@@ -449,7 +449,7 @@ export default function LectureManagerPage() {
                 <a href={link.url} target="_blank" rel="noopener noreferrer">
                   {link.text}
                 </a>
-                <button onClick={() => handleDeleteLink(link.id)}>
+                <button style={{ marginLeft: "0.5rem" }} onClick={() => handleDeleteLink(link.id)}>
                   Delete
                 </button>
               </li>

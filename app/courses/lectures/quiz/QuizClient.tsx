@@ -215,6 +215,22 @@ export default function QuizClient() {
     router,
   ]);
 
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // This code only runs on the client
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Set initial value on mount
+    handleResize();
+
+    // Add and remove event listener for dynamic updates
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []); // Empty dependency array ensures this runs once on mount
+
   useEffect(() => {
     const blockContextMenu = (e: MouseEvent) => e.preventDefault();
     const blockKeys = (e: KeyboardEvent) => {
@@ -421,7 +437,13 @@ export default function QuizClient() {
   }
 
   return (
-    <div className={styles.wrapper}>
+    <div
+      className="wrapper"
+      style={{
+        width: isMobile ? "100%" : "calc(100% - 200px)",
+        position: isMobile ? "unset" : "relative",
+      }}
+    >
       <h1>Lecture Quiz</h1>
       <hr />
 

@@ -139,7 +139,7 @@ export default function ProgressPage() {
   }
 
   return (
-    <div className={styles.container}>
+    <div className="wrapper">
       <h1 className={styles.heading}>My Quiz Progress 📚</h1>
 
       {error ? (

@@ -277,7 +277,7 @@ export default function QuizBuilder() {
   }
 
   return (
-    <div className={styles.wrapper}>
+    <div className="wrapper">
       <h1>Quiz Builder</h1>
       <p>
         <strong>Year:</strong> {year.toUpperCase()} |{" "}

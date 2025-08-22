@@ -49,6 +49,22 @@ export default function LecturePage() {
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [homeworkVideos, setHomeworkVideos] = useState<HomeworkVideo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isExpired, setIsExpired] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // This code only runs on the client
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Set initial value on mount
+    handleResize();
+
+    // Add and remove event listener for dynamic updates
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []); // Empty dependency array ensures this runs once on mount
 
   useEffect(() => {
     const auth = getAuth();
@@ -61,40 +77,61 @@ export default function LecturePage() {
 
       if (year && courseId && lectureId) {
         try {
-          const courseDocRef = doc(db, `years/${year}/courses/${courseId}`);
-          const courseDocSnap = await getDoc(courseDocRef);
-          if (courseDocSnap.exists()) {
-            setCourseTitle(courseDocSnap.data().title);
-          }
-
-          const linksRef = collection(
+          // Fetch the lecture document
+          const lectureDocRef = doc(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/links`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}`
           );
-          const linksSnapshot = await getDocs(linksRef);
-          const fetchedLinks: LinkItem[] = linksSnapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() } as LinkItem)
-          );
-          setLinks(fetchedLinks);
+          const lectureDocSnap = await getDoc(lectureDocRef);
 
-          const homeworkVideosRef = collection(
-            db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkVideos`
-          );
-          const homeworkVideosSnapshot = await getDocs(homeworkVideosRef);
-          const fetchedHomeworkVideos: HomeworkVideo[] =
-            homeworkVideosSnapshot.docs.map(
-              (doc) => ({ id: doc.id, ...doc.data() } as HomeworkVideo)
+          if (lectureDocSnap.exists()) {
+            const lectureData = lectureDocSnap.data();
+            const isLectureEnabled = lectureData?.isEnabled ?? true;
+
+            // Just mark expired, don't stop other fetching
+            if (!isLectureEnabled) {
+              setIsExpired(true);
+            }
+
+            // Course title
+            const courseDocRef = doc(db, `years/${year}/courses/${courseId}`);
+            const courseDocSnap = await getDoc(courseDocRef);
+            if (courseDocSnap.exists()) {
+              setCourseTitle(courseDocSnap.data().title);
+            }
+
+            // Extra links
+            const linksRef = collection(
+              db,
+              `years/${year}/courses/${courseId}/lectures/${lectureId}/links`
             );
-          setHomeworkVideos(fetchedHomeworkVideos);
+            const linksSnapshot = await getDocs(linksRef);
+            const fetchedLinks: LinkItem[] = linksSnapshot.docs.map(
+              (doc) => ({ id: doc.id, ...doc.data() } as LinkItem)
+            );
+            setLinks(fetchedLinks);
 
-          const lectureProgress = await getLectureProgress(
-            currentUser.uid,
-            year,
-            courseId,
-            lectureId
-          );
-          setProgress(lectureProgress);
+            // Homework videos
+            const homeworkVideosRef = collection(
+              db,
+              `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkVideos`
+            );
+            const homeworkVideosSnapshot = await getDocs(homeworkVideosRef);
+            const fetchedHomeworkVideos: HomeworkVideo[] =
+              homeworkVideosSnapshot.docs.map(
+                (doc) => ({ id: doc.id, ...doc.data() } as HomeworkVideo)
+              );
+            setHomeworkVideos(fetchedHomeworkVideos);
+
+            // Progress
+            const lectureProgress = await getLectureProgress(
+              currentUser.uid,
+              year,
+              courseId,
+              lectureId
+            );
+            setProgress(lectureProgress);
+          }
         } catch (error) {
           console.error("Error fetching data:", error);
         } finally {
@@ -108,6 +145,11 @@ export default function LecturePage() {
     return () => unsubscribe();
   }, [router, year, courseId, lectureId]);
 
+  const handleBack = () => {
+    router.push(`/courses/lectures?year=${year}&courseId=${courseId}`);
+  };
+
+  // Missing params
   if (
     !year ||
     !courseId ||
@@ -117,37 +159,63 @@ export default function LecturePage() {
     !lectureTitle
   ) {
     return (
-      <div className={styles.wrapper}>
+      <div className="wrapper">
         <p>Error: Missing video details. Please return to the lectures page.</p>
         <button onClick={() => router.push("/courses")}>Back to Courses</button>
       </div>
     );
   }
 
-  const handleBack = () => {
-    router.push(`/courses/lectures?year=${year}&courseId=${courseId}`);
-  };
-
   return (
-    <div className={styles.wrapper}>
+    <div
+      className="wrapper"
+      style={{
+        width: isMobile ? "100%" : "calc(100% - 200px)",
+        position: isMobile ? "unset" : "relative",
+      }}
+    >
       <button onClick={handleBack}>← Back to Lectures</button>
       {loading ? (
         <p>Loading details...</p>
       ) : (
         <>
           <h1 className={styles.lectureTitle}>{lectureTitle}</h1>
+
+          {/* Main lecture video OR expired message */}
           <div className={styles.videoContainer}>
-            <iframe
-              src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
-              width="100%"
-              height="500"
-              allowFullScreen
-              frameBorder="0"
-            />
+            {isExpired ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "500px",
+                  border: "2px dashed red",
+                  borderRadius: "8px",
+                  padding: "1rem",
+                  textAlign: "center",
+                }}
+              >
+                <h2 style={{ color: "red", marginBottom: "0.5rem" }}>
+                  The Lecture has Expired 🔒
+                </h2>
+                <p>This lecture is currently not available.</p>
+              </div>
+            ) : (
+              <iframe
+                src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
+                width="100%"
+                height="500"
+                allowFullScreen
+                frameBorder="0"
+              />
+            )}
           </div>
 
           <hr />
 
+          {/* Homework Videos */}
           {homeworkVideos.length > 0 && (
             <>
               <section>
@@ -172,6 +240,7 @@ export default function LecturePage() {
             </>
           )}
 
+          {/* Sidebar info */}
           <div className={styles.quizSummaryFloating}>
             <div>
               <p>

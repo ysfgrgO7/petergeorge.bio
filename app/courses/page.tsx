@@ -137,7 +137,7 @@ export default function CoursesPage() {
   const groupedCourses = groupAndSortCourses(courses);
 
   return (
-    <div className={styles.wrapper}>
+    <div className="wrapper">
       <h1>Available Courses</h1>
       {loadingCourses ? (
         <p>Loading courses...</p>

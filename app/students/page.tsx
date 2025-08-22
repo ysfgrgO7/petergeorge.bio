@@ -119,7 +119,7 @@ export default function StudentsPage() {
   });
 
   return (
-    <div className={styles.container}>
+    <div className="wrapper">
       <div
         style={{
           display: "flex",

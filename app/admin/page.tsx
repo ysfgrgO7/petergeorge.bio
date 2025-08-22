@@ -29,6 +29,7 @@ interface Lecture extends DocumentData {
   odyseeId: string;
   order: number; // To maintain the display order of lectures
   isHidden?: boolean; // New optional field to track visibility
+  isEnabled?: boolean; // NEW: Add this optional field
 }
 
 interface Course extends DocumentData {
@@ -186,6 +187,7 @@ export default function AdminDashboard() {
     }
   };
 
+  // NEW: Handler to create a new course
   const handleCreate = async () => {
     if (!title.trim() || !description.trim()) {
       setModalMessage("Course title and description cannot be empty.");
@@ -269,6 +271,7 @@ export default function AdminDashboard() {
         odyseeId: info.id,
         order: newOrder,
         isHidden: true,
+        isEnabled: true, // NEW: Set isEnabled to true by default
       });
 
       setLectureTitle("");
@@ -331,6 +334,38 @@ export default function AdminDashboard() {
       setShowModal(true);
     }
   };
+
+  // NEW: Handler to toggle enabled status
+  const handleToggleLectureEnabled = async (
+    courseId: string,
+    lectureId: string,
+    currentStatus: boolean
+  ) => {
+    try {
+      const lectureRef = doc(
+        db,
+        `years/${activeYearTab}/courses/${courseId}/lectures`,
+        lectureId
+      );
+      await updateDoc(lectureRef, {
+        isEnabled: !currentStatus,
+      });
+      fetchLecturesForCourse(activeYearTab, courseId);
+      setModalMessage(
+        `Lecture status updated successfully! It is now ${
+          !currentStatus ? "enabled" : "disabled"
+        }.`
+      );
+      setShowModal(true);
+    } catch (error: unknown) {
+      console.error("Error updating lecture status:", error);
+      setModalMessage(
+        "Failed to update lecture status: " + (error as Error).message
+      );
+      setShowModal(true);
+    }
+  };
+
   const handleGenerateUniversalCode = async () => {
     try {
       const generateCodeString = () => {
@@ -386,7 +421,7 @@ export default function AdminDashboard() {
 
   // Rest of the component renders only if the user is an admin
   return (
-    <div className={styles.wrapper}>
+    <div className="wrapper">
       <h1>Admin Dashboard</h1>
       <hr />
       <h1>Create Course</h1>
@@ -419,7 +454,6 @@ export default function AdminDashboard() {
 
       <hr />
 
-      {/* NEW: Section for generating a universal code */}
       <section>
         <h2>Generate Universal Lecture Code</h2>
         <p>This code will unlock a single, locked lecture for one user.</p>
@@ -437,6 +471,18 @@ export default function AdminDashboard() {
             placeholder="Generated code will appear here"
             className={styles.generatedCodeInput}
           />
+          <button
+            onClick={() => {
+              if (generatedCode) {
+                navigator.clipboard.writeText(generatedCode);
+              }
+
+              setModalMessage(`Code copied to clipboard!`);
+              setShowModal(true);
+            }}
+          >
+            Copy
+          </button>
         </div>
       </section>
 
@@ -555,6 +601,28 @@ export default function AdminDashboard() {
                             }
                           >
                             {lecture.isHidden ? "Make Visible" : "Hide Lecture"}
+                          </button>
+                          {/* NEW: Button to toggle enabled/disabled status */}
+                          <button
+                            style={{ backgroundColor: "var(--red)" }}
+                            onClick={() =>
+                              handleToggleLectureEnabled(
+                                course.id,
+                                lecture.id,
+                                !!lecture.isEnabled
+                              )
+                            }
+                          >
+                            {lecture.isEnabled ? "Disable" : "Enable"}
+                          </button>
+                          <button
+                            onClick={() =>
+                              router.push(
+                                `/admin/viewLecture?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}&odyseeName=${lecture.odyseeName}&odyseeId=${lecture.odyseeId}`
+                              )
+                            }
+                          >
+                            View Lecture
                           </button>
                         </div>
                       </li>

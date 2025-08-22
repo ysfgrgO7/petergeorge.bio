@@ -218,7 +218,7 @@ function LecturesContent() {
   );
 
   return (
-    <div className={styles.wrapper}>
+    <div className="wrapper">
       <button onClick={() => router.push("/courses")}>
         <IoChevronBackCircleSharp /> Back to Courses
       </button>
