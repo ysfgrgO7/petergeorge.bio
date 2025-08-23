@@ -1,5 +1,5 @@
 // admin/MessageModal.tsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 interface MessageModalProps {
   message: string;
@@ -7,41 +7,73 @@ interface MessageModalProps {
 }
 
 const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    // Auto-close after 3s
+    const timer = setTimeout(() => {
+      setVisible(false);
+      setTimeout(onClose, 800); // wait for animation to finish
+    }, 8000);
+
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
   return (
     <div
       style={{
         position: "fixed",
-        inset: 0,
+        top: "1rem",
+        right: "1rem",
         zIndex: 1000,
-        backgroundColor: "transparent",
-        height: "min-content",
-        width: "fit-content",
-        border: "10px solid transparent",
-        right: 0,
       }}
     >
       <div
+        className={`toast ${visible ? "toast-show" : "toast-hide"}`}
         style={{
           backgroundColor: "var(--green)",
           color: "var(--white)",
-          padding: "10px",
+          padding: "12px 16px",
           borderRadius: "var(--border-radius)",
-          right: 0,
+          boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
+          minWidth: "200px",
         }}
       >
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
-            <p className="text-lg font-semibold mb-4">{message}</p>
-            <button
-              onClick={onClose}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-              style={{ backgroundColor: "var(--black)" }}
-            >
-              OK
-            </button>
-          </div>
-        </div>
+        <p style={{ margin: 0 }}>{message}</p>
+        <button
+          onClick={() => {
+            setVisible(false);
+            setTimeout(onClose, 300);
+          }}
+          style={{
+            marginTop: "8px",
+            backgroundColor: "var(--black)",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            padding: "6px 12px",
+            cursor: "pointer",
+          }}
+        >
+          OK
+        </button>
       </div>
+
+      <style jsx>{`
+        .toast {
+          transition: all 0.3s ease-in-out;
+          opacity: 0;
+          transform: translateX(100%);
+        }
+        .toast-show {
+          opacity: 1;
+          transform: translateX(0);
+        }
+        .toast-hide {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+      `}</style>
     </div>
   );
 };
