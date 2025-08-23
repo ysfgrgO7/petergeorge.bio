@@ -203,13 +203,33 @@ export default function LecturePage() {
                 <p>This lecture is currently not available.</p>
               </div>
             ) : (
-              <iframe
-                src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
-                width="100%"
-                height="500"
-                allowFullScreen
-                frameBorder="0"
-              />
+              <div
+                style={{ position: "relative", width: "100%", height: "500px" }}
+              >
+                <iframe
+                  src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
+                  width="100%"
+                  height="500"
+                  allowFullScreen
+                  frameBorder="0"
+                  style={{ display: "block" }}
+                />
+                <button
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100px",
+                    background: "transparent",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.5rem",
+                  }}
+                ></button>
+              </div>
             )}
           </div>
 
@@ -226,13 +246,36 @@ export default function LecturePage() {
                     className={styles.videoContainer}
                     style={{ marginBottom: "20px" }}
                   >
-                    <iframe
-                      src={`https://odysee.com/$/embed/${video.odyseeName}:${video.odyseeId}`}
-                      width="100%"
-                      height="350"
-                      allowFullScreen
-                      frameBorder="0"
-                    />
+                    <div
+                      style={{
+                        position: "relative",
+                        width: "100%",
+                        height: "500px",
+                      }}
+                    >
+                      <iframe
+                        src={`https://odysee.com/$/embed/${video.odyseeName}:${video.odyseeId}`}
+                        width="100%"
+                        height="350"
+                        allowFullScreen
+                        frameBorder="0"
+                      />
+                      <button
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100px",
+                          background: "transparent",
+                          color: "white",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "1.5rem",
+                        }}
+                      ></button>
+                    </div>
                   </div>
                 ))}
               </section>

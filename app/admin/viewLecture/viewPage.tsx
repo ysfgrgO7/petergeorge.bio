@@ -103,13 +103,30 @@ export default function LecturePage() {
 
       {odyseeName && odyseeId && (
         <div className={styles.videoPlayer}>
-          <iframe
-            id="odysee-iframe"
-            width="100%"
-            height="500"
-            src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
-            allowFullScreen
-          ></iframe>
+          <div style={{ position: "relative", width: "100%", height: "500px" }}>
+            <iframe
+              id="odysee-iframe"
+              width="100%"
+              height="500"
+              src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
+              allowFullScreen
+            ></iframe>
+            <button
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100px",
+                background: "transparent",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.5rem",
+              }}
+            ></button>
+          </div>
         </div>
       )}
       <hr />
@@ -121,12 +138,29 @@ export default function LecturePage() {
           className={styles.videoContainer}
           style={{ marginBottom: "20px" }}
         >
-          <iframe
-            src={`https://odysee.com/$/embed/${video.odyseeName}:${video.odyseeId}`}
-            width="100%"
-            height="350"
-            allowFullScreen
-          />
+          <div style={{ position: "relative", width: "100%", height: "500px" }}>
+            <iframe
+              src={`https://odysee.com/$/embed/${video.odyseeName}:${video.odyseeId}`}
+              width="100%"
+              height="350"
+              allowFullScreen
+            />
+            <button
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100px",
+                background: "transparent",
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.5rem",
+              }}
+            ></button>
+          </div>
         </div>
       ))}
 
