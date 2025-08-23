@@ -1,11 +1,12 @@
 "use client";
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { setDoc, doc } from "firebase/firestore";
 import styles from "../styles.module.css";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { onAuthStateChanged } from "firebase/auth";
 
 interface FormData {
   firstName: string;
@@ -44,6 +45,16 @@ export default function Register() {
   const router = useRouter();
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push("/courses");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [auth, router]);
 
   const [formData, setFormData] = useState<FormData>({
     firstName: "",

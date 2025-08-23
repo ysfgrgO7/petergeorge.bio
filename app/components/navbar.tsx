@@ -346,6 +346,7 @@ export default function Navbar({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                color: "var(--white)",
               }}
               aria-label="Toggle sidebar"
               title="Toggle sidebar"

@@ -12,6 +12,7 @@
   transform: translateX(0);
   transition: transform 0.3s ease, width 0.3s ease;
   z-index: 999;
+  border-right: 1px solid var(--white);
 }
 
 .logoContainer {
@@ -83,7 +84,7 @@
 
 .logout:hover {
   background-color: var(--red);
-  color: var(--black);
+  color: var(--fg);
   opacity: 0.8;
 }
 
@@ -159,7 +160,7 @@
 .collapseToggle {
   background: none;
   border: none;
-  color: var(--white);
+  color: var(--bg);
   cursor: pointer;
   padding: 0.5rem;
   top: 1rem;
@@ -171,12 +172,14 @@
   position: relative;
   bottom: 0;
   width: 100%;
-  background-color: var(--white);
+  background-color: var(--black);
   text-align: center;
   margin-top: auto; /* Push footer to the bottom */
 }
 
 .footer {
+  border-top: 1px solid var(--white);
+  padding: 0.2rem;
   display: flex;
   justify-content: space-between;
   background-color: var(--black);
@@ -209,9 +212,36 @@
   font-size: 1.6rem;
 }
 
+.toggleWrapper {
+  display: flex;
+  background-color: transparent;
+  border: 2px solid var(--light);
+  border-radius: 15px;
+  width: fit-content;
+}
+
+.toggleBtn {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.toggleBtn:hover {
+  color: #aaa;
+}
+
+.toggleWrapper .active {
+  background-color: var(--light);
+  color: white;
+}
+
 @media (max-width: 768px) {
   .topbar {
     display: flex;
+    border-bottom: 1px solid var(--white);
   }
 
   .navbar {
@@ -272,5 +302,15 @@
   .collapseToggle {
     display: none;
     visibility: hidden;
+  }
+
+  .footer {
+    border-top: 1px solid var(--white);
+    padding: 0.2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background-color: var(--black);
+    color: var(--white);
   }
 }

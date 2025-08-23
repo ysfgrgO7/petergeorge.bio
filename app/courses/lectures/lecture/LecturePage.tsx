@@ -265,6 +265,7 @@ export default function LecturePage() {
                       key={link.id}
                       style={{
                         color: "var(--blue)",
+                        filter: "brightness(1.9)",
                         textDecoration: "underline",
                         listStyle: "none",
                       }}

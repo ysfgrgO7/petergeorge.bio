@@ -9,7 +9,7 @@
   border: 2px solid var(--blue);
   text-align: left;
   background-color: var(--light);
-  color: var(--white);
+  color: var(--bg);
 }
 
 .table td:hover {
@@ -18,7 +18,7 @@
 
 .table th {
   background-color: var(--blue);
-  color: var(--white);
+  color: var(--bg);
   font-weight: bold;
   padding: 0.75rem;
   border: 2px solid var(--blue);

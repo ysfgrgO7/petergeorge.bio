@@ -1,6 +1,8 @@
 "use client";
-import React, { useState, ChangeEvent, FormEvent } from "react";
+import React, { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import { getAuth, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
+
 import { FirebaseError } from "firebase/app";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
@@ -16,6 +18,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const auth = getAuth();
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push("/courses");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [auth, router]);
 
   const getDeviceId = () => {
     let deviceId = localStorage.getItem("deviceId");

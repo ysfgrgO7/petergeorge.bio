@@ -11,10 +11,10 @@
 .lectureCard,
 .courseCard {
   border: 1px solid var(--dark);
-  box-shadow: 0px 0px 9px 1px var(--black);
-  background-color: var(--white);
+  box-shadow: 0px 0px 9px 1px var(--fg);
+  background-color: var(--bg);
   filter: brightness(0.95);
-  color: var(--black);
+  color: var(--fg);
   padding: 1rem;
   border-radius: var(--border-radius);
 }
@@ -49,7 +49,7 @@
   margin-bottom: 5px;
   font-size: 1.2rem;
   border: 3px solid var(--dark);
-  background-color: var(--white); /* Light background */
+  background-color: var(--bg); /* Light background */
   filter: brightness(0.95);
   border-radius: var(--border-radius);
   transition: background-color 0.2s ease, color 0.2s ease,
@@ -60,7 +60,7 @@
 .choices:hover,
 .selectedChoice {
   background-color: var(--green); /* Highlight background */
-  color: var(--white); /* Highlight text color */
+  color: var(--bg); /* Highlight text color */
 }
 
 .quizSummaryFloating {
@@ -72,14 +72,14 @@
   justify-content: space-between;
   height: 75%;
   width: 200px; /* Width of the floating window */
-  background-color: var(--white); /* Light background */
+  background-color: var(--bg); /* Light background */
   filter: brightness(0.95);
   padding: 1.5rem;
   border-radius: var(--border-radius);
   z-index: 1000; /* Ensure it stays on top */
   border: 2px solid var(--dark); /* Subtle border */
   font-size: 1rem;
-  color: var(--black);
+  color: var(--fg);
 }
 
 .quizImageContainer {

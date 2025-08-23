@@ -483,7 +483,7 @@ export default function QuizClient() {
             You scored{" "}
             <strong
               style={{
-                color: "var(--white)",
+                color: "var(--bg)",
                 padding: "7px",
                 borderRadius: "5px",
                 backgroundColor:

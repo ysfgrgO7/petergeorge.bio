@@ -32,7 +32,7 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
         className={`toast ${visible ? "toast-show" : "toast-hide"}`}
         style={{
           backgroundColor: "var(--green)",
-          color: "var(--white)",
+          color: "var(--bg)",
           padding: "12px 16px",
           borderRadius: "var(--border-radius)",
           boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
@@ -47,7 +47,7 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
           }}
           style={{
             marginTop: "8px",
-            backgroundColor: "var(--black)",
+            backgroundColor: "var(--fg)",
             color: "white",
             border: "none",
             borderRadius: "6px",
