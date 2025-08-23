@@ -13,7 +13,7 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
     // Auto-close after 3s
     const timer = setTimeout(() => {
       setVisible(false);
-      setTimeout(onClose, 800); // wait for animation to finish
+      setTimeout(onClose, 300); // wait for animation to finish
     }, 8000);
 
     return () => clearTimeout(timer);
