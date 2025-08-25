@@ -73,8 +73,9 @@ export default function QuizClient() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [isQuizReady, setIsQuizReady] = useState(false);
 
-  const [score, setScore] = useState<number | null>(null);
-  const [showResults, setShowResults] = useState(false);
+  // The 'score' and 'showResults' states are no longer needed here.
+  // const [score, setScore] = useState<number | null>(null);
+  // const [showResults, setShowResults] = useState(false);
 
   const handleSubmit = useCallback(async () => {
     if (quizSubmitted) return;
@@ -121,8 +122,9 @@ export default function QuizClient() {
       }
     });
 
-    setScore(correctAnswersCount);
-    setShowResults(true);
+    // Remove the state updates for score and results
+    // setScore(correctAnswersCount);
+    // setShowResults(true);
 
     const attemptRef = doc(
       db,
@@ -170,39 +172,25 @@ export default function QuizClient() {
           totalMCQQuestions
         );
         await unlockLecture(user.uid, year, courseId, lectureId);
-        setModalMessage(
-          `Quiz completed! You scored ${correctAnswersCount} out of ${totalMCQQuestions} on the multiple-choice questions. Video unlocked! 🎉`
-        );
-        if (submittedEssayAnswers.length > 0) {
-          setModalMessage(
-            (prev) =>
-              prev +
-              " Your essay questions will be graded separately. Check Your Progress page for updates."
-          );
-        }
       } catch (error: unknown) {
         console.error("Error completing quiz:", error);
-        setModalMessage("Failed to complete quiz. " + (error as Error).message);
       }
     } else {
       try {
         await deleteDoc(quizStateDocRef);
-        setModalMessage(
-          `You failed the quiz with a score of ${correctAnswersCount} out of ${totalMCQQuestions}.`
-        );
       } catch (error) {
         console.error(
           "Error deleting quiz attempt document after failure:",
           error
         );
-        setModalMessage(
-          "Quiz failed, but there was an error resetting your progress."
-        );
       }
     }
 
-    setShowModal(true);
-    setQuizSubmitted(false);
+    // Redirect to the new results page after submission.
+    // The score and total are passed as URL query parameters.
+    router.push(
+      `/courses/lectures/quiz/results?score=${correctAnswersCount}&total=${totalMCQQuestions}`
+    );
   }, [
     quizSubmitted,
     questions,
@@ -230,6 +218,26 @@ export default function QuizClient() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []); // Empty dependency array ensures this runs once on mount
+
+  useEffect(() => {
+    const blockContextMenu = (e: MouseEvent) => e.preventDefault();
+    const blockKeys = (e: KeyboardEvent) => {
+      if (
+        e.key === "PrintScreen" ||
+        (e.ctrlKey && e.key === "c") ||
+        (e.ctrlKey && e.key === "u") ||
+        (e.ctrlKey && e.shiftKey && e.key === "I")
+      ) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener("contextmenu", blockContextMenu);
+    window.addEventListener("keydown", blockKeys);
+    return () => {
+      document.removeEventListener("contextmenu", blockContextMenu);
+      window.removeEventListener("keydown", blockKeys);
+    };
+  }, []);
 
   useEffect(() => {
     const auth = getAuth();
@@ -347,7 +355,8 @@ export default function QuizClient() {
   }, [year, courseId, lectureId, router]);
 
   useEffect(() => {
-    if (!isQuizReady || quizSubmitted || showResults) return;
+    // We no longer need to check for showResults here
+    if (!isQuizReady || quizSubmitted) return;
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime <= 1) {
@@ -362,7 +371,7 @@ export default function QuizClient() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isQuizReady, quizSubmitted, showResults, handleSubmit]);
+  }, [isQuizReady, quizSubmitted, handleSubmit]);
 
   const handleMcqChange = (qIndex: number, optionIndex: number) => {
     const updatedAnswers = [...mcqAnswers];
@@ -416,6 +425,7 @@ export default function QuizClient() {
     );
   }
 
+  // The rendering logic for results has been moved to a separate page.
   return (
     <div
       className="wrapper"
@@ -427,7 +437,7 @@ export default function QuizClient() {
       <h1>Lecture Quiz</h1>
       <hr />
 
-      {questions.length > 0 && !showResults && (
+      {questions.length > 0 && (
         <div className={styles.quizSummaryFloating}>
           <div>
             <h2>Quiz Summary</h2>
@@ -456,58 +466,74 @@ export default function QuizClient() {
       )}
       <hr className={styles.summaryHr} />
 
-      {showResults ? (
-        <div>
-          <h2>Quiz Results</h2>
-          <p style={{ marginBottom: "10px" }}>
-            You scored{" "}
-            <strong
-              style={{
-                color: "var(--bg)",
-                padding: "7px",
-                borderRadius: "5px",
-                backgroundColor:
-                  score !== null &&
-                  score >= Math.floor(totalMCQQuestions / 2) + 1
-                    ? "var(--green)"
-                    : "var(--red)",
-              }}
-            >
-              {score}/{totalMCQQuestions}
-            </strong>{" "}
-            questions correctly on the multiple-choice section!
-          </p>
-          {totalEssayQuestions > 0 && (
-            <p style={{ marginBottom: "10px" }}>
-              Your {totalEssayQuestions}{" "}
-              {totalEssayQuestions > 1 ? "essay questions" : "essay question"}{" "}
-              will be graded separately. Check Your Progress page for updates.
+      {/* Render MCQ Questions */}
+      {questions
+        .filter((q) => q.type === "mcq")
+        .map((q, i) => (
+          <div key={q.id} className={styles.question}>
+            <p>
+              <strong>
+                Q{i + 1}: {q.question}{" "}
+              </strong>
             </p>
-          )}
-          <button
-            onClick={() => router.push("/courses")}
-            className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
-          >
-            Back to Courses
-          </button>
-        </div>
-      ) : (
-        <>
-          {/* Render MCQ Questions */}
+            {q.imageUrl && (
+              <div className={styles.quizImageContainer}>
+                <img
+                  src={q.imageUrl}
+                  alt={`Question ${i + 1}`}
+                  className={styles.quizImage}
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    target.src =
+                      "https://placehold.co/400x200/cccccc/000000?text=Image+Not+Found";
+                  }}
+                />
+              </div>
+            )}
+            {q.options!.map((opt: string, j: number) => (
+              <label
+                key={j}
+                className={`${styles.choices} ${
+                  mcqAnswers[i] === j ? styles.selectedChoice : ""
+                }`}
+              >
+                <input
+                  type="radio"
+                  name={`q-${i}`}
+                  checked={mcqAnswers[i] === j}
+                  style={{
+                    marginRight: "0.2rem",
+                    visibility: "hidden",
+                  }}
+                  onChange={() => handleMcqChange(i, j)}
+                />
+                {opt}
+              </label>
+            ))}
+            <hr />
+          </div>
+        ))}
+
+      {/* Render Essay Questions */}
+      {questions.filter((q) => q.type === "essay").length > 0 && (
+        <div className={styles.essayQuestionsSection}>
+          <h2>Essay Questions</h2>
+          <p>Please provide detailed answers in the boxes below.</p>
+          <hr />
           {questions
-            .filter((q) => q.type === "mcq")
+            .filter((q) => q.type === "essay")
             .map((q, i) => (
               <div key={q.id} className={styles.question}>
                 <p>
                   <strong>
-                    Q{i + 1}: {q.question}{" "}
+                    Q{totalMCQQuestions + i + 1}: {q.question}{" "}
                   </strong>
                 </p>
                 {q.imageUrl && (
                   <div className={styles.quizImageContainer}>
                     <img
                       src={q.imageUrl}
-                      alt={`Question ${i + 1}`}
+                      alt={`Question ${totalMCQQuestions + i + 1}`}
                       className={styles.quizImage}
                       onError={(e) => {
                         const target = e.currentTarget as HTMLImageElement;
@@ -517,78 +543,30 @@ export default function QuizClient() {
                     />
                   </div>
                 )}
-                {q.options!.map((opt: string, j: number) => (
-                  <label
-                    key={j}
-                    className={`${styles.choices} ${
-                      mcqAnswers[i] === j ? styles.selectedChoice : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`q-${i}`}
-                      checked={mcqAnswers[i] === j}
-                      style={{
-                        marginRight: "0.2rem",
-                        visibility: "hidden",
-                      }}
-                      onChange={() => handleMcqChange(i, j)}
-                    />
-                    {opt}
-                  </label>
-                ))}
+                <div className={styles.essayAnswerContainer}>
+                  <label htmlFor={`essay-${q.id}`}>Your Answer:</label>
+                  <textarea
+                    id={`essay-${q.id}`}
+                    className={styles.essayTextarea}
+                    value={essayAnswers[q.id] || ""}
+                    onChange={(e) => handleEssayChange(q.id, e.target.value)}
+                    rows={8}
+                  ></textarea>
+                </div>
                 <hr />
               </div>
             ))}
-
-          {/* Render Essay Questions */}
-          {questions.filter((q) => q.type === "essay").length > 0 && (
-            <div className={styles.essayQuestionsSection}>
-              <h2>Essay Questions</h2>
-              <p>Please provide detailed answers in the boxes below.</p>
-              <hr />
-              {questions
-                .filter((q) => q.type === "essay")
-                .map((q, i) => (
-                  <div key={q.id} className={styles.question}>
-                    <p>
-                      <strong>
-                        Q{totalMCQQuestions + i + 1}: {q.question}{" "}
-                      </strong>
-                    </p>
-                    {q.imageUrl && (
-                      <div className={styles.quizImageContainer}>
-                        <img
-                          src={q.imageUrl}
-                          alt={`Question ${totalMCQQuestions + i + 1}`}
-                          className={styles.quizImage}
-                          onError={(e) => {
-                            const target = e.currentTarget as HTMLImageElement;
-                            target.src =
-                              "https://placehold.co/400x200/cccccc/000000?text=Image+Not+Found";
-                          }}
-                        />
-                      </div>
-                    )}
-                    <div className={styles.essayAnswerContainer}>
-                      <label htmlFor={`essay-${q.id}`}>Your Answer:</label>
-                      <textarea
-                        id={`essay-${q.id}`}
-                        className={styles.essayTextarea}
-                        value={essayAnswers[q.id] || ""}
-                        onChange={(e) =>
-                          handleEssayChange(q.id, e.target.value)
-                        }
-                        rows={8}
-                      ></textarea>
-                    </div>
-                    <hr />
-                  </div>
-                ))}
-            </div>
-          )}
-        </>
+        </div>
       )}
+      <div className="flex justify-center mt-6">
+        <button
+          onClick={handleSubmit}
+          disabled={quizSubmitted}
+          className="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
+        >
+          {quizSubmitted ? "Submitting..." : "Submit Quiz"}
+        </button>
+      </div>
 
       {showModal && (
         <MessageModal
