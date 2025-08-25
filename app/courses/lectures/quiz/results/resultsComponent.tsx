@@ -1,19 +1,70 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { getAuth, onAuthStateChanged, User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import styles from "../../../courses.module.css";
 
-// This component displays the quiz results after submission.
 export default function QuizResults() {
   const router = useRouter();
   const params = useSearchParams();
+  const year = params.get("year");
+  const courseId = params.get("courseId");
+  const lectureId = params.get("lectureId");
 
-  // Get the score and total questions from the URL query parameters.
-  const score = params.get("score");
-  const total = params.get("total");
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [score, setScore] = useState<number | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
 
-  // If no score or total is found, show an error message.
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (!currentUser) {
+        router.push("/login");
+        return;
+      }
+      setUser(currentUser);
+
+      if (!year || !courseId || !lectureId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const resultRef = doc(
+          db,
+          "students",
+          currentUser.uid,
+          "progress",
+          `${year}_${courseId}_${lectureId}`
+        );
+        const resultSnap = await getDoc(resultRef);
+        if (resultSnap.exists()) {
+          const data = resultSnap.data();
+          setScore(data.score ?? null);
+          setTotal(data.total ?? null);
+        }
+      } catch (err) {
+        console.error("Error fetching results:", err);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [year, courseId, lectureId, router]);
+
+  if (loading) {
+    return (
+      <div className={styles.wrapper}>
+        <p>Loading results...</p>
+      </div>
+    );
+  }
+
   if (!score || !total) {
     return (
       <div className={styles.wrapper}>
@@ -29,10 +80,8 @@ export default function QuizResults() {
     );
   }
 
-  const numericScore = parseInt(score, 10);
-  const numericTotal = parseInt(total, 10);
-  const requiredScore = Math.floor(numericTotal / 2) + 1;
-  const passed = numericScore >= requiredScore;
+  const requiredScore = Math.floor(total / 2) + 1;
+  const passed = score >= requiredScore;
 
   return (
     <div className={styles.wrapper}>
@@ -49,7 +98,7 @@ export default function QuizResults() {
             backgroundColor: passed ? "var(--green)" : "var(--red)",
           }}
         >
-          {numericScore}/{numericTotal}
+          {score}/{total}
         </strong>{" "}
         questions correctly on the multiple-choice section!
       </p>

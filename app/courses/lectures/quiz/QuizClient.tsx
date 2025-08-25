@@ -189,7 +189,7 @@ export default function QuizClient() {
     // Redirect to the new results page after submission.
     // The score and total are passed as URL query parameters.
     router.push(
-      `/courses/lectures/quiz/results?score=${correctAnswersCount}&total=${totalMCQQuestions}`
+      `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
     );
   }, [
     quizSubmitted,
@@ -558,15 +558,6 @@ export default function QuizClient() {
             ))}
         </div>
       )}
-      <div className="flex justify-center mt-6">
-        <button
-          onClick={handleSubmit}
-          disabled={quizSubmitted}
-          className="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
-        >
-          {quizSubmitted ? "Submitting..." : "Submit Quiz"}
-        </button>
-      </div>
 
       {showModal && (
         <MessageModal

@@ -14,6 +14,8 @@ import { db } from "@/lib/firebase";
 import { getLectureProgress } from "@/lib/studentProgress";
 import styles from "../../courses.module.css";
 
+import { IoChevronBackCircleSharp } from "react-icons/io5";
+
 interface ProgressData {
   quizCompleted?: boolean;
   score?: number;
@@ -174,7 +176,12 @@ export default function LecturePage() {
         position: isMobile ? "unset" : "relative",
       }}
     >
-      <button onClick={handleBack}>← Back to Lectures</button>
+      <button
+        onClick={handleBack}
+        style={{ display: "flex", alignItems: "center" }}
+      >
+        <IoChevronBackCircleSharp /> Back to Lectures
+      </button>
       {loading ? (
         <p>Loading details...</p>
       ) : (
