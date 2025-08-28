@@ -30,16 +30,14 @@ export default function QuizBuilder() {
   const courseId = searchParams.get("courseId");
   const lectureId = searchParams.get("lectureId");
 
-  // --- MCQ state ---
-  const [question, setQuestion] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  // --- Quiz content state ---
+  const [mcqQuestion, setMcqQuestion] = useState("");
+  const [mcqImageUrl, setMcqImageUrl] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
     null
   );
   const [existingQuizzes, setExistingQuizzes] = useState<ExistingQuiz[]>([]);
-
-  // --- Essay state ---
   const [essayQuestion, setEssayQuestion] = useState("");
   const [essayImageUrl, setEssayImageUrl] = useState("");
   const [existingEssays, setExistingEssays] = useState<ExistingQuiz[]>([]);
@@ -54,8 +52,11 @@ export default function QuizBuilder() {
   // --- UI state ---
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [activeTab, setActiveTab] = useState<
+    "variant1" | "variant2" | "variant3"
+  >("variant1");
 
-  // --- Duration logic (same as before) ---
+  // --- Duration logic ---
   const fetchQuizDuration = async () => {
     if (!year || !courseId || !lectureId) {
       setIsDurationLoading(false);
@@ -111,7 +112,7 @@ export default function QuizBuilder() {
       await setDoc(settingsDocRef, { duration: durationValue });
       setCurrentQuizDuration(durationValue);
       setQuizDurationInput("");
-      setModalMessage("Quiz duration saved successfully!");
+      setModalMessage("Quiz duration saved successfully! 🎉");
       setShowModal(true);
     } catch (error: unknown) {
       console.error("Error saving quiz duration:", error);
@@ -123,26 +124,36 @@ export default function QuizBuilder() {
   };
 
   // --- Fetch quizzes ---
-  const fetchQuizzes = async () => {
+  const fetchQuizzes = async (tab: "variant1" | "variant2" | "variant3") => {
     if (!year || !courseId || !lectureId) return;
+    let mcqCollectionPath: string;
+
+    switch (tab) {
+      case "variant1":
+        mcqCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/variant1Quizzes`;
+        break;
+      case "variant2":
+        mcqCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/variant2Quizzes`;
+        break;
+      case "variant3":
+        mcqCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/variant3Quizzes`;
+        break;
+      default:
+        return;
+    }
+
+    const essayCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
+
     try {
-      // MCQs
-      const quizQuestionsRef = collection(
-        db,
-        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
-      );
-      const snapshot = await getDocs(quizQuestionsRef);
-      const quizzes = snapshot.docs.map((doc) => ({
+      const mcqQuestionsRef = collection(db, mcqCollectionPath);
+      const mcqSnapshot = await getDocs(mcqQuestionsRef);
+      const quizzes = mcqSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       })) as ExistingQuiz[];
       setExistingQuizzes(quizzes);
 
-      // Essays
-      const essayRef = collection(
-        db,
-        `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`
-      );
+      const essayRef = collection(db, essayCollectionPath);
       const essaySnap = await getDocs(essayRef);
       const essays = essaySnap.docs.map((doc) => ({
         id: doc.id,
@@ -158,10 +169,19 @@ export default function QuizBuilder() {
 
   useEffect(() => {
     fetchQuizDuration();
-    fetchQuizzes();
-  }, [year, courseId, lectureId]);
+    fetchQuizzes(activeTab);
+  }, [year, courseId, lectureId, activeTab]);
 
-  // --- MCQ handlers ---
+  useEffect(() => {
+    setMcqQuestion("");
+    setMcqImageUrl("");
+    setOptions(["", ""]);
+    setCorrectAnswerIndex(null);
+    setEssayQuestion("");
+    setEssayImageUrl("");
+  }, [activeTab]);
+
+  // --- Options handlers ---
   const addOption = () => {
     if (options.length < 4) setOptions([...options, ""]);
   };
@@ -179,90 +199,76 @@ export default function QuizBuilder() {
     setOptions(updated);
   };
 
-  const handleMCQSubmit = async () => {
+  // --- Submission handlers ---
+  const handleSubmit = async (quizType: "mcq" | "essay") => {
     if (currentQuizDuration === null) {
       setModalMessage("Please set the overall quiz duration first.");
       setShowModal(true);
       return;
     }
-    if (
-      !question.trim() ||
-      options.some((opt) => !opt.trim()) ||
-      correctAnswerIndex === null
-    ) {
-      setModalMessage(
-        "Please complete all MCQ fields and select a correct answer."
-      );
-      setShowModal(true);
-      return;
-    }
+
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
       setShowModal(true);
       return;
     }
+
     try {
-      const quizQuestionsRef = collection(
-        db,
-        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
-      );
-      await addDoc(quizQuestionsRef, {
-        type: "mcq",
-        question,
-        options,
-        correctAnswerIndex,
-        imageUrl: imageUrl.trim() || null,
-      });
-      setModalMessage("MCQ saved successfully!");
+      if (quizType === "mcq") {
+        if (
+          !mcqQuestion.trim() ||
+          options.some((opt) => !opt.trim()) ||
+          correctAnswerIndex === null
+        ) {
+          setModalMessage(
+            "Please complete all MCQ fields and select a correct answer."
+          );
+          setShowModal(true);
+          return;
+        }
+
+        const collectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/${activeTab}Quizzes`;
+        const data = {
+          type: "mcq",
+          question: mcqQuestion,
+          options,
+          correctAnswerIndex,
+          imageUrl: mcqImageUrl.trim() || null,
+        };
+
+        await addDoc(collection(db, collectionPath), data);
+      } else if (quizType === "essay") {
+        if (!essayQuestion.trim()) {
+          setModalMessage("Please enter an essay question.");
+          setShowModal(true);
+          return;
+        }
+
+        const collectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
+        const data = {
+          type: "essay",
+          question: essayQuestion,
+          imageUrl: essayImageUrl.trim() || null,
+        };
+
+        await addDoc(collection(db, collectionPath), data);
+      }
+
+      setModalMessage(`${quizType.toUpperCase()} saved successfully! ✅`);
       setShowModal(true);
-      setQuestion("");
-      setImageUrl("");
+
+      setMcqQuestion("");
+      setMcqImageUrl("");
       setOptions(["", ""]);
       setCorrectAnswerIndex(null);
-      fetchQuizzes();
-    } catch (error: unknown) {
-      console.error("Error adding MCQ:", error);
-      setModalMessage("Failed to save MCQ: " + (error as Error).message);
-      setShowModal(true);
-    }
-  };
-
-  // --- Essay handlers ---
-  const handleEssaySubmit = async () => {
-    if (currentQuizDuration === null) {
-      setModalMessage("Please set the overall quiz duration first.");
-      setShowModal(true);
-      return;
-    }
-    if (!essayQuestion.trim()) {
-      setModalMessage("Please enter an essay question.");
-      setShowModal(true);
-      return;
-    }
-    if (!year || !courseId || !lectureId) {
-      setModalMessage("Missing course, lecture, or year information.");
-      setShowModal(true);
-      return;
-    }
-    try {
-      const essayRef = collection(
-        db,
-        `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`
-      );
-      await addDoc(essayRef, {
-        type: "essay",
-        question: essayQuestion,
-        imageUrl: essayImageUrl.trim() || null,
-      });
-      setModalMessage("Essay question saved successfully!");
-      setShowModal(true);
       setEssayQuestion("");
       setEssayImageUrl("");
-      fetchQuizzes();
+
+      fetchQuizzes(activeTab);
     } catch (error: unknown) {
-      console.error("Error adding essay question:", error);
+      console.error(`Error adding ${quizType}:`, error);
       setModalMessage(
-        "Failed to save essay question: " + (error as Error).message
+        `Failed to save ${quizType}: ` + (error as Error).message
       );
       setShowModal(true);
     }
@@ -285,7 +291,31 @@ export default function QuizBuilder() {
         {lectureId}
       </p>
 
-      {/* Duration Section */}
+      {/* Tabs for different quiz variants */}
+      <div className={styles.tabs}>
+        <button
+          className={activeTab === "variant1" ? styles.activeTab : ""}
+          onClick={() => setActiveTab("variant1")}
+        >
+          Variant 1
+        </button>
+        <button
+          className={activeTab === "variant2" ? styles.activeTab : ""}
+          onClick={() => setActiveTab("variant2")}
+        >
+          Variant 2
+        </button>
+        <button
+          className={activeTab === "variant3" ? styles.activeTab : ""}
+          onClick={() => setActiveTab("variant3")}
+        >
+          Variant 3
+        </button>
+      </div>
+
+      <hr />
+
+      {/* Duration Section (always visible) */}
       <div className={styles.quizDurationSection}>
         <h2>Quiz Duration</h2>
         {isDurationLoading ? (
@@ -330,103 +360,113 @@ export default function QuizBuilder() {
 
       <hr />
 
-      {/* Add MCQ */}
-      <h2>Add MCQ</h2>
-      <textarea
-        placeholder="Question"
-        value={question}
-        onChange={(e) => setQuestion(e.target.value)}
-        style={{ marginBottom: "10px" }}
-      />
-      <input
-        type="url"
-        style={{ marginBottom: "10px" }}
-        placeholder="Image URL (optional)"
-        value={imageUrl}
-        onChange={(e) => setImageUrl(e.target.value)}
-      />
-      {options.map((opt, idx) => (
-        <div
-          key={idx}
-          style={{
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center",
-            marginBottom: "5px",
-          }}
-        >
-          <input
-            type="text"
-            placeholder={`Option ${idx + 1}`}
-            value={opt}
-            onChange={(e) => handleOptionChange(idx, e.target.value)}
+      {/* Render form and existing questions based on the active tab */}
+      <div className={styles.variantSection}>
+        <h2>Add Questions to {activeTab.replace("variant", "Variant ")}</h2>
+        <div className={styles.formSection}>
+          <h3>Add MCQ</h3>
+          <textarea
+            placeholder="Question"
+            value={mcqQuestion}
+            onChange={(e) => setMcqQuestion(e.target.value)}
+            style={{ marginBottom: "10px" }}
           />
           <input
-            type="radio"
-            name="correct"
-            checked={correctAnswerIndex === idx}
-            onChange={() => setCorrectAnswerIndex(idx)}
+            type="url"
+            style={{ marginBottom: "10px" }}
+            placeholder="Image URL (optional)"
+            value={mcqImageUrl}
+            onChange={(e) => setMcqImageUrl(e.target.value)}
           />
-          <label>Correct</label>
-          {options.length > 2 && (
-            <button onClick={() => removeOption(idx)} type="button">
-              🗑️
-            </button>
+          {options.map((opt: string, idx: number) => (
+            <div
+              key={idx}
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                alignItems: "center",
+                marginBottom: "5px",
+              }}
+            >
+              <input
+                type="text"
+                placeholder={`Option ${idx + 1}`}
+                value={opt}
+                onChange={(e) => handleOptionChange(idx, e.target.value)}
+              />
+              <input
+                type="radio"
+                name="correct"
+                checked={correctAnswerIndex === idx}
+                onChange={() => setCorrectAnswerIndex(idx)}
+              />
+              <label>Correct</label>
+              {options.length > 2 && (
+                <button onClick={() => removeOption(idx)} type="button">
+                  🗑️
+                </button>
+              )}
+            </div>
+          ))}
+          {options.length < 5 && (
+            <button onClick={addOption}>➕ Add Option</button>
           )}
+          <button
+            style={{ marginLeft: "10px" }}
+            onClick={() => handleSubmit("mcq")}
+          >
+            ✅ Save MCQ
+          </button>
         </div>
-      ))}
-      {options.length < 5 && <button onClick={addOption}>➕ Add Option</button>}
-      <button style={{ marginLeft: "10px" }} onClick={handleMCQSubmit}>
-        ✅ Save MCQ
-      </button>
 
-      <hr />
+        <hr />
 
-      {/* Add Essay */}
-      <h2>Add Essay Question</h2>
-      <textarea
-        placeholder="Essay Question"
-        value={essayQuestion}
-        onChange={(e) => setEssayQuestion(e.target.value)}
-        style={{ marginBottom: "10px" }}
-      />
-      <input
-        type="url"
-        placeholder="Image URL (optional)"
-        value={essayImageUrl}
-        onChange={(e) => setEssayImageUrl(e.target.value)}
-        style={{ marginBottom: "10px" }}
-      />
-      <button onClick={handleEssaySubmit}>✅ Save Essay</button>
+        <div className={styles.formSection}>
+          <h3>Add Essay Question (Shared)</h3>
+          <textarea
+            placeholder="Essay Question"
+            value={essayQuestion}
+            onChange={(e) => setEssayQuestion(e.target.value)}
+            style={{ marginBottom: "10px" }}
+          />
+          <input
+            type="url"
+            placeholder="Image URL (optional)"
+            value={essayImageUrl}
+            onChange={(e) => setEssayImageUrl(e.target.value)}
+            style={{ marginBottom: "10px" }}
+          />
+          <button onClick={() => handleSubmit("essay")}>✅ Save Essay</button>
+        </div>
 
-      <hr />
+        <hr />
 
-      {/* Display Existing */}
-      <h2>Existing MCQs</h2>
-      {existingQuizzes.length ? (
-        <ul>
-          {existingQuizzes.map((q, i) => (
-            <li key={q.id}>
-              {i + 1}. {q.question}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No MCQs yet.</p>
-      )}
+        <h2>Existing MCQs in {activeTab.replace("variant", "Variant ")}</h2>
+        {existingQuizzes.length ? (
+          <ul>
+            {existingQuizzes.map((q, i) => (
+              <li key={q.id}>
+                {i + 1}. {q.question}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No MCQs yet.</p>
+        )}
 
-      <h2>Existing Essays</h2>
-      {existingEssays.length ? (
-        <ul>
-          {existingEssays.map((q, i) => (
-            <li key={q.id}>
-              {i + 1}. {q.question}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No essays yet.</p>
-      )}
+        <h2>Existing Essays (Shared)</h2>
+        {existingEssays.length ? (
+          <ul>
+            {existingEssays.map((q, i) => (
+              <li key={q.id}>
+                {i + 1}. {q.question}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No essays yet.</p>
+        )}
+      </div>
 
       {showModal && (
         <MessageModal

@@ -40,7 +40,6 @@ export default function LectureManagerPage() {
   const [odyseeName, setOdyseeName] = useState("");
   const [odyseeId, setOdyseeId] = useState("");
   const [newOdyseeLink, setNewOdyseeLink] = useState("");
-  const [quizCount, setQuizCount] = useState(0);
 
   // New state for homework video
   const [newHomeworkLink, setNewHomeworkLink] = useState("");
@@ -90,9 +89,6 @@ export default function LectureManagerPage() {
       setHomeworkVideos(fetchedHomeworkVideos);
 
       // Fetch quiz count
-      const quizzesRef = collection(lectureRef, "quizzes");
-      const quizSnapshot = await getDocs(quizzesRef);
-      setQuizCount(quizSnapshot.docs.length);
     } catch (error) {
       let message = "Failed to fetch lecture data.";
       if (error instanceof Error) {
@@ -411,9 +407,6 @@ export default function LectureManagerPage() {
 
       <section>
         <h2>Quizzes</h2>
-        <p>
-          This lecture has <strong>{quizCount}</strong> quiz question(s).
-        </p>
         <button
           onClick={handleManageQuizzes}
           className={styles.fullWidthButton}
@@ -449,7 +442,10 @@ export default function LectureManagerPage() {
                 <a href={link.url} target="_blank" rel="noopener noreferrer">
                   {link.text}
                 </a>
-                <button style={{ marginLeft: "0.5rem" }} onClick={() => handleDeleteLink(link.id)}>
+                <button
+                  style={{ marginLeft: "0.5rem" }}
+                  onClick={() => handleDeleteLink(link.id)}
+                >
                   Delete
                 </button>
               </li>

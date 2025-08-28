@@ -1,3 +1,4 @@
+// QuizResults.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -65,7 +66,8 @@ export default function QuizResults() {
     );
   }
 
-  if (!score || !total) {
+  // ✅ Fix: check explicitly for null, not falsy (so 0 works)
+  if (score === null || total === null) {
     return (
       <div className={styles.wrapper}>
         <h1>Quiz Results</h1>

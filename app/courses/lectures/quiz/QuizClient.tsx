@@ -13,7 +13,14 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { markQuizComplete, unlockLecture } from "@/lib/studentProgress";
+import {
+  markQuizComplete,
+  unlockLecture,
+  incrementQuizAttempt,
+  getQuizAttemptInfo,
+} from "@/lib/studentProgress";
+import { getUnusedQuizVariant, getRandomQuizVariant } from "@/lib/quizUtils";
+import ConfirmModal from "./confirmModal";
 import styles from "../../courses.module.css";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import MessageModal from "@/app/MessageModal";
@@ -72,10 +79,7 @@ export default function QuizClient() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [isQuizReady, setIsQuizReady] = useState(false);
-
-  // The 'score' and 'showResults' states are no longer needed here.
-  // const [score, setScore] = useState<number | null>(null);
-  // const [showResults, setShowResults] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleSubmit = useCallback(async () => {
     if (quizSubmitted) return;
@@ -98,9 +102,7 @@ export default function QuizClient() {
       if (q.type === "mcq") {
         totalMCQQuestions++;
         const isCorrect = mcqAnswers[mcqQuestionIndex] === q.correctAnswerIndex;
-        if (isCorrect) {
-          correctAnswersCount++;
-        }
+        if (isCorrect) correctAnswersCount++;
         submittedMCQAnswers.push({
           question: q.question,
           type: "mcq",
@@ -122,10 +124,7 @@ export default function QuizClient() {
       }
     });
 
-    // Remove the state updates for score and results
-    // setScore(correctAnswersCount);
-    // setShowResults(true);
-
+    // Save results in Firestore
     const attemptRef = doc(
       db,
       "students",
@@ -179,15 +178,11 @@ export default function QuizClient() {
       try {
         await deleteDoc(quizStateDocRef);
       } catch (error) {
-        console.error(
-          "Error deleting quiz attempt document after failure:",
-          error
-        );
+        console.error("Error deleting quiz attempt doc:", error);
       }
     }
 
-    // Redirect to the new results page after submission.
-    // The score and total are passed as URL query parameters.
+    // ✅ Redirect to results page (results page fetches Firestore, no query needed)
     router.push(
       `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
     );
@@ -202,6 +197,15 @@ export default function QuizClient() {
     lectureId,
     router,
   ]);
+
+  const handleConfirmSubmit = () => {
+    setShowConfirm(true);
+  };
+
+  const confirmSubmit = async () => {
+    setShowConfirm(false);
+    await handleSubmit();
+  };
 
   const [isMobile, setIsMobile] = useState(false);
 
@@ -262,6 +266,23 @@ export default function QuizClient() {
 
       const fetchQuizData = async () => {
         try {
+          // 🆕 Check attempt info before starting quiz
+          const attemptInfo = await getQuizAttemptInfo(
+            currentUser.uid,
+            year,
+            courseId,
+            lectureId
+          );
+
+          if (attemptInfo.maxAttemptsReached) {
+            setModalMessage(
+              "You have reached the maximum number of attempts (3) for this quiz."
+            );
+            setShowModal(true);
+            setLoading(false);
+            return;
+          }
+
           const settingsDocRef = doc(
             db,
             `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
@@ -308,9 +329,21 @@ export default function QuizClient() {
             setTimeLeft(durationSeconds);
           }
 
+          // 🆕 Get unused variant and increment attempt with variant tracking
+          const selectedVariant = getUnusedQuizVariant(
+            attemptInfo.usedVariants
+          );
+          await incrementQuizAttempt(
+            currentUser.uid,
+            year,
+            courseId,
+            lectureId,
+            selectedVariant
+          );
+
           const quizRef = collection(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/${selectedVariant}`
           );
           const essayRef = collection(
             db,
@@ -456,7 +489,7 @@ export default function QuizClient() {
             <hr />
           </div>
           <button
-            onClick={handleSubmit}
+            onClick={handleConfirmSubmit}
             disabled={quizSubmitted}
             style={{ textAlign: "center" }}
           >
@@ -563,6 +596,13 @@ export default function QuizClient() {
         <MessageModal
           message={modalMessage}
           onClose={() => setShowModal(false)}
+        />
+      )}
+      {showConfirm && (
+        <ConfirmModal
+          message="Are you sure you want to submit?"
+          onConfirm={confirmSubmit}
+          onCancel={() => setShowConfirm(false)}
         />
       )}
     </div>

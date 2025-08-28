@@ -13,6 +13,7 @@ import {
 import { db } from "@/lib/firebase";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { getLectureProgress, unlockLecture } from "@/lib/studentProgress";
+import { getRandomQuizVariant } from "@/lib/quizUtils";
 import styles from "../courses.module.css";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -39,6 +40,9 @@ interface ProgressData {
   score?: number;
   totalQuestions?: number;
   unlocked?: boolean;
+  attempts?: number;
+  total?: number;
+  usedVariants?: string[]; // Add this line
 }
 
 function LecturesContent() {
@@ -97,9 +101,10 @@ function LecturesContent() {
               id: docSnap.id,
               ...docSnap.data(),
             } as Lecture;
+            const randomVariant = getRandomQuizVariant();
             const quizRef = collection(
               db,
-              `years/${year}/courses/${courseId}/lectures/${lectureData.id}/quizzes`
+              `years/${year}/courses/${courseId}/lectures/${lectureData.id}/${randomVariant}`
             );
             const quizSnapshot = await getDocs(quizRef);
             lectureData.hasQuiz = !quizSnapshot.empty;
@@ -332,34 +337,64 @@ function LecturesContent() {
                   </>
                 ) : (
                   <>
-                    {lecture.hasQuiz && progress?.quizCompleted && (
-                      <p className={styles.quizScore}>
-                        Quiz Completed: {progress?.score} /{" "}
-                        {progress?.totalQuestions}
-                      </p>
-                    )}
-                    <div className={styles.buttonGroup}>
-                      <button onClick={() => router.push(lectureUrl)}>
-                        {lecture.hasQuiz && !progress?.quizCompleted ? (
-                          <>
-                            <MdQuiz /> Take Quiz
-                          </>
-                        ) : (
-                          <>
-                            <FaPlay /> View Lecture
-                          </>
-                        )}
-                      </button>
-                      {lecture.homeworkLink && (
-                        <a
-                          href={lecture.homeworkLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                    {lecture.hasQuiz &&
+                      progress?.score !== undefined &&
+                      progress?.score !== null && (
+                        <p
+                          className={`${styles.quizScore} ${
+                            !progress?.quizCompleted ? styles.failedQuiz : ""
+                          }`}
                         >
-                          <button>
-                            <FaPlay /> Watch H.w
-                          </button>
-                        </a>
+                          {progress?.quizCompleted
+                            ? "Quiz Completed"
+                            : "Last Score"}
+                          : {progress?.score} /{" "}
+                          {progress?.total || progress?.totalQuestions}
+                        </p>
+                      )}
+
+                    {lecture.hasQuiz &&
+                      progress?.attempts &&
+                      progress.attempts > 0 && (
+                        <p className={styles.attemptCount}>
+                          Attempts: {progress.attempts}
+                        </p>
+                      )}
+                    {lecture.hasQuiz &&
+                      progress?.attempts &&
+                      progress.attempts >= 3 &&
+                      !progress?.quizCompleted && (
+                        <p className={styles.maxAttemptsMessage}>
+                          Maximum attempts reached. Contact Support for help.
+                        </p>
+                      )}
+                    <div className={styles.buttonGroup}>
+                      {/* If lecture has quiz and max attempts reached → render nothing */}
+                      {!(
+                        lecture.hasQuiz &&
+                        progress?.attempts &&
+                        progress.attempts >= 3
+                      ) && (
+                        <button onClick={() => router.push(lectureUrl)}>
+                          {lecture.hasQuiz && progress?.quizCompleted ? (
+                            <>
+                              <FaPlay /> View Lecture
+                            </>
+                          ) : lecture.hasQuiz &&
+                            progress?.score !== undefined ? (
+                            <>
+                              <MdQuiz /> Retake Quiz
+                            </>
+                          ) : lecture.hasQuiz ? (
+                            <>
+                              <MdQuiz /> Take Quiz
+                            </>
+                          ) : (
+                            <>
+                              <FaPlay /> View Lecture
+                            </>
+                          )}
+                        </button>
                       )}
                     </div>
                   </>
