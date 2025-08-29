@@ -19,7 +19,7 @@ import { IoChevronBackCircleSharp } from "react-icons/io5";
 interface ProgressData {
   quizCompleted?: boolean;
   score?: number;
-  totalQuestions?: number;
+  total?: number;
 }
 
 interface LinkItem extends DocumentData {
@@ -300,7 +300,7 @@ export default function LecturePage() {
               {progress?.quizCompleted && (
                 <p>
                   <strong>Quiz Mark:</strong> {progress.score} /{" "}
-                  {progress.totalQuestions}
+                  {progress.total}
                 </p>
               )}
 

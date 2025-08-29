@@ -9,16 +9,15 @@ import styles from "./progress.module.css";
 
 interface QuizData {
   score: number;
-  totalQuestions: number;
-  unlocked: boolean;
-  quizCompleted: boolean;
+  total: number;
 }
 
 interface ProgressItem {
   id: string;
   courseTitle: string;
   lectureTitle: string;
-  quiz: QuizData;
+  quiz: QuizData | null;
+  isHidden: boolean;
 }
 
 export default function ProgressPage() {
@@ -59,66 +58,64 @@ export default function ProgressPage() {
         }
 
         const items: ProgressItem[] = await Promise.all(
-          quizSnapshot.docs
-            .filter((docSnap) => docSnap.data().quizCompleted)
-            .map(async (docSnap) => {
-              const quiz = docSnap.data() as QuizData;
-              const docId = docSnap.id; // e.g., year1_biology_lecture1
+          quizSnapshot.docs.map(async (docSnap) => {
+            const quiz = docSnap.data() as QuizData;
+            const docId = docSnap.id; // e.g., year1_biology_lecture1
 
-              const [year, courseId, lectureId] = docId.split("_");
+            const [year, courseId, lectureId] = docId.split("_");
 
-              // --- fetch course title ---
-              let courseTitle = courseId;
-              try {
-                const courseDocRef = doc(
-                  db,
-                  "years",
-                  year,
-                  "courses",
-                  courseId
-                );
-                const courseDoc = await getDoc(courseDocRef);
-                if (courseDoc.exists()) {
-                  courseTitle = courseDoc.data().title || courseId;
-                }
-              } catch (err) {
-                console.warn("Failed to fetch course title for", courseId, err);
+            // Fetch course title
+            let courseTitle = courseId;
+            try {
+              const courseDocRef = doc(db, "years", year, "courses", courseId);
+              const courseDoc = await getDoc(courseDocRef);
+              if (courseDoc.exists()) {
+                courseTitle = courseDoc.data().title || courseId;
               }
+            } catch (err) {
+              console.warn("Failed to fetch course title for", courseId, err);
+            }
 
-              // --- fetch lecture title ---
-              let lectureTitle = lectureId;
-              try {
-                const lectureDocRef = doc(
-                  db,
-                  "years",
-                  year,
-                  "courses",
-                  courseId,
-                  "lectures",
-                  lectureId
-                );
-                const lectureDoc = await getDoc(lectureDocRef);
-                if (lectureDoc.exists()) {
-                  lectureTitle = lectureDoc.data().title || lectureId;
-                }
-              } catch (err) {
-                console.warn(
-                  "Failed to fetch lecture title for",
-                  lectureId,
-                  err
-                );
+            // Fetch lecture details
+            let lectureTitle = lectureId;
+            let isHidden = false;
+            try {
+              const lectureDocRef = doc(
+                db,
+                "years",
+                year,
+                "courses",
+                courseId,
+                "lectures",
+                lectureId
+              );
+              const lectureDoc = await getDoc(lectureDocRef);
+              if (lectureDoc.exists()) {
+                const data = lectureDoc.data();
+                lectureTitle = data.title || lectureId;
+                isHidden = !!data.isHidden;
               }
+            } catch (err) {
+              console.warn(
+                "Failed to fetch lecture title or properties for",
+                lectureId,
+                err
+              );
+            }
 
-              return {
-                id: docId,
-                quiz,
-                courseTitle,
-                lectureTitle,
-              };
-            })
+            return {
+              id: docId,
+              quiz,
+              courseTitle,
+              lectureTitle,
+              isHidden,
+            };
+          })
         );
 
-        setProgressData(items);
+        // ✅ Filter out hidden lectures completely
+        const visibleItems = items.filter((item) => !item.isHidden);
+        setProgressData(visibleItems);
       } catch (err) {
         console.error("Error fetching progress data:", err);
         setError("Failed to load your progress. Please try again.");
@@ -159,7 +156,9 @@ export default function ProgressPage() {
                 <td>{item.courseTitle}</td>
                 <td>{item.lectureTitle}</td>
                 <td className={styles.score}>
-                  {item.quiz.score} / {item.quiz.totalQuestions}
+                  {item.quiz && item.quiz.score !== undefined
+                    ? `${item.quiz.score} / ${item.quiz.total}`
+                    : "No Quiz"}
                 </td>
               </tr>
             ))}
