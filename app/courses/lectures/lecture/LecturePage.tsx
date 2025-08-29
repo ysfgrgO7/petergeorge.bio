@@ -298,13 +298,15 @@ export default function LecturePage() {
               </p>
               <hr />
               {progress?.quizCompleted && (
-                <p>
-                  <strong>Quiz Mark:</strong> {progress.score} /{" "}
-                  {progress.total}
-                </p>
+                <>
+                  <p>
+                    <strong>Quiz Mark:</strong> {progress.score} /{" "}
+                    {progress.total}
+                  </p>
+                  <hr />
+                </>
               )}
 
-              <hr />
               <p>
                 <strong>Extra Links</strong>
               </p>

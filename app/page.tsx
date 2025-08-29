@@ -4,19 +4,101 @@ import Image from "next/image";
 import styles from "./page.module.css";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, User } from "firebase/auth";
 import { auth, db } from "@/lib/firebase"; // ensure db is exported in firebase.ts
-import { doc, getDoc } from "firebase/firestore";
 
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  query,
+  where,
+  DocumentData,
+} from "firebase/firestore";
 import { MdAppRegistration, MdLogin } from "react-icons/md";
 
 export default function Home() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [studentYear, setStudentYear] = useState<string | null>(null);
+  const [userName, setUserName] = useState("");
+
+  const pickName = (data: DocumentData | undefined, user: User) => {
+    const first =
+      data?.firstName ??
+      data?.givenName ??
+      data?.name?.first ??
+      data?.first ??
+      "";
+    const full =
+      data?.fullName ??
+      data?.displayName ??
+      data?.name ??
+      (first ? [first].filter(Boolean).join(" ") : "");
+
+    if (full) return String(full).trim();
+    if (user.displayName) return user.displayName;
+    if (user.email) return user.email.split("@")[0];
+    return "";
+  };
+
+  const tryDoc = async (path: [string, string]) => {
+    try {
+      const snap = await getDoc(doc(db, path[0], path[1]));
+      return snap.exists() ? snap.data() : undefined;
+    } catch (e) {
+      console.warn("Firestore read blocked for", path.join("/"));
+      return undefined;
+    }
+  };
+
+  const tryQuery = async (
+    coll: string,
+    field: "uid" | "email",
+    value: string
+  ) => {
+    try {
+      const q = query(collection(db, coll), where(field, "==", value));
+      const res = await getDocs(q);
+      if (!res.empty) return res.docs[0].data();
+    } catch (e) {
+      console.warn("Firestore query blocked for", coll, field);
+    }
+    return undefined;
+  };
+
+  const resolveDisplayName = async (user: User) => {
+    if (user.displayName && user.displayName.trim()) return user.displayName;
+
+    const fromUsersByUid = await tryDoc(["users", user.uid]);
+    if (fromUsersByUid) return pickName(fromUsersByUid, user);
+
+    if (user.email) {
+      const fromUsersByEmail = await tryDoc(["users", user.email]);
+      if (fromUsersByEmail) return pickName(fromUsersByEmail, user);
+    }
+
+    const fromStudentsByUid = await tryDoc(["students", user.uid]);
+    if (fromStudentsByUid) return pickName(fromStudentsByUid, user);
+
+    if (user.email) {
+      const fromStudentsByEmail = await tryDoc(["students", user.email]);
+      if (fromStudentsByEmail) return pickName(fromStudentsByEmail, user);
+    }
+    const byUidField = await tryQuery("users", "uid", user.uid);
+    if (byUidField) return pickName(byUidField, user);
+
+    if (user.email) {
+      const byEmailField = await tryQuery("users", "email", user.email);
+      if (byEmailField) return pickName(byEmailField, user);
+    }
+    return user.email ? user.email.split("@")[0] : "";
+  };
 
   useEffect(() => {
     // Listen for Firebase auth state changes
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setIsLoggedIn(true);
@@ -31,6 +113,20 @@ export default function Home() {
       } else {
         setIsLoggedIn(false);
         setStudentYear(null);
+      }
+
+      if (!user) {
+        setUserName("");
+        return;
+      }
+
+      try {
+        const name = await resolveDisplayName(user);
+        setUserName(name);
+        console.log("Resolved student name:", name);
+      } catch (e) {
+        console.error("Failed to resolve display name", e);
+        setUserName("");
       }
     });
 
@@ -73,6 +169,7 @@ export default function Home() {
         <h1 style={{ textAlign: "center", marginBottom: "2rem" }}>
           You bring the dream ... We bring the Way
         </h1>
+
         {!isLoggedIn && (
           <div
             style={{
@@ -108,6 +205,12 @@ export default function Home() {
               <MdAppRegistration style={{ fontSize: "1.3rem" }} /> Register
             </button>
           </div>
+        )}
+
+        {isLoggedIn && (
+          <h2 style={{ textAlign: "center", marginBottom: "2rem" }}>
+            Welcome Back, {userName}👋
+          </h2>
         )}
         <div className={styles.buttonContainer}>
           {buttons

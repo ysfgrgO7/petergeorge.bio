@@ -470,35 +470,6 @@ export default function QuizClient() {
       <h1>Lecture Quiz</h1>
       <hr />
 
-      {questions.length > 0 && (
-        <div className={styles.quizSummaryFloating}>
-          <div>
-            <h2>Quiz Summary</h2>
-            <p>
-              Time Left: <strong>{formatTime(timeLeft)}</strong>
-            </p>
-            <p>
-              Total Questions: <strong>{totalQuestions}</strong>
-            </p>
-            <p>
-              Solved: <strong>{solvedQuestions}</strong>
-            </p>
-            <p>
-              Unsolved: <strong>{unsolvedQuestions}</strong>
-            </p>
-            <hr />
-          </div>
-          <button
-            onClick={handleConfirmSubmit}
-            disabled={quizSubmitted}
-            style={{ textAlign: "center" }}
-          >
-            {quizSubmitted ? "Submitting..." : "Submit Quiz"}
-          </button>
-        </div>
-      )}
-      <hr className={styles.summaryHr} />
-
       {/* Render MCQ Questions */}
       {questions
         .filter((q) => q.type === "mcq")
@@ -591,6 +562,35 @@ export default function QuizClient() {
             ))}
         </div>
       )}
+
+      {questions.length > 0 && (
+        <div className={styles.quizSummaryFloating}>
+          <div>
+            <h2>Quiz Summary</h2>
+            <p>
+              Time Left: <strong>{formatTime(timeLeft)}</strong>
+            </p>
+            <p>
+              Total Questions: <strong>{totalQuestions}</strong>
+            </p>
+            <p>
+              Solved: <strong>{solvedQuestions}</strong>
+            </p>
+            <p>
+              Unsolved: <strong>{unsolvedQuestions}</strong>
+            </p>
+            <hr />
+          </div>
+          <button
+            onClick={handleConfirmSubmit}
+            disabled={quizSubmitted}
+            style={{ textAlign: "center" }}
+          >
+            {quizSubmitted ? "Submitting..." : "Submit Quiz"}
+          </button>
+        </div>
+      )}
+      <hr className={styles.summaryHr} />
 
       {showModal && (
         <MessageModal

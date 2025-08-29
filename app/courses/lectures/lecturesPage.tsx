@@ -369,12 +369,14 @@ function LecturesContent() {
                         </p>
                       )}
                     <div className={styles.buttonGroup}>
-                      {/* If lecture has quiz and max attempts reached → render nothing */}
-                      {!(
+                      {/* Show button if quiz is completed OR if max attempts not reached */}
+                      {(lecture.hasQuiz && progress?.quizCompleted) ||
+                      !(
                         lecture.hasQuiz &&
                         progress?.attempts &&
-                        progress.attempts >= 3
-                      ) && (
+                        progress.attempts >= 3 &&
+                        !progress?.quizCompleted
+                      ) ? (
                         <button onClick={() => router.push(lectureUrl)}>
                           {lecture.hasQuiz && progress?.quizCompleted ? (
                             <>
@@ -395,7 +397,7 @@ function LecturesContent() {
                             </>
                           )}
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   </>
                 )}
