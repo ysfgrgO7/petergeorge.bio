@@ -177,6 +177,13 @@ export default function Register() {
   return (
     <div className={styles.container}>
       <h1>Register</h1>
+      Already a Member?{" "}
+      <a
+        href="/login"
+        style={{ color: "var(--blue)", textDecoration: "underline" }}
+      >
+        Login here
+      </a>
       <form onSubmit={handleSubmit} className={styles.form}>
         <div className={styles.splitContainer}>
           <div className={styles.section}>

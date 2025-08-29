@@ -26,6 +26,7 @@ import {
   MdMenu,
   MdChevronLeft,
   MdChevronRight,
+  MdOutlineHelp,
 } from "react-icons/md";
 import { CgProfile } from "react-icons/cg";
 import { GiProgression } from "react-icons/gi";
@@ -304,6 +305,13 @@ export default function Navbar({
                 </Link>
               </li>
 
+              <li className={pathname === "/help" ? styles.active : ""}>
+                <Link href="/help" onClick={toggleSidebar}>
+                  <MdOutlineHelp className={styles.icon} />
+                  {!isCollapsed && <span>Help</span>}
+                </Link>
+              </li>
+
               {isAdmin && (
                 <li className={pathname === "/admin" ? styles.active : ""}>
                   <Link href="/admin" onClick={toggleSidebar}>
@@ -371,6 +379,12 @@ export default function Navbar({
           </>
         ) : (
           <ul className={styles.links}>
+            <li className={pathname === "/" ? styles.active : ""}>
+              <Link href="/" onClick={toggleSidebar}>
+                <MdHome className={styles.icon} />
+                {!isCollapsed && <span>Home</span>}
+              </Link>
+            </li>
             <li className={pathname === "/register" ? styles.active : ""}>
               <Link href="/register" onClick={toggleSidebar}>
                 <MdAppRegistration className={styles.icon} />
@@ -381,6 +395,13 @@ export default function Navbar({
               <Link href="/login" onClick={toggleSidebar}>
                 <MdLogin className={styles.icon} />
                 {!isCollapsed && <span>Login</span>}
+              </Link>
+            </li>
+
+            <li className={pathname === "/help" ? styles.active : ""}>
+              <Link href="/help" onClick={toggleSidebar}>
+                <MdOutlineHelp className={styles.icon} />
+                {!isCollapsed && <span>Help</span>}
               </Link>
             </li>
           </ul>

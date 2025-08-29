@@ -41,6 +41,9 @@
   width: 100%;
   background-color: var(--black);
   transition: transform 0.3s ease;
+  overflow: auto;
+  scrollbar-color: var(--white) var(--green);
+  scrollbar-width: 10px;
 }
 
 .links a {

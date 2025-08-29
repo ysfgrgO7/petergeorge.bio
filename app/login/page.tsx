@@ -96,6 +96,8 @@ export default function LoginPage() {
   return (
     <div className={styles.container}>
       <h2>Login</h2>
+      New user? <a href="/register" style={{ color: "var(--blue)", textDecoration: "underline" }}>Register here</a>
+      <br />
       <form onSubmit={handleSubmit} className={styles.form}>
         <input
           type="email"
