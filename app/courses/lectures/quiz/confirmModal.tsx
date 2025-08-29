@@ -29,6 +29,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       <div
         style={{
           backgroundColor: "var(--black)",
+          color: "var(--white)",
           padding: "1.5rem",
           borderRadius: "8px",
           width: "90%",
