@@ -12,9 +12,10 @@ import {
   deleteDoc,
   DocumentData,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import styles from "../admin.module.css";
 import MessageModal from "@/app/MessageModal";
+import { onAuthStateChanged } from "firebase/auth";
+import { db, auth } from "@/lib/firebase";
 
 interface LinkItem extends DocumentData {
   id: string;
@@ -30,6 +31,8 @@ interface HomeworkVideo {
 
 export default function LectureManagerPage() {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const year = searchParams.get("year");
   const courseId = searchParams.get("courseId");
@@ -98,6 +101,30 @@ export default function LectureManagerPage() {
       setShowModal(true);
     }
   };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        if (user.email) {
+          const adminDocRef = doc(db, "admins", user.email);
+          const adminDocSnap = await getDoc(adminDocRef);
+
+          if (adminDocSnap.exists()) {
+            setIsAdmin(true);
+          } else {
+            router.push("/");
+          }
+        } else {
+          router.push("/");
+        }
+      } else {
+        router.push("/");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe(); // Cleanup the listener on component unmount
+  }, [router]);
 
   useEffect(() => {
     if (lectureRef) {

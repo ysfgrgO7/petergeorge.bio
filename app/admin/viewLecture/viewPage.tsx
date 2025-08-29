@@ -1,11 +1,18 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { collection, getDocs, DocumentData } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  DocumentData,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import { getAllQuizVariants } from "@/lib/quizUtils";
 import styles from "../admin.module.css";
+import { onAuthStateChanged } from "firebase/auth";
 
 // Interfaces
 interface ExistingQuiz extends DocumentData {
@@ -29,6 +36,7 @@ interface QuizVariantData {
 export default function LecturePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const year = searchParams.get("year");
   const courseId = searchParams.get("courseId");
@@ -44,6 +52,30 @@ export default function LecturePage() {
   const [activeTab, setActiveTab] = useState<
     "variant1Quizzes" | "variant2Quizzes" | "variant3Quizzes"
   >("variant1Quizzes");
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        if (user.email) {
+          const adminDocRef = doc(db, "admins", user.email);
+          const adminDocSnap = await getDoc(adminDocRef);
+
+          if (adminDocSnap.exists()) {
+            setIsAdmin(true);
+          } else {
+            router.push("/");
+          }
+        } else {
+          router.push("/");
+        }
+      } else {
+        router.push("/");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe(); // Cleanup the listener on component unmount
+  }, [router]);
 
   useEffect(() => {
     if (!lectureId || !courseId || !year) {

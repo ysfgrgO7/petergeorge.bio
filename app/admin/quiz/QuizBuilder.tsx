@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   collection,
   addDoc,
@@ -13,9 +13,10 @@ import {
   deleteDoc, // 👈 New import
   updateDoc, // 👈 New import
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { db, auth } from "@/lib/firebase";
 import styles from "../admin.module.css";
 import MessageModal from "@/app/MessageModal";
+import { onAuthStateChanged } from "firebase/auth";
 
 // Interfaces
 interface ExistingQuiz extends DocumentData {
@@ -28,6 +29,9 @@ interface ExistingQuiz extends DocumentData {
 
 export default function QuizBuilder() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
   const year = searchParams.get("year");
   const courseId = searchParams.get("courseId");
   const lectureId = searchParams.get("lectureId");
@@ -170,6 +174,30 @@ export default function QuizBuilder() {
       setShowModal(true);
     }
   };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        if (user.email) {
+          const adminDocRef = doc(db, "admins", user.email);
+          const adminDocSnap = await getDoc(adminDocRef);
+
+          if (adminDocSnap.exists()) {
+            setIsAdmin(true);
+          } else {
+            router.push("/");
+          }
+        } else {
+          router.push("/");
+        }
+      } else {
+        router.push("/");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe(); // Cleanup the listener on component unmount
+  }, [router]);
 
   useEffect(() => {
     fetchQuizDuration();
