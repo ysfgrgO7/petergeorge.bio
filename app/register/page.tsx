@@ -180,7 +180,13 @@ export default function Register() {
       Already a Member?{" "}
       <a
         href="/login"
-        style={{ color: "var(--blue)", textDecoration: "underline" }}
+        style={{
+          padding: "4px 6px",
+          borderRadius: "var(--border-radius)",
+          backgroundColor: "var(--white)",
+          color: "var(--blue)",
+          textDecoration: "underline",
+        }}
       >
         Login here
       </a>
