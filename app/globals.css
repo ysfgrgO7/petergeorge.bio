@@ -70,6 +70,11 @@ select {
   filter: brightness(1.05);
 }
 
+textarea {
+  width: 75%;
+  height: 5rem;
+}
+
 hr {
   margin: 1rem 0;
   border: none;
