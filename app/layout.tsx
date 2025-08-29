@@ -27,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={poppins.className}>
-        <DisableRightClick /> {/* 👈 Inject client logic */}
+        <DisableRightClick />
         <LayoutWrapper>{children}</LayoutWrapper>
         <Footer />
       </body>

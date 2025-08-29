@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { collection, getDocs, DocumentData } from "firebase/firestore";
 import { useRouter, useSearchParams } from "next/navigation";
-import { db } from "@/lib/firebase"; // Make sure to import 'db'
+import { db } from "@/lib/firebase";
+import { getAllQuizVariants } from "@/lib/quizUtils";
 import styles from "../admin.module.css";
 
 // Interfaces
@@ -21,6 +22,10 @@ interface HomeworkVideo {
   odyseeId: string;
 }
 
+interface QuizVariantData {
+  [variantName: string]: ExistingQuiz[];
+}
+
 export default function LecturePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,13 +35,15 @@ export default function LecturePage() {
   const lectureId = searchParams.get("lectureId");
   const lectureTitle = searchParams.get("lectureTitle");
   const odyseeName = searchParams.get("odyseeName");
-  const odyseeId = searchParams.get("odyseeId"); // --- Quiz state ---
+  const odyseeId = searchParams.get("odyseeId");
 
   const [homeworkVideos, setHomeworkVideos] = useState<HomeworkVideo[]>([]);
-
-  const [existingQuizzes, setExistingQuizzes] = useState<ExistingQuiz[]>([]);
+  const [quizVariants, setQuizVariants] = useState<QuizVariantData>({});
   const [existingEssays, setExistingEssays] = useState<ExistingQuiz[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<
+    "variant1Quizzes" | "variant2Quizzes" | "variant3Quizzes"
+  >("variant1Quizzes");
 
   useEffect(() => {
     if (!lectureId || !courseId || !year) {
@@ -47,17 +54,24 @@ export default function LecturePage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch MCQs
-        const mcqRef = collection(
-          db,
-          `years/${year}/courses/${courseId}/lectures/${lectureId}/quizzes`
-        );
-        const mcqSnapshot = await getDocs(mcqRef);
-        const mcqData = mcqSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as ExistingQuiz[];
-        setExistingQuizzes(mcqData);
+        // Fetch all quiz variants
+        const variants = getAllQuizVariants();
+        const variantData: QuizVariantData = {};
+
+        for (const variant of variants) {
+          const variantRef = collection(
+            db,
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/${variant}`
+          );
+          const variantSnapshot = await getDocs(variantRef);
+          const variantQuizzes = variantSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as ExistingQuiz[];
+          variantData[variant] = variantQuizzes;
+        }
+
+        setQuizVariants(variantData);
 
         // Fetch Essays
         const essayRef = collection(
@@ -71,7 +85,7 @@ export default function LecturePage() {
         })) as ExistingQuiz[];
         setExistingEssays(essayData);
 
-        // ✅ Fetch Homework Videos
+        // Fetch Homework Videos
         const homeworkRef = collection(
           db,
           `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkVideos`
@@ -91,6 +105,13 @@ export default function LecturePage() {
 
     fetchData();
   }, [lectureId, courseId, year]);
+
+  const getVariantDisplayName = (variantName: string) => {
+    const variantNumber = variantName
+      .replace("variant", "")
+      .replace("Quizzes", "");
+    return `Variant ${variantNumber}`;
+  };
 
   if (!lectureId) {
     return <div>Lecture not found.</div>;
@@ -168,50 +189,122 @@ export default function LecturePage() {
         <p>Loading quiz questions...</p>
       ) : (
         <>
-          <h2>Existing MCQs</h2>
-          {existingQuizzes.length > 0 ? (
-            <ul>
-              {existingQuizzes.map((q, i) => (
-                <li key={q.id}>
+          <h2>Quiz Variants</h2>
+
+          {/* Tab Navigation */}
+          <div className={styles.tabs}>
+            <div className={styles.yearTabs}>
+              <button
+                className={
+                  activeTab === "variant1Quizzes" ? styles.activeTab : ""
+                }
+                onClick={() => setActiveTab("variant1Quizzes")}
+              >
+                Variant 1
+              </button>
+              <button
+                className={
+                  activeTab === "variant2Quizzes" ? styles.activeTab : ""
+                }
+                onClick={() => setActiveTab("variant2Quizzes")}
+              >
+                Variant 2
+              </button>
+              <button
+                className={
+                  activeTab === "variant3Quizzes" ? styles.activeTab : ""
+                }
+                onClick={() => setActiveTab("variant3Quizzes")}
+              >
+                Variant 3
+              </button>
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className={styles.tabContent}>
+            {Object.keys(quizVariants).length > 0 ? (
+              <div>
+                <h3>{getVariantDisplayName(activeTab)}</h3>
+                {quizVariants[activeTab] &&
+                quizVariants[activeTab].length > 0 ? (
+                  <ul className={styles.quizList}>
+                    <br />
+                    {quizVariants[activeTab].map((q, i) => (
+                      <li key={q.id} className={styles.quizItem}>
+                        <p className={styles.questionText}>
+                          <strong>
+                            {i + 1}. {q.question}
+                          </strong>
+                        </p>
+                        {q.imageUrl && (
+                          <div className={styles.questionImage}>
+                            <img
+                              src={q.imageUrl}
+                              alt={`Question ${i + 1}`}
+                              style={{ maxWidth: "300px", height: "auto" }}
+                            />
+                          </div>
+                        )}
+                        {q.options && q.options.length > 0 && (
+                          <ul className={styles.optionsList}>
+                            {q.options.map((option, j) => (
+                              <li
+                                key={j}
+                                className={`${styles.optionItem} ${
+                                  j === q.correctAnswerIndex
+                                    ? styles.correctOption
+                                    : ""
+                                }`}
+                              >
+                                {option}
+                                {j === q.correctAnswerIndex && (
+                                  <span className={styles.checkmark}>✅ </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        <br />
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No MCQs in this variant yet.</p>
+                )}
+              </div>
+            ) : (
+              <p>No quiz variants found.</p>
+            )}
+          </div>
+
+          {/* Display Existing Essays */}
+          <hr />
+          <h2>Essay Questions</h2>
+          {existingEssays.length > 0 ? (
+            <ul className={styles.essayList}>
+              {existingEssays.map((q, i) => (
+                <li key={q.id} className={styles.essayItem}>
                   <p>
                     <strong>
                       {i + 1}. {q.question}
                     </strong>
                   </p>
-                  {q.options && q.options.length > 0 && (
-                    <ul className={styles.optionsList}>
-                      {q.options.map((option, j) => (
-                        <li
-                          key={j}
-                          className={
-                            j === q.correctAnswerIndex
-                              ? styles.correctOption
-                              : ""
-                          }
-                        >
-                          {option}
-                        </li>
-                      ))}
-                    </ul>
+                  {q.imageUrl && (
+                    <div className={styles.questionImage}>
+                      <img
+                        src={q.imageUrl}
+                        alt={`Essay Question ${i + 1}`}
+                        style={{ maxWidth: "300px", height: "auto" }}
+                      />
+                    </div>
                   )}
                 </li>
               ))}
             </ul>
           ) : (
-            <p>No MCQs yet.</p>
-          )}
-          {/* Display Existing Essays */}
-          <h2>Existing Essays</h2>
-          {existingEssays.length > 0 ? (
-            <ul>
-              {existingEssays.map((q, i) => (
-                <li key={q.id}>
-                  {i + 1}. {q.question}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No essays yet.</p>
+            <p>No essay questions yet.</p>
           )}
         </>
       )}

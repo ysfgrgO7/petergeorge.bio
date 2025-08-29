@@ -447,6 +447,33 @@ export default function QuizBuilder() {
             {existingQuizzes.map((q, i) => (
               <li key={q.id}>
                 {i + 1}. {q.question}
+                {q.imageUrl && (
+                  <div className={styles.questionImage}>
+                    <img
+                      src={q.imageUrl}
+                      alt={`Question ${i + 1}`}
+                      style={{ maxWidth: "300px", height: "auto" }}
+                    />
+                  </div>
+                )}
+                {q.options && q.options.length > 0 && (
+                  <ul className={styles.optionsList}>
+                    {q.options.map((option, j) => (
+                      <li
+                        key={j}
+                        className={`${styles.optionItem} ${
+                          j === q.correctAnswerIndex ? styles.correctOption : ""
+                        }`}
+                      >
+                        {option}
+                        {j === q.correctAnswerIndex && (
+                          <span className={styles.checkmark}>✅ </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <br />
               </li>
             ))}
           </ul>
