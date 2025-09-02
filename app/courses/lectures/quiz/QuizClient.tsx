@@ -64,30 +64,6 @@ function shuffleArray<T>(array: T[]): T[] {
   return newArray;
 }
 
-// Function to get unused variant from available variants
-function getUnusedQuizVariantFromAvailable(
-  usedVariants: string[],
-  availableVariants: string[]
-): string | null {
-  // Convert variant names to match the format used in usedVariants tracking
-  const variantMapping: Record<string, string> = {
-    variant1Quizzes: "variant1Quizzes",
-    variant2Quizzes: "variant2Quizzes",
-    variant3Quizzes: "variant3Quizzes",
-  };
-
-  // Find variants that are available but not yet used
-  for (const availableVariant of availableVariants) {
-    const variantKey = variantMapping[availableVariant];
-    if (variantKey && !usedVariants.includes(variantKey)) {
-      return availableVariant;
-    }
-  }
-
-  // If all variants have been used, return the first available one (allow retakes)
-  return availableVariants.length > 0 ? availableVariants[0] : null;
-}
-
 export default function QuizClient() {
   const params = useSearchParams();
   const router = useRouter();
@@ -107,7 +83,6 @@ export default function QuizClient() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [isQuizReady, setIsQuizReady] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [availableVariants, setAvailableVariants] = useState<string[]>([]);
 
   const handleSubmit = useCallback(async () => {
     if (quizSubmitted) return;
@@ -321,41 +296,6 @@ export default function QuizClient() {
             return;
           }
 
-          // Check which variants are available
-          const variantsToCheck = [
-            "variant1Quizzes",
-            "variant2Quizzes",
-            "variant3Quizzes",
-          ];
-          const availableVariantsList: string[] = [];
-
-          for (const variant of variantsToCheck) {
-            try {
-              const variantRef = collection(
-                db,
-                `years/${year}/courses/${courseId}/lectures/${lectureId}/${variant}`
-              );
-              const variantSnapshot = await getDocs(variantRef);
-
-              if (!variantSnapshot.empty) {
-                availableVariantsList.push(variant);
-              }
-            } catch (error) {
-              console.warn(`Error checking variant ${variant}:`, error);
-            }
-          }
-
-          setAvailableVariants(availableVariantsList);
-
-          if (availableVariantsList.length === 0) {
-            setModalMessage(
-              "No quiz questions are available for this lecture."
-            );
-            setShowModal(true);
-            setLoading(false);
-            return;
-          }
-
           const settingsDocRef = doc(
             db,
             `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
@@ -402,19 +342,9 @@ export default function QuizClient() {
             setTimeLeft(durationSeconds);
           }
 
-          // Use available variants instead of hardcoded variants
-          const selectedVariant = getUnusedQuizVariantFromAvailable(
-            attemptInfo.usedVariants,
-            availableVariantsList
+          const selectedVariant = getUnusedQuizVariant(
+            attemptInfo.usedVariants
           );
-
-          if (!selectedVariant) {
-            setModalMessage("No unused quiz variants available.");
-            setShowModal(true);
-            setLoading(false);
-            return;
-          }
-
           await incrementQuizAttempt(
             currentUser.uid,
             year,
@@ -567,7 +497,7 @@ export default function QuizClient() {
                 {/* Display marks for each question */}
                 <span
                   style={{
-                    backgroundColor: "var(--dark)",
+                    backgroundColor: "var(--blue)",
                     color: "var(--white)",
                     padding: "2px 8px",
                     borderRadius: "12px",
@@ -634,7 +564,7 @@ export default function QuizClient() {
                     {/* Display marks for essay questions */}
                     <span
                       style={{
-                        backgroundColor: "var(--dark)",
+                        backgroundColor: "var(--blue)",
                         color: "var(--white)",
                         padding: "2px 8px",
                         borderRadius: "12px",
