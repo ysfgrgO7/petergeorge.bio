@@ -26,12 +26,13 @@ import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import MessageModal from "@/app/MessageModal";
 
 interface QuizQuestion extends DocumentData {
-  id: string; // Add question ID for better tracking
+  id: string;
   question: string;
   type: "mcq" | "essay";
   options?: string[];
   correctAnswerIndex?: number;
   imageUrl?: string;
+  marks?: number; // Added marks property
 }
 
 interface SubmittedMCQAnswer {
@@ -41,12 +42,14 @@ interface SubmittedMCQAnswer {
   selectedText: string | null;
   correctAnswer: string;
   isCorrect: boolean;
+  marks: number; // Added marks to submitted answers
 }
 
 interface SubmittedEssayAnswer {
   question: string;
   type: "essay";
   answerText: string;
+  marks: number; // Added marks to submitted answers
 }
 
 type SubmittedAnswer = SubmittedMCQAnswer | SubmittedEssayAnswer;
@@ -59,6 +62,30 @@ function shuffleArray<T>(array: T[]): T[] {
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
   return newArray;
+}
+
+// Function to get unused variant from available variants
+function getUnusedQuizVariantFromAvailable(
+  usedVariants: string[],
+  availableVariants: string[]
+): string | null {
+  // Convert variant names to match the format used in usedVariants tracking
+  const variantMapping: Record<string, string> = {
+    variant1Quizzes: "variant1Quizzes",
+    variant2Quizzes: "variant2Quizzes",
+    variant3Quizzes: "variant3Quizzes",
+  };
+
+  // Find variants that are available but not yet used
+  for (const availableVariant of availableVariants) {
+    const variantKey = variantMapping[availableVariant];
+    if (variantKey && !usedVariants.includes(variantKey)) {
+      return availableVariant;
+    }
+  }
+
+  // If all variants have been used, return the first available one (allow retakes)
+  return availableVariants.length > 0 ? availableVariants[0] : null;
 }
 
 export default function QuizClient() {
@@ -80,6 +107,7 @@ export default function QuizClient() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [isQuizReady, setIsQuizReady] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [availableVariants, setAvailableVariants] = useState<string[]>([]);
 
   const handleSubmit = useCallback(async () => {
     if (quizSubmitted) return;
@@ -93,16 +121,24 @@ export default function QuizClient() {
     }
 
     let correctAnswersCount = 0;
+    let totalPossibleMarks = 0; // Track total possible marks
+    let earnedMarks = 0; // Track earned marks
     const submittedMCQAnswers: SubmittedMCQAnswer[] = [];
     const submittedEssayAnswers: SubmittedEssayAnswer[] = [];
     let totalMCQQuestions = 0;
     let mcqQuestionIndex = 0;
 
     questions.forEach((q) => {
+      const questionMarks = q.marks || 1; // Default to 1 if marks doesn't exist
+      totalPossibleMarks += questionMarks;
+
       if (q.type === "mcq") {
         totalMCQQuestions++;
         const isCorrect = mcqAnswers[mcqQuestionIndex] === q.correctAnswerIndex;
-        if (isCorrect) correctAnswersCount++;
+        if (isCorrect) {
+          correctAnswersCount++;
+          earnedMarks += questionMarks;
+        }
         submittedMCQAnswers.push({
           question: q.question,
           type: "mcq",
@@ -113,6 +149,7 @@ export default function QuizClient() {
               : null,
           correctAnswer: q.options![q.correctAnswerIndex!],
           isCorrect,
+          marks: questionMarks,
         });
         mcqQuestionIndex++;
       } else {
@@ -120,11 +157,15 @@ export default function QuizClient() {
           question: q.question,
           type: "essay",
           answerText: essayAnswers[q.id] || "",
+          marks: questionMarks,
         });
       }
     });
 
-    // Save results in Firestore
+    const requiredScore = Math.floor(totalMCQQuestions / 2) + 1;
+    const hasPassed = correctAnswersCount >= requiredScore;
+
+    // Save results in Firestore with enhanced marking system and explicit quizCompleted field
     const attemptRef = doc(
       db,
       "students",
@@ -141,6 +182,9 @@ export default function QuizClient() {
         lectureId,
         score: correctAnswersCount,
         total: totalMCQQuestions,
+        earnedMarks, // New field for actual marks earned
+        totalPossibleMarks, // New field for total possible marks
+        quizCompleted: hasPassed, // Explicitly set based on pass/fail
         answers: {
           mcq: submittedMCQAnswers,
           essay: submittedEssayAnswers,
@@ -150,7 +194,6 @@ export default function QuizClient() {
       { merge: true }
     );
 
-    const requiredScore = Math.floor(totalMCQQuestions / 2) + 1;
     const quizStateDocRef = doc(
       db,
       "students",
@@ -159,7 +202,7 @@ export default function QuizClient() {
       lectureId
     );
 
-    if (correctAnswersCount >= requiredScore) {
+    if (hasPassed) {
       try {
         await deleteDoc(quizStateDocRef);
         await markQuizComplete(
@@ -182,7 +225,7 @@ export default function QuizClient() {
       }
     }
 
-    // ✅ Redirect to results page (results page fetches Firestore, no query needed)
+    // Redirect to results page
     router.push(
       `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
     );
@@ -210,18 +253,14 @@ export default function QuizClient() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // This code only runs on the client
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
-    // Set initial value on mount
     handleResize();
-
-    // Add and remove event listener for dynamic updates
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []);
 
   useEffect(() => {
     const blockContextMenu = (e: MouseEvent) => e.preventDefault();
@@ -266,7 +305,6 @@ export default function QuizClient() {
 
       const fetchQuizData = async () => {
         try {
-          // 🆕 Check attempt info before starting quiz
           const attemptInfo = await getQuizAttemptInfo(
             currentUser.uid,
             year,
@@ -277,6 +315,41 @@ export default function QuizClient() {
           if (attemptInfo.maxAttemptsReached) {
             setModalMessage(
               "You have reached the maximum number of attempts (3) for this quiz."
+            );
+            setShowModal(true);
+            setLoading(false);
+            return;
+          }
+
+          // Check which variants are available
+          const variantsToCheck = [
+            "variant1Quizzes",
+            "variant2Quizzes",
+            "variant3Quizzes",
+          ];
+          const availableVariantsList: string[] = [];
+
+          for (const variant of variantsToCheck) {
+            try {
+              const variantRef = collection(
+                db,
+                `years/${year}/courses/${courseId}/lectures/${lectureId}/${variant}`
+              );
+              const variantSnapshot = await getDocs(variantRef);
+
+              if (!variantSnapshot.empty) {
+                availableVariantsList.push(variant);
+              }
+            } catch (error) {
+              console.warn(`Error checking variant ${variant}:`, error);
+            }
+          }
+
+          setAvailableVariants(availableVariantsList);
+
+          if (availableVariantsList.length === 0) {
+            setModalMessage(
+              "No quiz questions are available for this lecture."
             );
             setShowModal(true);
             setLoading(false);
@@ -329,10 +402,19 @@ export default function QuizClient() {
             setTimeLeft(durationSeconds);
           }
 
-          // 🆕 Get unused variant and increment attempt with variant tracking
-          const selectedVariant = getUnusedQuizVariant(
-            attemptInfo.usedVariants
+          // Use available variants instead of hardcoded variants
+          const selectedVariant = getUnusedQuizVariantFromAvailable(
+            attemptInfo.usedVariants,
+            availableVariantsList
           );
+
+          if (!selectedVariant) {
+            setModalMessage("No unused quiz variants available.");
+            setShowModal(true);
+            setLoading(false);
+            return;
+          }
+
           await incrementQuizAttempt(
             currentUser.uid,
             year,
@@ -353,16 +435,19 @@ export default function QuizClient() {
           const quizSnapshot = await getDocs(quizRef);
           const essaySnapshot = await getDocs(essayRef);
 
+          // Map questions and ensure marks defaults to 1 if not present
           const mcqQuestions = quizSnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
             type: "mcq",
+            marks: doc.data().marks || 1, // Default to 1 if marks doesn't exist
           })) as QuizQuestion[];
 
           const essayQuestions = essaySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
             type: "essay",
+            marks: doc.data().marks || 1, // Default to 1 if marks doesn't exist
           })) as QuizQuestion[];
 
           const shuffledMcqQuestions = shuffleArray(mcqQuestions);
@@ -388,7 +473,6 @@ export default function QuizClient() {
   }, [year, courseId, lectureId, router]);
 
   useEffect(() => {
-    // We no longer need to check for showResults here
     if (!isQuizReady || quizSubmitted) return;
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
@@ -427,6 +511,9 @@ export default function QuizClient() {
       .padStart(2, "0")}`;
   };
 
+  // Calculate total marks for display
+  const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+
   const totalMCQQuestions = questions.filter((q) => q.type === "mcq").length;
   const totalEssayQuestions = questions.filter(
     (q) => q.type === "essay"
@@ -458,7 +545,6 @@ export default function QuizClient() {
     );
   }
 
-  // The rendering logic for results has been moved to a separate page.
   return (
     <div
       className="wrapper"
@@ -477,7 +563,21 @@ export default function QuizClient() {
           <div key={q.id} className={styles.question}>
             <p>
               <strong>
-                Q{i + 1}: {q.question}{" "}
+                Q{i + 1}: {q.question}
+                {/* Display marks for each question */}
+                <span
+                  style={{
+                    backgroundColor: "var(--dark)",
+                    color: "var(--white)",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    fontSize: "0.8em",
+                    marginLeft: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
+                </span>
               </strong>
             </p>
             {q.imageUrl && (
@@ -530,7 +630,21 @@ export default function QuizClient() {
               <div key={q.id} className={styles.question}>
                 <p>
                   <strong>
-                    Q{totalMCQQuestions + i + 1}: {q.question}{" "}
+                    Q{totalMCQQuestions + i + 1}: {q.question}
+                    {/* Display marks for essay questions */}
+                    <span
+                      style={{
+                        backgroundColor: "var(--dark)",
+                        color: "var(--white)",
+                        padding: "2px 8px",
+                        borderRadius: "12px",
+                        fontSize: "0.8em",
+                        marginLeft: "10px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
+                    </span>
                   </strong>
                 </p>
                 {q.imageUrl && (
@@ -572,6 +686,9 @@ export default function QuizClient() {
             </p>
             <p>
               Total Questions: <strong>{totalQuestions}</strong>
+            </p>
+            <p>
+              Total Marks: <strong>{totalMarks}</strong>
             </p>
             <p>
               Solved: <strong>{solvedQuestions}</strong>

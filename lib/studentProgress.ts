@@ -49,8 +49,8 @@ export async function getLectureProgress(
     ? snap.data()
     : {
         quizCompleted: false,
-        score: null,
-        totalQuestions: null,
+        earnedMarks: null,
+        totalPossibleMarks: null,
         unlocked: false,
         attempts: 0, // Track number of attempts
       };
@@ -91,8 +91,8 @@ export async function incrementQuizAttempt(
     // Document doesn't exist, create it with attempts: 1
     await setDoc(docRef, {
       quizCompleted: false,
-      score: null,
-      totalQuestions: null,
+      earnedMarks: null,
+      totalPossibleMarks: null,
       unlocked: false,
       attempts: 1,
       usedVariants: [variantUsed],
@@ -151,13 +151,13 @@ export async function markQuizComplete(
   year: string,
   courseId: string,
   lectureId: string,
-  score: number,
-  totalQuestions: number
+  earnedMarks: number,
+  totalPossibleMarks: number
 ) {
-  if (typeof score !== "number" || isNaN(score)) {
+  if (typeof earnedMarks !== "number" || isNaN(earnedMarks)) {
     throw new Error("Invalid score provided. Score must be a number.");
   }
-  if (typeof totalQuestions !== "number" || isNaN(totalQuestions)) {
+  if (typeof totalPossibleMarks !== "number" || isNaN(totalPossibleMarks)) {
     throw new Error("Invalid total questions provided. Must be a number.");
   }
   const docRef = doc(
@@ -171,8 +171,8 @@ export async function markQuizComplete(
     docRef,
     {
       quizCompleted: true,
-      score,
-      total: totalQuestions, // Corrected from totalQuestions to total
+      earnedMarks: earnedMarks,
+      total: totalPossibleMarks, // Corrected from totalQuestions to total
     },
     { merge: true }
   );

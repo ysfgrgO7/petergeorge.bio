@@ -8,8 +8,8 @@ import { useRouter } from "next/navigation";
 import styles from "./progress.module.css";
 
 interface QuizData {
-  score: number;
-  total: number;
+  earnedMarks: number;
+  totalPossibleMarks: number;
 }
 
 interface ProgressItem {
@@ -156,8 +156,8 @@ export default function ProgressPage() {
                 <td>{item.courseTitle}</td>
                 <td>{item.lectureTitle}</td>
                 <td className={styles.score}>
-                  {item.quiz && item.quiz.score !== undefined
-                    ? `${item.quiz.score} / ${item.quiz.total}`
+                  {item.quiz && item.quiz.earnedMarks !== undefined
+                    ? `${item.quiz.earnedMarks} / ${item.quiz.totalPossibleMarks}`
                     : "No Quiz"}
                 </td>
               </tr>

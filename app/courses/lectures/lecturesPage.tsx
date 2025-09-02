@@ -37,11 +37,11 @@ interface Lecture extends DocumentData {
 
 interface ProgressData {
   quizCompleted?: boolean;
-  score?: number;
+  earnedMarks?: number;
+  totalPossibleMarks?: number;
   totalQuestions?: number;
   unlocked?: boolean;
   attempts?: number;
-  total?: number;
   usedVariants?: string[]; // Add this line
 }
 
@@ -338,8 +338,8 @@ function LecturesContent() {
                 ) : (
                   <>
                     {lecture.hasQuiz &&
-                      progress?.score !== undefined &&
-                      progress?.score !== null && (
+                      progress?.earnedMarks !== undefined &&
+                      progress?.earnedMarks !== null && (
                         <p
                           className={`${styles.quizScore} ${
                             !progress?.quizCompleted ? styles.failedQuiz : ""
@@ -348,8 +348,8 @@ function LecturesContent() {
                           {progress?.quizCompleted
                             ? "Quiz Completed"
                             : "Last Score"}
-                          : {progress?.score} /{" "}
-                          {progress?.total || progress?.totalQuestions}
+                          : {progress?.earnedMarks} /{" "}
+                          {progress?.totalPossibleMarks || progress?.totalQuestions}
                         </p>
                       )}
 
@@ -383,7 +383,7 @@ function LecturesContent() {
                               <FaPlay /> View Lecture
                             </>
                           ) : lecture.hasQuiz &&
-                            progress?.score !== undefined ? (
+                            progress?.earnedMarks !== undefined ? (
                             <>
                               <MdQuiz /> Retake Quiz
                             </>

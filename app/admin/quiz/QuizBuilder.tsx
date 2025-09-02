@@ -10,8 +10,8 @@ import {
   doc,
   getDoc,
   setDoc,
-  deleteDoc, // 👈 New import
-  updateDoc, // 👈 New import
+  deleteDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import styles from "../admin.module.css";
@@ -25,6 +25,7 @@ interface ExistingQuiz extends DocumentData {
   options?: string[];
   correctAnswerIndex?: number;
   imageUrl?: string;
+  marks?: number; // 👈 Added marks property
 }
 
 export default function QuizBuilder() {
@@ -39,6 +40,7 @@ export default function QuizBuilder() {
   // --- Quiz content state ---
   const [mcqQuestion, setMcqQuestion] = useState("");
   const [mcqImageUrl, setMcqImageUrl] = useState("");
+  const [mcqMarks, setMcqMarks] = useState<1 | 2>(1); // 👈 New state for MCQ marks
   const [options, setOptions] = useState(["", ""]);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
     null
@@ -46,9 +48,10 @@ export default function QuizBuilder() {
   const [existingQuizzes, setExistingQuizzes] = useState<ExistingQuiz[]>([]);
   const [essayQuestion, setEssayQuestion] = useState("");
   const [essayImageUrl, setEssayImageUrl] = useState("");
+  const [essayMarks, setEssayMarks] = useState<1 | 2>(1); // 👈 New state for essay marks
   const [existingEssays, setExistingEssays] = useState<ExistingQuiz[]>([]);
-  const [editingMcq, setEditingMcq] = useState<string | null>(null); // 👈 New state for editing
-  const [editingEssay, setEditingEssay] = useState<string | null>(null); // 👈 New state for editing
+  const [editingMcq, setEditingMcq] = useState<string | null>(null);
+  const [editingEssay, setEditingEssay] = useState<string | null>(null);
 
   // --- Duration state ---
   const [quizDurationInput, setQuizDurationInput] = useState<number | "">("");
@@ -196,7 +199,7 @@ export default function QuizBuilder() {
       setLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup the listener on component unmount
+    return () => unsubscribe();
   }, [router]);
 
   useEffect(() => {
@@ -207,12 +210,14 @@ export default function QuizBuilder() {
   useEffect(() => {
     setMcqQuestion("");
     setMcqImageUrl("");
+    setMcqMarks(1); // 👈 Reset marks to default
     setOptions(["", ""]);
     setCorrectAnswerIndex(null);
     setEssayQuestion("");
     setEssayImageUrl("");
-    setEditingMcq(null); // 👈 Reset editing state
-    setEditingEssay(null); // 👈 Reset editing state
+    setEssayMarks(1); // 👈 Reset marks to default
+    setEditingMcq(null);
+    setEditingEssay(null);
   }, [activeTab]);
 
   // --- Options handlers ---
@@ -233,11 +238,12 @@ export default function QuizBuilder() {
     setOptions(updated);
   };
 
-  // 👈 New handleEdit function for MCQs
+  // 👈 Updated handleEdit function for MCQs
   const handleEditMcq = (quiz: ExistingQuiz) => {
     setEditingMcq(quiz.id);
     setMcqQuestion(quiz.question);
     setMcqImageUrl(quiz.imageUrl || "");
+    setMcqMarks((quiz.marks as 1 | 2) || 1); // 👈 Set marks or default to 1
     setOptions(quiz.options || ["", ""]);
     setCorrectAnswerIndex(quiz.correctAnswerIndex || null);
     // Scroll to the form
@@ -247,11 +253,12 @@ export default function QuizBuilder() {
     });
   };
 
-  // 👈 New handleEdit function for essays
+  // 👈 Updated handleEdit function for essays
   const handleEditEssay = (essay: ExistingQuiz) => {
     setEditingEssay(essay.id);
     setEssayQuestion(essay.question);
     setEssayImageUrl(essay.imageUrl || "");
+    setEssayMarks((essay.marks as 1 | 2) || 1); // 👈 Set marks or default to 1
     // Scroll to the form
     window.scrollTo({
       top: document.getElementById("essay-form")?.offsetTop,
@@ -259,7 +266,6 @@ export default function QuizBuilder() {
     });
   };
 
-  // 👈 New handleDelete function
   const handleDelete = async (quizType: "mcq" | "essay", id: string) => {
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
@@ -275,7 +281,7 @@ export default function QuizBuilder() {
       await deleteDoc(docRef);
       setModalMessage(`${quizType.toUpperCase()} deleted successfully! 🗑️`);
       setShowModal(true);
-      fetchQuizzes(activeTab); // Refresh the list
+      fetchQuizzes(activeTab);
     } catch (error) {
       console.error(`Error deleting ${quizType}:`, error);
       setModalMessage(`Failed to delete ${quizType}.`);
@@ -318,14 +324,13 @@ export default function QuizBuilder() {
           options,
           correctAnswerIndex,
           imageUrl: mcqImageUrl.trim() || null,
+          marks: mcqMarks, // 👈 Include marks in data
         };
 
         if (editingMcq) {
-          // 👈 Update existing document
           await updateDoc(doc(db, collectionPath, editingMcq), data);
           setModalMessage("MCQ updated successfully! ✅");
         } else {
-          // 👈 Add new document
           await addDoc(collection(db, collectionPath), data);
           setModalMessage("MCQ saved successfully! ✅");
         }
@@ -341,14 +346,13 @@ export default function QuizBuilder() {
           type: "essay",
           question: essayQuestion,
           imageUrl: essayImageUrl.trim() || null,
+          marks: essayMarks, // 👈 Include marks in data
         };
 
         if (editingEssay) {
-          // 👈 Update existing document
           await updateDoc(doc(db, collectionPath, editingEssay), data);
           setModalMessage("Essay updated successfully! ✅");
         } else {
-          // 👈 Add new document
           await addDoc(collection(db, collectionPath), data);
           setModalMessage("Essay saved successfully! ✅");
         }
@@ -357,15 +361,17 @@ export default function QuizBuilder() {
       // Reset form fields
       setMcqQuestion("");
       setMcqImageUrl("");
+      setMcqMarks(1); // 👈 Reset marks to default
       setOptions(["", ""]);
       setCorrectAnswerIndex(null);
       setEssayQuestion("");
       setEssayImageUrl("");
-      setEditingMcq(null); // 👈 Reset editing state
-      setEditingEssay(null); // 👈 Reset editing state
+      setEssayMarks(1); // 👈 Reset marks to default
+      setEditingMcq(null);
+      setEditingEssay(null);
 
       setShowModal(true);
-      fetchQuizzes(activeTab); // Refresh the list
+      fetchQuizzes(activeTab);
     } catch (error: unknown) {
       console.error(`Error adding/updating ${quizType}:`, error);
       setModalMessage(
@@ -416,7 +422,7 @@ export default function QuizBuilder() {
 
       <hr />
 
-      {/* Duration Section (always visible) */}
+      {/* Duration Section */}
       <div className={styles.quizDurationSection}>
         <h2>Quiz Duration</h2>
         {isDurationLoading ? (
@@ -461,7 +467,7 @@ export default function QuizBuilder() {
 
       <hr />
 
-      {/* Render form and existing questions based on the active tab */}
+      {/* MCQ Form */}
       <div className={styles.variantSection}>
         <h2>Add Questions to {activeTab.replace("variant", "Variant ")}</h2>
         <div className={styles.formSection} id="mcq-form">
@@ -479,6 +485,27 @@ export default function QuizBuilder() {
             value={mcqImageUrl}
             onChange={(e) => setMcqImageUrl(e.target.value)}
           />
+
+          {/* 👈 Marks selector for MCQ */}
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ fontWeight: "bold", marginRight: "10px" }}>
+              Marks:
+            </label>
+            <select
+              value={mcqMarks}
+              onChange={(e) => setMcqMarks(Number(e.target.value) as 1 | 2)}
+              style={{
+                padding: "5px 10px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                fontSize: "14px",
+              }}
+            >
+              <option value={1}>1 Mark</option>
+              <option value={2}>2 Marks</option>
+            </select>
+          </div>
+
           {options.map((opt: string, idx: number) => (
             <div
               key={idx}
@@ -525,6 +552,7 @@ export default function QuizBuilder() {
                 setEditingMcq(null);
                 setMcqQuestion("");
                 setMcqImageUrl("");
+                setMcqMarks(1); // 👈 Reset marks to default
                 setOptions(["", ""]);
                 setCorrectAnswerIndex(null);
               }}
@@ -536,6 +564,7 @@ export default function QuizBuilder() {
 
         <hr />
 
+        {/* Essay Form */}
         <div className={styles.formSection} id="essay-form">
           <h3>
             {editingEssay
@@ -555,6 +584,27 @@ export default function QuizBuilder() {
             onChange={(e) => setEssayImageUrl(e.target.value)}
             style={{ marginBottom: "10px" }}
           />
+
+          {/* 👈 Marks selector for Essay */}
+          <div style={{ marginBottom: "10px" }}>
+            <label style={{ fontWeight: "bold", marginRight: "10px" }}>
+              Marks:
+            </label>
+            <select
+              value={essayMarks}
+              onChange={(e) => setEssayMarks(Number(e.target.value) as 1 | 2)}
+              style={{
+                padding: "5px 10px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                fontSize: "14px",
+              }}
+            >
+              <option value={1}>1 Mark</option>
+              <option value={2}>2 Marks</option>
+            </select>
+          </div>
+
           <button onClick={() => handleSubmit("essay")}>
             {editingEssay ? "✅ Update Essay" : "✅ Save Essay"}
           </button>
@@ -565,6 +615,7 @@ export default function QuizBuilder() {
                 setEditingEssay(null);
                 setEssayQuestion("");
                 setEssayImageUrl("");
+                setEssayMarks(1); // 👈 Reset marks to default
               }}
             >
               Cancel Edit
@@ -574,12 +625,27 @@ export default function QuizBuilder() {
 
         <hr />
 
+        {/* Existing MCQs */}
         <h2>Existing MCQs in {activeTab.replace("variant", "Variant ")}</h2>
         {existingQuizzes.length ? (
           <ul>
             {existingQuizzes.map((q, i) => (
               <li key={q.id}>
                 {i + 1}. {q.question}
+                {/* 👈 Display marks */}
+                <span
+                  style={{
+                    backgroundColor: "var(--dark)",
+                    color: "var(--white)",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    fontSize: "0.8em",
+                    marginLeft: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {q.marks || 1} {q.marks === 1 ? "Mark" : "Marks"}
+                </span>
                 {q.imageUrl && (
                   <div className={styles.questionImage}>
                     <img
@@ -625,12 +691,26 @@ export default function QuizBuilder() {
           <p>No MCQs yet.</p>
         )}
 
+        {/* Existing Essays */}
         <h2>Existing Essays (Shared)</h2>
         {existingEssays.length ? (
           <ul>
             {existingEssays.map((q, i) => (
               <li key={q.id}>
                 {i + 1}. {q.question}
+                {/* 👈 Display marks */}
+                <span
+                  style={{
+                    backgroundColor: "#f3e5f5",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    fontSize: "0.8em",
+                    marginLeft: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {q.marks || 1} {q.marks === 1 ? "Mark" : "Marks"}
+                </span>
                 <div style={{ display: "flex", gap: "10px" }}>
                   <button onClick={() => handleEditEssay(q)} type="button">
                     ✏️ Edit

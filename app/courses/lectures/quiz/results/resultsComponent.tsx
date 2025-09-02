@@ -17,8 +17,8 @@ export default function QuizResults() {
 
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [score, setScore] = useState<number | null>(null);
-  const [total, setTotal] = useState<number | null>(null);
+  const [earnedMarks, setEarnedMarks] = useState<number | null>(null);
+  const [totalPossibleMarks, setTotalPossibleMarks] = useState<number | null>(null);
 
   useEffect(() => {
     const auth = getAuth();
@@ -45,8 +45,8 @@ export default function QuizResults() {
         const resultSnap = await getDoc(resultRef);
         if (resultSnap.exists()) {
           const data = resultSnap.data();
-          setScore(data.score ?? null);
-          setTotal(data.total ?? null);
+          setEarnedMarks(data.earnedMarks ?? null);
+          setTotalPossibleMarks(data.totalPossibleMarks ?? null);
         }
       } catch (err) {
         console.error("Error fetching results:", err);
@@ -67,7 +67,7 @@ export default function QuizResults() {
   }
 
   // ✅ Fix: check explicitly for null, not falsy (so 0 works)
-  if (score === null || total === null) {
+  if (earnedMarks === null || totalPossibleMarks === null) {
     return (
       <div className={styles.wrapper}>
         <h1>Quiz Results</h1>
@@ -82,8 +82,8 @@ export default function QuizResults() {
     );
   }
 
-  const requiredScore = Math.floor(total / 2) + 1;
-  const passed = score >= requiredScore;
+  const requiredScore = Math.floor(totalPossibleMarks / 2) + 1;
+  const passed = earnedMarks >= requiredScore;
 
   return (
     <div className={styles.wrapper}>
@@ -100,7 +100,7 @@ export default function QuizResults() {
             backgroundColor: passed ? "var(--green)" : "var(--red)",
           }}
         >
-          {score}/{total}
+          {earnedMarks}/{totalPossibleMarks}
         </strong>{" "}
         questions correctly on the multiple-choice section!
       </p>
