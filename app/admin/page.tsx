@@ -76,6 +76,54 @@ export default function AdminDashboard() {
     useState<React.CSSProperties["flexDirection"]>("column-reverse"); // State for card direction
   const [generatedCode, setGeneratedCode] = useState<string>("");
 
+  // for greying out button
+  const [lectureQuizzesReady, setLectureQuizzesReady] = useState<
+    Record<string, boolean>
+  >({});
+
+  const checkQuizzesExist = async (
+    year: string,
+    courseId: string,
+    lectureId: string
+  ) => {
+    try {
+      const settingsRef = collection(
+        db,
+        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings`
+      );
+      const settingsSnap = await getDocs(settingsRef);
+
+      if (settingsSnap.empty) {
+        setLectureQuizzesReady((prev) => ({ ...prev, [lectureId]: true }));
+        return;
+      }
+
+      const variants = [
+        "variant1Quizzes",
+        "variant2Quizzes",
+        "variant3Quizzes",
+      ];
+      let allPresent = true;
+
+      for (const v of variants) {
+        const vRef = collection(
+          db,
+          `years/${year}/courses/${courseId}/lectures/${lectureId}/${v}`
+        );
+        const vSnap = await getDocs(vRef);
+        if (vSnap.empty) {
+          allPresent = false;
+          break;
+        }
+      }
+
+      setLectureQuizzesReady((prev) => ({ ...prev, [lectureId]: allPresent }));
+    } catch (err) {
+      console.error("Error checking quizzes:", err);
+      setLectureQuizzesReady((prev) => ({ ...prev, [lectureId]: false }));
+    }
+  };
+
   // Admin Check Logic
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -171,6 +219,9 @@ export default function AdminDashboard() {
         ...doc.data(),
       })) as Lecture[];
       setCourseLectures((prev) => ({ ...prev, [courseId]: fetchedLectures }));
+      for (const lecture of fetchedLectures) {
+        checkQuizzesExist(courseYear, courseId, lecture.id);
+      }
     } catch (error) {
       console.error(
         `Error fetching lectures for course ${courseId} in ${courseYear}:`,
@@ -282,25 +333,6 @@ export default function AdminDashboard() {
     } catch (error: unknown) {
       console.error("Error adding lecture:", error);
       setModalMessage("Failed to add lecture: " + (error as Error).message);
-      setShowModal(true);
-    }
-  };
-
-  const handleDeleteLecture = async (courseId: string, lectureId: string) => {
-    try {
-      await deleteDoc(
-        doc(
-          db,
-          `years/${activeYearTab}/courses/${courseId}/lectures`,
-          lectureId
-        )
-      );
-      fetchLecturesForCourse(activeYearTab, courseId);
-      setModalMessage("Lecture deleted successfully!");
-      setShowModal(true);
-    } catch (error: unknown) {
-      console.error("Error deleting lecture:", error);
-      setModalMessage("Failed to delete lecture: " + (error as Error).message);
       setShowModal(true);
     }
   };
@@ -592,16 +624,31 @@ export default function AdminDashboard() {
                             Manage Lecture
                           </button>
                           <button
-                            onClick={() =>
+                            disabled={lectureQuizzesReady[lecture.id] !== true}
+                            style={{
+                              backgroundColor:
+                                lectureQuizzesReady[lecture.id] !== true
+                                  ? "grey"
+                                  : "var(--blue)",
+                              cursor:
+                                lectureQuizzesReady[lecture.id] !== true
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                            onClick={() => {
+                              if (lectureQuizzesReady[lecture.id] !== true)
+                                return;
+
                               handleToggleLectureVisibility(
                                 course.id,
                                 lecture.id,
                                 !!lecture.isHidden
-                              )
-                            }
+                              );
+                            }}
                           >
                             {lecture.isHidden ? "Make Visible" : "Hide Lecture"}
                           </button>
+
                           {/* NEW: Button to toggle enabled/disabled status */}
                           <button
                             style={{ backgroundColor: "var(--red)" }}

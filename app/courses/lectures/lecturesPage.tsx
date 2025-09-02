@@ -349,7 +349,8 @@ function LecturesContent() {
                             ? "Quiz Completed"
                             : "Last Score"}
                           : {progress?.earnedMarks} /{" "}
-                          {progress?.totalPossibleMarks || progress?.totalQuestions}
+                          {progress?.totalPossibleMarks ||
+                            progress?.totalQuestions}
                         </p>
                       )}
 

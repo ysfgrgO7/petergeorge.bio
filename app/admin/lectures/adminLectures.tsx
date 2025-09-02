@@ -17,6 +17,8 @@ import MessageModal from "@/app/MessageModal";
 import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 
+import { IoChevronBackCircleSharp } from "react-icons/io5";
+
 interface LinkItem extends DocumentData {
   id: string;
   text: string;
@@ -264,25 +266,6 @@ export default function LectureManagerPage() {
     }
   };
 
-  const handleToggleVisibility = async () => {
-    if (!lectureRef) return;
-    try {
-      await updateDoc(lectureRef, { isHidden: !isHidden });
-      setIsHidden(!isHidden);
-      setModalMessage(
-        `Lecture visibility updated to ${!isHidden ? "hidden" : "visible"}.`
-      );
-      setShowModal(true);
-    } catch (error: unknown) {
-      let message = "Failed to update visibility.";
-      if (error instanceof Error) {
-        message += ": " + error.message;
-      }
-      setModalMessage(message);
-      setShowModal(true);
-    }
-  };
-
   const handleDeleteLecture = async () => {
     if (
       !lectureRef ||
@@ -346,15 +329,18 @@ export default function LectureManagerPage() {
 
   return (
     <div className="wrapper">
-      <button onClick={() => router.push("/admin")}>← Back to Dashboard</button>
+      <button onClick={() => router.push("/admin")}> <IoChevronBackCircleSharp /> Back to Dashboard</button>
       <h1>Managing: {lectureTitle}</h1>
       <hr />
 
       <section className={styles.lectureActions}>
         <h2>Lecture Actions</h2>
         <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button onClick={handleToggleVisibility}>
-            {isHidden ? "Show Lecture" : "Hide Lecture"}
+          <button
+            onClick={handleManageQuizzes}
+            className={styles.fullWidthButton}
+          >
+            Manage Lecture Quiz
           </button>
           <button onClick={handleDeleteLecture} className={styles.deleteButton}>
             Delete Lecture
@@ -428,18 +414,6 @@ export default function LectureManagerPage() {
             <li>No homework videos found.</li>
           )}
         </ul>
-      </section>
-
-      <hr />
-
-      <section>
-        <h2>Quizzes</h2>
-        <button
-          onClick={handleManageQuizzes}
-          className={styles.fullWidthButton}
-        >
-          Manage Quizzes
-        </button>
       </section>
 
       <hr />
