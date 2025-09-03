@@ -28,7 +28,12 @@ import {
   MdChevronRight,
   MdOutlineHelp,
 } from "react-icons/md";
-import { CgProfile } from "react-icons/cg";
+import {
+  VscAccount,
+  VscLayoutSidebarLeft,
+  VscLayoutSidebarLeftOff,
+} from "react-icons/vsc";
+
 import { GiProgression } from "react-icons/gi";
 
 export default function Navbar({
@@ -324,7 +329,7 @@ export default function Navbar({
               {isSuperAdmin && (
                 <li className={pathname === "/students" ? styles.active : ""}>
                   <Link href="/students" onClick={toggleSidebar}>
-                    <CgProfile className={styles.icon} />
+                    <VscAccount className={styles.icon} />
                     {!isCollapsed && <span>Students</span>}
                   </Link>
                 </li>
@@ -341,7 +346,7 @@ export default function Navbar({
                   gap: "10px",
                 }}
               >
-                <CgProfile className={styles.icon} />
+                <VscAccount className={styles.icon} />
                 {userName}
               </div>
             )}
@@ -359,14 +364,13 @@ export default function Navbar({
               aria-label="Toggle sidebar"
               title="Toggle sidebar"
             >
-              {isCollapsed ? "" : <strong>Collapse</strong>}
               {isCollapsed ? (
-                <MdChevronRight size={24} />
+                <VscLayoutSidebarLeftOff size={24} />
               ) : (
-                <MdChevronLeft size={24} />
+                <VscLayoutSidebarLeft size={24} />
               )}
+              {isCollapsed ? "" : <strong>Collapse</strong>}
             </button>
-
             <button
               onClick={handleLogout}
               style={{ gap: "9px" }}

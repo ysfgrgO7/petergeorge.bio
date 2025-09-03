@@ -6,9 +6,9 @@
   width: 100%;
 }
 
-.button {
-  background-color: var(--fg);
-  color: var(--bg);
+.buttonContainer button {
+  background-color: var(--dark);
+  color: var(--white);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -16,8 +16,8 @@
   font-size: 1.2rem; /* Adjusted font size for mobile */
   padding: 1.5rem; /* Adjusted padding */
   border-radius: var(--border-radius);
-  border: 2px solid var(--fg);
-  box-shadow: 0px 0px 20px 2px var(--fg);
+  border: 2px solid var(--dark);
+  box-shadow: 0px 0px 20px 2px var(--dark);
   cursor: pointer;
   transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
   width: 45%;
@@ -27,9 +27,10 @@
   gap: 1rem;
 }
 
-.button:hover {
+.buttonContainer button:hover {
   transform: translateY(-10px);
-  box-shadow: 0px 10px 30px 5px var(--fg);
+  box-shadow: 0px 10px 30px 5px var(--dark);
+  filter: brightness(1);
 }
 
 @media (max-width: 768px) {
@@ -47,7 +48,7 @@
     gap: 2rem;
   }
 
-  .button {
+  .buttonContainer button {
     width: 90%;
     height: fit-content;
     padding: 1rem;

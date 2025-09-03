@@ -218,7 +218,6 @@ export default function Home() {
             .map((btn) => (
               <button
                 key={btn.title}
-                className={styles.button}
                 onClick={() => handleButtonClick(btn.year)}
               >
                 <strong>{btn.title}</strong>
