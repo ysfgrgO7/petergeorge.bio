@@ -34,6 +34,12 @@ interface HomeworkVideo {
   odyseeId: string;
 }
 
+interface StudentData {
+  studentCode?: string;
+  firstName?: string;
+  secondName?: string;
+}
+
 export default function LecturePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -46,6 +52,7 @@ export default function LecturePage() {
   const lectureTitle = searchParams.get("title");
 
   const [user, setUser] = useState<User | null>(null);
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [courseTitle, setCourseTitle] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
@@ -76,6 +83,17 @@ export default function LecturePage() {
         return;
       }
       setUser(currentUser);
+
+      // Fetch student data to get student code
+      try {
+        const studentDocRef = doc(db, "students", currentUser.uid);
+        const studentDocSnap = await getDoc(studentDocRef);
+        if (studentDocSnap.exists()) {
+          setStudentData(studentDocSnap.data() as StudentData);
+        }
+      } catch (error) {
+        console.error("Error fetching student data:", error);
+      }
 
       if (year && courseId && lectureId) {
         try {
@@ -151,6 +169,44 @@ export default function LecturePage() {
     router.push(`/courses/lectures?year=${year}&courseId=${courseId}`);
   };
 
+  // Video overlay component
+  const VideoOverlay = ({ children }: { children: React.ReactNode }) => (
+    <div style={{ position: "relative", width: "100%" }}>
+      {children}
+      {/* Student Code Overlay */}
+      <div
+        style={{
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+          background: "rgba(0, 0, 0, 0.8)",
+          color: "white",
+          padding: "8px 12px",
+          borderRadius: "6px",
+          fontSize: "14px",
+          fontWeight: "bold",
+          zIndex: 10,
+          pointerEvents: "none",
+          fontFamily: "monospace",
+          border: "2px solid rgba(255, 255, 255, 0.3)",
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        {studentData?.studentCode ? (
+          <>
+            ID: {studentData.studentCode}
+            <br />
+            <span style={{ fontSize: "12px", opacity: 0.9 }}>
+              {studentData.firstName} {studentData.secondName}
+            </span>
+          </>
+        ) : (
+          "Loading..."
+        )}
+      </div>
+    </div>
+  );
+
   // Missing params
   if (
     !year ||
@@ -210,33 +266,39 @@ export default function LecturePage() {
                 <p>This lecture is currently not available.</p>
               </div>
             ) : (
-              <div
-                style={{ position: "relative", width: "100%", height: "500px" }}
-              >
-                <iframe
-                  src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
-                  width="100%"
-                  height="500"
-                  allowFullScreen
-                  frameBorder="0"
-                  style={{ display: "block" }}
-                />
-                <button
+              <VideoOverlay>
+                <div
                   style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
+                    position: "relative",
                     width: "100%",
-                    height: "100px",
-                    background: "transparent",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "1.5rem",
+                    height: "500px",
                   }}
-                ></button>
-              </div>
+                >
+                  <iframe
+                    src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
+                    width="100%"
+                    height="500"
+                    allowFullScreen
+                    frameBorder="0"
+                    style={{ display: "block" }}
+                  />
+                  <button
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: "100px",
+                      background: "transparent",
+                      color: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "1.5rem",
+                    }}
+                  ></button>
+                </div>
+              </VideoOverlay>
             )}
           </div>
 
@@ -253,13 +315,7 @@ export default function LecturePage() {
                     className={styles.videoContainer}
                     style={{ marginBottom: "20px" }}
                   >
-                    <div
-                      style={{
-                        position: "relative",
-                        width: "100%",
-                        height: "500px",
-                      }}
-                    >
+                    <VideoOverlay>
                       <iframe
                         src={`https://odysee.com/$/embed/${video.odyseeName}:${video.odyseeId}`}
                         width="100%"
@@ -267,22 +323,7 @@ export default function LecturePage() {
                         allowFullScreen
                         frameBorder="0"
                       />
-                      <button
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: "100px",
-                          background: "transparent",
-                          color: "white",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "1.5rem",
-                        }}
-                      ></button>
-                    </div>
+                    </VideoOverlay>
                   </div>
                 ))}
               </section>
