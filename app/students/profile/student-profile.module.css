@@ -1,0 +1,136 @@
+/* student-profile.module.css */
+
+.section {
+  background: var(--dark);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.section h2 {
+  margin: 0 0 1.5rem 0;
+  color: var(--white);
+  font-size: 1.5rem;
+  font-weight: 600;
+  border-bottom: 2px solid var(--white);
+  padding-bottom: 0.5rem;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: var(--light);
+  border-radius: 0.375rem;
+  border-left: 5px solid var(--blue);
+}
+
+.infoItem strong {
+  color: var(--dark);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.infoItem span {
+  color: var(--white);
+  font-size: 1rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--dark);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.table thead {
+  background: var(--light);
+}
+
+.table th,
+.table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--light);
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--dark);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.table tr:hover {
+  background: var(--light);
+}
+
+.percentage {
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.percentage.good {
+  background: var(--light);
+  color: var(--dark);
+}
+
+.percentage.average {
+  background: var(--yellow);
+  color: var(--red);
+}
+
+.percentage.poor {
+  background: var(--red);
+  color: var(--dark);
+}
+
+.empty {
+  text-align: center;
+  color: var(--gray);
+  font-style: italic;
+  padding: 2rem;
+  background: var(--light);
+  border-radius: 0.5rem;
+}
+
+.error {
+  color: var(--red);
+  background: var(--white);
+  padding: 1rem;
+  border-radius: 0.375rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .table {
+    font-size: 0.875rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 0.5rem;
+  }
+}

@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, collection, getDocs } from "firebase/firestore";
 import styles from "./students.module.css";
 
 interface StudentData {
+  uid: string; // Added uid to identify the student
   firstName: string;
   secondName: string;
   thirdName: string;
@@ -48,7 +50,7 @@ export default function StudentsPage() {
       setLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup the listener on component unmount
+    return () => unsubscribe();
   }, [router]);
 
   useEffect(() => {
@@ -61,6 +63,7 @@ export default function StudentsPage() {
           (doc) => {
             const data = doc.data() as StudentData;
             return {
+              uid: doc.id, // Use document ID as uid
               firstName: data.firstName || "",
               secondName: data.secondName || "",
               thirdName: data.thirdName || "",
@@ -152,16 +155,21 @@ export default function StudentsPage() {
                     <th>Full Name</th>
                     <th>Gender</th>
                     <th>Student Phone</th>
-                    <th>Father’s Phone</th>
-                    <th>Mother’s Phone</th>
+                    <th>Fathers Phone</th>
+                    <th>Mothers Phone</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredGrouped[year].map((student, index) => (
                     <tr key={index}>
                       <td>
-                        {student.firstName} {student.secondName}{" "}
-                        {student.thirdName} {student.forthName}
+                        <Link
+                          href={`/students/profile?id=${student.uid}`}
+                          className={styles.studentNameLink}
+                        >
+                          {student.firstName} {student.secondName}{" "}
+                          {student.thirdName} {student.forthName}
+                        </Link>
                       </td>
                       <td>{student.gender}</td>
                       <td>{student.studentPhone}</td>
