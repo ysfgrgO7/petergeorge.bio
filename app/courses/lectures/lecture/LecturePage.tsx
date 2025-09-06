@@ -266,14 +266,14 @@ export default function LecturePage() {
                 <p>This lecture is currently not available.</p>
               </div>
             ) : (
-              <VideoOverlay>
-                <div
-                  style={{
-                    position: "relative",
-                    width: "100%",
-                    height: "500px",
-                  }}
-                >
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: "500px",
+                }}
+              >
+                <VideoOverlay>
                   <iframe
                     src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
                     width="100%"
@@ -297,8 +297,8 @@ export default function LecturePage() {
                       fontSize: "1.5rem",
                     }}
                   ></button>
-                </div>
-              </VideoOverlay>
+                </VideoOverlay>
+              </div>
             )}
           </div>
 
@@ -313,7 +313,10 @@ export default function LecturePage() {
                   <div
                     key={video.id}
                     className={styles.videoContainer}
-                    style={{ marginBottom: "20px" }}
+                    style={{
+                      position: "relative",
+                      width: "100%",
+                    }}
                   >
                     <VideoOverlay>
                       <iframe
@@ -323,6 +326,21 @@ export default function LecturePage() {
                         allowFullScreen
                         frameBorder="0"
                       />
+                      <button
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          height: "100px",
+                          background: "transparent",
+                          color: "white",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "1.5rem",
+                        }}
+                      ></button>
                     </VideoOverlay>
                   </div>
                 ))}
