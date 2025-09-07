@@ -91,7 +91,7 @@
 
 .percentage.average {
   background: var(--magenta);
-  color: var(--red);
+  color: var(--white);
 }
 
 .percentage.poor {
