@@ -12,6 +12,7 @@ import {
   setDoc,
   deleteDoc,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import styles from "../admin.module.css";
@@ -25,7 +26,7 @@ interface ExistingQuiz extends DocumentData {
   options?: string[];
   correctAnswerIndex?: number;
   imageUrl?: string;
-  marks?: number; // 👈 Added marks property
+  marks?: number;
 }
 
 export default function QuizBuilder() {
@@ -40,7 +41,7 @@ export default function QuizBuilder() {
   // --- Quiz content state ---
   const [mcqQuestion, setMcqQuestion] = useState("");
   const [mcqImageUrl, setMcqImageUrl] = useState("");
-  const [mcqMarks, setMcqMarks] = useState<1 | 2>(1); // 👈 New state for MCQ marks
+  const [mcqMarks, setMcqMarks] = useState<1 | 2>(1);
   const [options, setOptions] = useState(["", ""]);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
     null
@@ -48,7 +49,7 @@ export default function QuizBuilder() {
   const [existingQuizzes, setExistingQuizzes] = useState<ExistingQuiz[]>([]);
   const [essayQuestion, setEssayQuestion] = useState("");
   const [essayImageUrl, setEssayImageUrl] = useState("");
-  const [essayMarks, setEssayMarks] = useState<1 | 2>(1); // 👈 New state for essay marks
+  const [essayMarks, setEssayMarks] = useState<1 | 2>(1);
   const [existingEssays, setExistingEssays] = useState<ExistingQuiz[]>([]);
   const [editingMcq, setEditingMcq] = useState<string | null>(null);
   const [editingEssay, setEditingEssay] = useState<string | null>(null);
@@ -66,6 +67,7 @@ export default function QuizBuilder() {
   const [activeTab, setActiveTab] = useState<
     "variant1" | "variant2" | "variant3"
   >("variant1");
+  const [isCopying, setIsCopying] = useState(false); // New state for copy operation
 
   // --- Duration logic ---
   const fetchQuizDuration = async () => {
@@ -178,6 +180,94 @@ export default function QuizBuilder() {
     }
   };
 
+  // --- New function to copy current variant to all other variants ---
+  const copyToAllVariants = async () => {
+    if (!year || !courseId || !lectureId) {
+      setModalMessage("Missing course, lecture, or year information.");
+      setShowModal(true);
+      return;
+    }
+
+    if (existingQuizzes.length === 0) {
+      setModalMessage(
+        `No MCQ questions found in ${activeTab.replace(
+          "variant",
+          "Variant "
+        )} to copy.`
+      );
+      setShowModal(true);
+      return;
+    }
+
+    const confirmCopy = window.confirm(
+      `Are you sure you want to copy all ${
+        existingQuizzes.length
+      } MCQ questions from ${activeTab.replace(
+        "variant",
+        "Variant "
+      )} to all other variants? This will replace existing questions in the other variants.`
+    );
+
+    if (!confirmCopy) return;
+
+    setIsCopying(true);
+
+    try {
+      const batch = writeBatch(db);
+      const variants = ["variant1", "variant2", "variant3"];
+      const targetVariants = variants.filter((v) => v !== activeTab);
+
+      // First, delete existing questions in target variants
+      for (const variant of targetVariants) {
+        const collectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/${variant}Quizzes`;
+        const existingDocs = await getDocs(collection(db, collectionPath));
+
+        existingDocs.docs.forEach((docSnap) => {
+          batch.delete(docSnap.ref);
+        });
+      }
+
+      // Then, copy questions from current variant to target variants
+      for (const variant of targetVariants) {
+        const collectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/${variant}Quizzes`;
+
+        existingQuizzes.forEach((quiz) => {
+          // Create a new document reference for each question in each target variant
+          const newDocRef = doc(collection(db, collectionPath));
+          const quizData = {
+            type: quiz.type || "mcq",
+            question: quiz.question,
+            options: quiz.options,
+            correctAnswerIndex: quiz.correctAnswerIndex,
+            imageUrl: quiz.imageUrl,
+            marks: quiz.marks || 1,
+          };
+          batch.set(newDocRef, quizData);
+        });
+      }
+
+      await batch.commit();
+
+      setModalMessage(
+        `Successfully copied ${
+          existingQuizzes.length
+        } MCQ questions from ${activeTab.replace(
+          "variant",
+          "Variant "
+        )} to all other variants! 🎉`
+      );
+      setShowModal(true);
+    } catch (error: unknown) {
+      console.error("Error copying to all variants:", error);
+      setModalMessage(
+        "Failed to copy questions to all variants: " + (error as Error).message
+      );
+      setShowModal(true);
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -210,12 +300,12 @@ export default function QuizBuilder() {
   useEffect(() => {
     setMcqQuestion("");
     setMcqImageUrl("");
-    setMcqMarks(1); // 👈 Reset marks to default
+    setMcqMarks(1);
     setOptions(["", ""]);
     setCorrectAnswerIndex(null);
     setEssayQuestion("");
     setEssayImageUrl("");
-    setEssayMarks(1); // 👈 Reset marks to default
+    setEssayMarks(1);
     setEditingMcq(null);
     setEditingEssay(null);
   }, [activeTab]);
@@ -238,12 +328,11 @@ export default function QuizBuilder() {
     setOptions(updated);
   };
 
-  // 👈 Updated handleEdit function for MCQs
   const handleEditMcq = (quiz: ExistingQuiz) => {
     setEditingMcq(quiz.id);
     setMcqQuestion(quiz.question);
     setMcqImageUrl(quiz.imageUrl || "");
-    setMcqMarks((quiz.marks as 1 | 2) || 1); // 👈 Set marks or default to 1
+    setMcqMarks((quiz.marks as 1 | 2) || 1);
     setOptions(quiz.options || ["", ""]);
     setCorrectAnswerIndex(quiz.correctAnswerIndex || null);
     // Scroll to the form
@@ -253,12 +342,11 @@ export default function QuizBuilder() {
     });
   };
 
-  // 👈 Updated handleEdit function for essays
   const handleEditEssay = (essay: ExistingQuiz) => {
     setEditingEssay(essay.id);
     setEssayQuestion(essay.question);
     setEssayImageUrl(essay.imageUrl || "");
-    setEssayMarks((essay.marks as 1 | 2) || 1); // 👈 Set marks or default to 1
+    setEssayMarks((essay.marks as 1 | 2) || 1);
     // Scroll to the form
     window.scrollTo({
       top: document.getElementById("essay-form")?.offsetTop,
@@ -324,7 +412,7 @@ export default function QuizBuilder() {
           options,
           correctAnswerIndex,
           imageUrl: mcqImageUrl.trim() || null,
-          marks: mcqMarks, // 👈 Include marks in data
+          marks: mcqMarks,
         };
 
         if (editingMcq) {
@@ -346,7 +434,7 @@ export default function QuizBuilder() {
           type: "essay",
           question: essayQuestion,
           imageUrl: essayImageUrl.trim() || null,
-          marks: essayMarks, // 👈 Include marks in data
+          marks: essayMarks,
         };
 
         if (editingEssay) {
@@ -361,12 +449,12 @@ export default function QuizBuilder() {
       // Reset form fields
       setMcqQuestion("");
       setMcqImageUrl("");
-      setMcqMarks(1); // 👈 Reset marks to default
+      setMcqMarks(1);
       setOptions(["", ""]);
       setCorrectAnswerIndex(null);
       setEssayQuestion("");
       setEssayImageUrl("");
-      setEssayMarks(1); // 👈 Reset marks to default
+      setEssayMarks(1);
       setEditingMcq(null);
       setEditingEssay(null);
 
@@ -486,7 +574,7 @@ export default function QuizBuilder() {
             onChange={(e) => setMcqImageUrl(e.target.value)}
           />
 
-          {/* 👈 Marks selector for MCQ */}
+          {/* Marks selector for MCQ */}
           <div style={{ marginBottom: "10px" }}>
             <label style={{ fontWeight: "bold", marginRight: "10px" }}>
               Marks:
@@ -552,7 +640,7 @@ export default function QuizBuilder() {
                 setEditingMcq(null);
                 setMcqQuestion("");
                 setMcqImageUrl("");
-                setMcqMarks(1); // 👈 Reset marks to default
+                setMcqMarks(1);
                 setOptions(["", ""]);
                 setCorrectAnswerIndex(null);
               }}
@@ -585,7 +673,7 @@ export default function QuizBuilder() {
             style={{ marginBottom: "10px" }}
           />
 
-          {/* 👈 Marks selector for Essay */}
+          {/* Marks selector for Essay */}
           <div style={{ marginBottom: "10px" }}>
             <label style={{ fontWeight: "bold", marginRight: "10px" }}>
               Marks:
@@ -615,7 +703,7 @@ export default function QuizBuilder() {
                 setEditingEssay(null);
                 setEssayQuestion("");
                 setEssayImageUrl("");
-                setEssayMarks(1); // 👈 Reset marks to default
+                setEssayMarks(1);
               }}
             >
               Cancel Edit
@@ -626,13 +714,41 @@ export default function QuizBuilder() {
         <hr />
 
         {/* Existing MCQs */}
-        <h2>Existing MCQs in {activeTab.replace("variant", "Variant ")}</h2>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "20px",
+          }}
+        >
+          <h2>Existing MCQs in {activeTab.replace("variant", "Variant ")}</h2>
+          {existingQuizzes.length > 0 && (
+            <button
+              onClick={copyToAllVariants}
+              disabled={isCopying}
+              style={{
+                backgroundColor: "#4CAF50",
+                color: "white",
+                padding: "10px 20px",
+                border: "none",
+                borderRadius: "6px",
+                cursor: isCopying ? "not-allowed" : "pointer",
+                fontWeight: "bold",
+                fontSize: "14px",
+                opacity: isCopying ? 0.6 : 1,
+              }}
+            >
+              {isCopying ? "🔄 Copying..." : "📋 Set for All Variants"}
+            </button>
+          )}
+        </div>
+
         {existingQuizzes.length ? (
           <ul>
             {existingQuizzes.map((q, i) => (
               <li key={q.id}>
                 {i + 1}. {q.question}
-                {/* 👈 Display marks */}
                 <span
                   style={{
                     backgroundColor: "var(--dark)",
@@ -698,7 +814,6 @@ export default function QuizBuilder() {
             {existingEssays.map((q, i) => (
               <li key={q.id}>
                 {i + 1}. {q.question}
-                {/* 👈 Display marks */}
                 <span
                   style={{
                     backgroundColor: "#f3e5f5",

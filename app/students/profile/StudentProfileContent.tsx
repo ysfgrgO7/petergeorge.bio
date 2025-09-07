@@ -20,6 +20,7 @@ interface StudentInfo {
   gender: string;
   school: string;
   studentCode: string;
+  uid: string;
   createdAt: string;
   devices?: string[];
 }
@@ -236,6 +237,10 @@ export default function StudentProfileContent() {
           <div className={styles.infoItem}>
             <strong>Student Code:</strong>
             <span>{studentInfo.studentCode}</span>
+          </div>
+          <div className={styles.infoItem}>
+            <strong>Student UID:</strong>
+            <span>{studentInfo.uid}</span>
           </div>
           <div className={styles.infoItem}>
             <strong>Email:</strong>

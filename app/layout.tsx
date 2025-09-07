@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
+// app/layout.tsx
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import LayoutWrapper from "@/app/components/LayoutWrapper";
-import DisableRightClick from "@/app/components/disableRightClicks";
 import Footer from "@/app/components/footer";
+import AdminProvider from "@/app/components/isAdmin";
 
 const poppins = Poppins({
   weight: ["400", "600", "700"],
@@ -11,7 +11,7 @@ const poppins = Poppins({
   display: "swap",
 });
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Master Biology",
   description: "Learn Biology",
   icons: {
@@ -21,15 +21,16 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body className={poppins.className}>
-        <DisableRightClick />
-        <LayoutWrapper>{children}</LayoutWrapper>
-        <Footer />
+        <AdminProvider>
+          <LayoutWrapper>{children}</LayoutWrapper>
+          <Footer />
+        </AdminProvider>
       </body>
     </html>
   );
