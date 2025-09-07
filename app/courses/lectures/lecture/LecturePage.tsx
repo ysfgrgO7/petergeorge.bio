@@ -308,7 +308,7 @@ export default function LecturePage() {
           {homeworkVideos.length > 0 && (
             <>
               <section>
-                <h1>Homework Videos</h1>
+                <h1>Related Videos</h1>
                 {homeworkVideos.map((video) => (
                   <div
                     key={video.id}
