@@ -20,7 +20,7 @@ import {
   getQuizAttemptInfo,
 } from "@/lib/studentProgress";
 import { getUnusedQuizVariant, getRandomQuizVariant } from "@/lib/quizUtils";
-import ConfirmModal from "./confirmModal";
+import PopupModal from "@/app/popupModal";
 import styles from "../../courses.module.css";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import MessageModal from "@/app/MessageModal";
@@ -77,6 +77,7 @@ export default function QuizClient() {
   const [user, setUser] = useState<User | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [popupModal, setPopupModal] = useState("");
   const [loading, setLoading] = useState(true);
 
   const [timeLeft, setTimeLeft] = useState(0);
@@ -135,6 +136,7 @@ export default function QuizClient() {
           marks: questionMarks,
         });
       }
+      setPopupModal("Are you sure you want to submit this quiz?");
     });
 
     const requiredScore = Math.floor(totalMCQQuestions / 2) + 1;
@@ -646,8 +648,11 @@ export default function QuizClient() {
         />
       )}
       {showConfirm && (
-        <ConfirmModal
-          message="Are you sure you want to submit?"
+        <PopupModal
+          isOpen={showConfirm}
+          message={"Are you sure you want to submit this quiz?"}
+          confirmText="Submit"
+          cancelText="Cancel"
           onConfirm={confirmSubmit}
           onCancel={() => setShowConfirm(false)}
         />

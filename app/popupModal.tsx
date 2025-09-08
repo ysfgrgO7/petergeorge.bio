@@ -1,19 +1,29 @@
-// app/ConfirmModal.tsx
+// components/ConfirmModal.tsx
 "use client";
 
 import React from "react";
 
 interface ConfirmModalProps {
+  isOpen: boolean;
   message: string;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmText?: string;
+  cancelText?: string;
+  children?: React.ReactNode; // 👈 allow extra content (like dropdown)
 }
 
-const ConfirmModal: React.FC<ConfirmModalProps> = ({
+const PopupModal: React.FC<ConfirmModalProps> = ({
+  isOpen,
   message,
   onConfirm,
   onCancel,
+  confirmText = "Yes",
+  cancelText = "No",
+  children,
 }) => {
+  if (!isOpen) return null;
+
   return (
     <div
       style={{
@@ -39,6 +49,10 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         }}
       >
         <p style={{ marginBottom: "1rem" }}>{message}</p>
+
+        {/* 👇 extra content goes here */}
+        {children && <div style={{ marginBottom: "1rem" }}>{children}</div>}
+
         <div style={{ display: "flex", justifyContent: "center", gap: "1rem" }}>
           <button
             onClick={onConfirm}
@@ -51,7 +65,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
               cursor: "pointer",
             }}
           >
-            Yes
+            {confirmText}
           </button>
           <button
             onClick={onCancel}
@@ -63,7 +77,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
               cursor: "pointer",
             }}
           >
-            No
+            {cancelText}
           </button>
         </div>
       </div>
@@ -71,4 +85,4 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   );
 };
 
-export default ConfirmModal;
+export default PopupModal;

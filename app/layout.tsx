@@ -4,6 +4,7 @@ import "./globals.css";
 import LayoutWrapper from "@/app/components/LayoutWrapper";
 import Footer from "@/app/components/footer";
 import AdminProvider from "@/app/components/isAdmin";
+import PlaceChecker from "@/app/components/placeChecker"; // 👈 new client component
 
 const poppins = Poppins({
   weight: ["400", "600", "700"],
@@ -30,6 +31,7 @@ export default function RootLayout({
         <AdminProvider>
           <LayoutWrapper>{children}</LayoutWrapper>
           <Footer />
+          <PlaceChecker /> {/* 👈 runs on client side */}
         </AdminProvider>
       </body>
     </html>

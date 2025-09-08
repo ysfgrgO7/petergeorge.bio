@@ -22,6 +22,7 @@ interface FormData {
   fatherPhone: string;
   motherPhone: string;
   year: string;
+  system: string;
 }
 
 interface FormErrors {
@@ -38,6 +39,7 @@ interface FormErrors {
   fatherPhone?: string;
   motherPhone?: string;
   year?: string;
+  system?: string;
 }
 
 export default function Register() {
@@ -70,6 +72,7 @@ export default function Register() {
     fatherPhone: "",
     motherPhone: "",
     year: "",
+    system: "",
   });
 
   const handleChange = (
@@ -248,6 +251,11 @@ export default function Register() {
               <option value="">Select School Year</option>
               <option value="year1">1st Secondary (Integrated Sciences)</option>
               <option value="year3">3rd Secondary (Biology/Geology)</option>
+            </select>
+            <select name="system" onChange={handleChange} required>
+              <option value="">Select Your Learning System</option>
+              <option value="center">center</option>
+              <option value="online">online</option>
             </select>
           </div>
           <div className={styles.section}>
