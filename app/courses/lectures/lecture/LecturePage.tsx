@@ -34,6 +34,12 @@ interface HomeworkVideo {
   odyseeId: string;
 }
 
+interface ExtraVideo {
+  id: string;
+  odyseeName: string;
+  odyseeId: string;
+}
+
 interface StudentData {
   studentCode?: string;
   firstName?: string;
@@ -58,6 +64,7 @@ export default function LecturePage() {
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [homeworkVideos, setHomeworkVideos] = useState<HomeworkVideo[]>([]);
+  const [extraVideos, setExtraVideos] = useState<ExtraVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [isExpired, setIsExpired] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -159,6 +166,18 @@ export default function LecturePage() {
                 (doc) => ({ id: doc.id, ...doc.data() } as HomeworkVideo)
               );
             setHomeworkVideos(fetchedHomeworkVideos);
+
+            // Extra videos
+            const extraVideosRef = collection(
+              db,
+              `years/${year}/courses/${courseId}/lectures/${lectureId}/extraVideos`
+            );
+            const extraVideosSnapshot = await getDocs(extraVideosRef);
+            const fetchedExtraVideos: ExtraVideo[] =
+              extraVideosSnapshot.docs.map(
+                (doc) => ({ id: doc.id, ...doc.data() } as ExtraVideo)
+              );
+            setExtraVideos(fetchedExtraVideos);
 
             // Progress
             const lectureProgress = await getLectureProgress(
@@ -306,34 +325,82 @@ export default function LecturePage() {
                 style={{
                   position: "relative",
                   width: "100%",
-                  height: "500px",
+                  height: "max-content",
                 }}
               >
-                <VideoOverlay>
-                  <iframe
-                    src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
-                    width="100%"
-                    height="500"
-                    allowFullScreen
-                    frameBorder="0"
-                    style={{ display: "block" }}
-                  />
-                  <button
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100px",
-                      background: "transparent",
-                      color: "white",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "1.5rem",
-                    }}
-                  ></button>
-                </VideoOverlay>
+                <section>
+                  <VideoOverlay>
+                    <iframe
+                      src={`https://odysee.com/$/embed/${odyseeName}:${odyseeId}`}
+                      width="100%"
+                      height="500"
+                      allowFullScreen
+                      frameBorder="0"
+                      style={{ display: "block" }}
+                    />
+                    <button
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100px",
+                        background: "transparent",
+                        color: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "1.5rem",
+                      }}
+                    ></button>
+                  </VideoOverlay>
+                </section>
+
+                <section>
+                  {/* Additional Videos */}
+                  {extraVideos.length > 0 && (
+                    <>
+                      <section>
+                        <br />
+                        {extraVideos.map((video) => (
+                          <div
+                            key={video.id}
+                            className={styles.videoContainer}
+                            style={{
+                              position: "relative",
+                              width: "100%",
+                            }}
+                          >
+                            <VideoOverlay>
+                              <iframe
+                                src={`https://odysee.com/$/embed/${video.odyseeName}:${video.odyseeId}`}
+                                width="100%"
+                                height="350"
+                                allowFullScreen
+                                frameBorder="0"
+                              />
+                              <button
+                                style={{
+                                  position: "absolute",
+                                  top: 0,
+                                  left: 0,
+                                  width: "100%",
+                                  height: "100px",
+                                  background: "transparent",
+                                  color: "white",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: "1.5rem",
+                                }}
+                              ></button>
+                            </VideoOverlay>
+                          </div>
+                        ))}
+                      </section>
+                    </>
+                  )}
+                </section>
               </div>
             )}
           </div>

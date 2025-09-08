@@ -31,6 +31,12 @@ interface HomeworkVideo {
   odyseeId: string;
 }
 
+interface ExtraVideo {
+  id: string;
+  odyseeName: string;
+  odyseeId: string;
+}
+
 export default function LectureManagerPage() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -49,6 +55,10 @@ export default function LectureManagerPage() {
   // New state for homework video
   const [newHomeworkLink, setNewHomeworkLink] = useState("");
   const [homeworkVideos, setHomeworkVideos] = useState<HomeworkVideo[]>([]);
+
+  // New state for extra videos
+  const [newExtraVideoLink, setNewExtraVideoLink] = useState("");
+  const [extraVideos, setExtraVideos] = useState<ExtraVideo[]>([]);
 
   // State for Links
   const [linkText, setLinkText] = useState("");
@@ -92,6 +102,14 @@ export default function LectureManagerPage() {
           (doc) => ({ id: doc.id, ...doc.data() } as HomeworkVideo)
         );
       setHomeworkVideos(fetchedHomeworkVideos);
+
+      // Fetch extra videos
+      const extraVideosRef = collection(lectureRef, "extraVideos");
+      const extraVideosSnapshot = await getDocs(extraVideosRef);
+      const fetchedExtraVideos: ExtraVideo[] = extraVideosSnapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as ExtraVideo)
+      );
+      setExtraVideos(fetchedExtraVideos);
 
       // Fetch quiz count
     } catch (error) {
@@ -239,6 +257,65 @@ export default function LectureManagerPage() {
     }
   };
 
+  const handleAddExtraVideo = async () => {
+    if (!newExtraVideoLink.trim()) {
+      setModalMessage("Extra video link cannot be empty.");
+      setShowModal(true);
+      return;
+    }
+
+    const info = extractOdyseeInfo(newExtraVideoLink);
+    if (!info) {
+      setModalMessage(
+        "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'."
+      );
+      setShowModal(true);
+      return;
+    }
+
+    if (!lectureRef) return;
+
+    try {
+      const extraVideosRef = collection(lectureRef, "extraVideos");
+      await addDoc(extraVideosRef, {
+        odyseeName: info.name,
+        odyseeId: info.id,
+      });
+      setNewExtraVideoLink("");
+      fetchData();
+      setModalMessage("Extra video added successfully!");
+      setShowModal(true);
+    } catch (error: unknown) {
+      let message = "Failed to add extra video.";
+      if (error instanceof Error) {
+        message += ": " + error.message;
+      }
+      setModalMessage(message);
+      setShowModal(true);
+    }
+  };
+
+  const handleDeleteExtraVideo = async (videoId: string) => {
+    if (
+      !lectureRef ||
+      !confirm("Are you sure you want to delete this extra video?")
+    )
+      return;
+    try {
+      await deleteDoc(doc(lectureRef, "extraVideos", videoId));
+      fetchData();
+      setModalMessage("Extra video deleted successfully!");
+      setShowModal(true);
+    } catch (error: unknown) {
+      let message = "Failed to delete extra video.";
+      if (error instanceof Error) {
+        message += ": " + error.message;
+      }
+      setModalMessage(message);
+      setShowModal(true);
+    }
+  };
+
   const handleAddLink = async () => {
     if (!linkText.trim() || !linkUrl.trim()) {
       setModalMessage("Link text and URL cannot be empty.");
@@ -329,7 +406,10 @@ export default function LectureManagerPage() {
 
   return (
     <div className="wrapper">
-      <button onClick={() => router.push("/admin")}> <IoChevronBackCircleSharp /> Back to Dashboard</button>
+      <button onClick={() => router.push("/admin")}>
+        {" "}
+        <IoChevronBackCircleSharp /> Back to Dashboard
+      </button>
       <h1>Managing: {lectureTitle}</h1>
       <hr />
 
@@ -381,7 +461,43 @@ export default function LectureManagerPage() {
 
       <hr />
 
-      {/* NEW SECTION FOR HOMEWORK VIDEOS */}
+      {/* NEW SECTION FOR ADDITIONAL VIDEOS */}
+      <section>
+        <h2>Additional Videos</h2>
+        <div className={styles.form}>
+          <input
+            type="text"
+            placeholder="New additional video Odysee link"
+            value={newExtraVideoLink}
+            onChange={(e) => setNewExtraVideoLink(e.target.value)}
+          />
+          <button onClick={handleAddExtraVideo}>Add Additional Video</button>
+        </div>
+        <h3>Existing Additional Videos</h3>
+        <ul className={styles.subList}>
+          {extraVideos.length > 0 ? (
+            extraVideos.map((video) => (
+              <li key={video.id}>
+                <a
+                  href={`https://odysee.com/$/embed/@${video.odyseeName}:${video.odyseeId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {video.odyseeName}
+                </a>
+                <button onClick={() => handleDeleteExtraVideo(video.id)}>
+                  Delete
+                </button>
+              </li>
+            ))
+          ) : (
+            <li>No additional videos found.</li>
+          )}
+        </ul>
+      </section>
+
+      <hr />
+
       <section>
         <h2>Homework Videos</h2>
         <div className={styles.form}>
