@@ -38,6 +38,7 @@ interface StudentData {
   studentCode?: string;
   firstName?: string;
   secondName?: string;
+  system?: "center" | "online"; // NEW: Add system field
 }
 
 export default function LecturePage() {
@@ -84,12 +85,14 @@ export default function LecturePage() {
       }
       setUser(currentUser);
 
-      // Fetch student data to get student code
+      // Fetch student data to get student code and system
+      let currentStudentData: StudentData | null = null;
       try {
         const studentDocRef = doc(db, "students", currentUser.uid);
         const studentDocSnap = await getDoc(studentDocRef);
         if (studentDocSnap.exists()) {
-          setStudentData(studentDocSnap.data() as StudentData);
+          currentStudentData = studentDocSnap.data() as StudentData;
+          setStudentData(currentStudentData);
         }
       } catch (error) {
         console.error("Error fetching student data:", error);
@@ -106,7 +109,21 @@ export default function LecturePage() {
 
           if (lectureDocSnap.exists()) {
             const lectureData = lectureDocSnap.data();
-            const isLectureEnabled = lectureData?.isEnabled ?? true;
+
+            // NEW: Check system-specific enabled status
+            let isLectureEnabled = true;
+
+            if (currentStudentData?.system) {
+              // Check the specific system field
+              if (currentStudentData.system === "center") {
+                isLectureEnabled = lectureData?.isEnabledCenter !== false; // Default to true if undefined
+              } else if (currentStudentData.system === "online") {
+                isLectureEnabled = lectureData?.isEnabledOnline !== false; // Default to true if undefined
+              }
+            } else {
+              // Fallback to general isEnabled if no system is specified
+              isLectureEnabled = lectureData?.isEnabled ?? true;
+            }
 
             // Just mark expired, don't stop other fetching
             if (!isLectureEnabled) {
@@ -199,6 +216,15 @@ export default function LecturePage() {
             <span style={{ fontSize: "12px", opacity: 0.9 }}>
               {studentData.firstName} {studentData.secondName}
             </span>
+            {/* NEW: Show system type */}
+            {studentData.system && (
+              <>
+                <br />
+                <span style={{ fontSize: "10px", opacity: 0.7 }}>
+                  {studentData.system.toUpperCase()}
+                </span>
+              </>
+            )}
           </>
         ) : (
           "Loading..."
@@ -263,7 +289,17 @@ export default function LecturePage() {
                 <h2 style={{ color: "red", marginBottom: "0.5rem" }}>
                   The Lecture has Expired 🔒
                 </h2>
-                <p>This lecture is currently not available.</p>
+                <p>
+                  This lecture is currently not available for your student
+                  system.
+                </p>
+                {/* NEW: Show which system the student belongs to */}
+                {studentData?.system && (
+                  <p style={{ fontSize: "0.9rem", opacity: 0.8 }}>
+                    Student System:{" "}
+                    <strong>{studentData.system.toUpperCase()}</strong>
+                  </p>
+                )}
               </div>
             ) : (
               <div

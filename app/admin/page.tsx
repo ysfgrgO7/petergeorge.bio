@@ -29,7 +29,9 @@ interface Lecture extends DocumentData {
   odyseeId: string;
   order: number; // To maintain the display order of lectures
   isHidden?: boolean; // New optional field to track visibility
-  isEnabled?: boolean; // NEW: Add this optional field
+  isEnabled?: boolean; // General enabled status (kept for backward compatibility)
+  isEnabledCenter?: boolean; // NEW: Enabled status for center students
+  isEnabledOnline?: boolean; // NEW: Enabled status for online students
 }
 
 interface Course extends DocumentData {
@@ -322,7 +324,9 @@ export default function AdminDashboard() {
         odyseeId: info.id,
         order: newOrder,
         isHidden: true,
-        isEnabled: true, // NEW: Set isEnabled to true by default
+        isEnabled: true, // Keep for backward compatibility
+        isEnabledCenter: true, // NEW: Enabled for center students by default
+        isEnabledOnline: true, // NEW: Enabled for online students by default
       });
 
       setLectureTitle("");
@@ -367,8 +371,8 @@ export default function AdminDashboard() {
     }
   };
 
-  // NEW: Handler to toggle enabled status
-  const handleToggleLectureEnabled = async (
+  // NEW: Handler to toggle enabled status for center students
+  const handleToggleLectureEnabledCenter = async (
     courseId: string,
     lectureId: string,
     currentStatus: boolean
@@ -380,19 +384,58 @@ export default function AdminDashboard() {
         lectureId
       );
       await updateDoc(lectureRef, {
-        isEnabled: !currentStatus,
+        isEnabledCenter: !currentStatus,
       });
       fetchLecturesForCourse(activeYearTab, courseId);
       setModalMessage(
-        `Lecture status updated successfully! It is now ${
+        `Lecture status for center students updated successfully! It is now ${
           !currentStatus ? "enabled" : "disabled"
         }.`
       );
       setShowModal(true);
     } catch (error: unknown) {
-      console.error("Error updating lecture status:", error);
+      console.error(
+        "Error updating lecture status for center students:",
+        error
+      );
       setModalMessage(
-        "Failed to update lecture status: " + (error as Error).message
+        "Failed to update lecture status for center students: " +
+          (error as Error).message
+      );
+      setShowModal(true);
+    }
+  };
+
+  // NEW: Handler to toggle enabled status for online students
+  const handleToggleLectureEnabledOnline = async (
+    courseId: string,
+    lectureId: string,
+    currentStatus: boolean
+  ) => {
+    try {
+      const lectureRef = doc(
+        db,
+        `years/${activeYearTab}/courses/${courseId}/lectures`,
+        lectureId
+      );
+      await updateDoc(lectureRef, {
+        isEnabledOnline: !currentStatus,
+      });
+      fetchLecturesForCourse(activeYearTab, courseId);
+      setModalMessage(
+        `Lecture status for online students updated successfully! It is now ${
+          !currentStatus ? "enabled" : "disabled"
+        }.`
+      );
+      setShowModal(true);
+    } catch (error: unknown) {
+      console.error(
+        "Error updating lecture status for online students:",
+        error
+      );
+      setModalMessage(
+        "Failed to update lecture status for online students: " +
+          (error as Error).message
       );
       setShowModal(true);
     }
@@ -602,77 +645,123 @@ export default function AdminDashboard() {
                   courseLectures[course.id].length > 0 ? (
                   <ul className={styles.lectureList}>
                     {courseLectures[course.id].map((lecture: Lecture) => (
-                      <li key={lecture.id}>
-                        <span
-                          className={
-                            lecture.isHidden ? styles.hiddenLecture : ""
-                          }
-                        >
-                          {lecture.title} ({lecture.order + 1}) -{" "}
-                          <strong>
-                            {lecture.isHidden ? "Hidden" : "Visible"}
-                          </strong>
-                        </span>
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
-                          <button
-                            onClick={() =>
-                              router.push(
-                                `/admin/lectures?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}`
-                              )
+                      <React.Fragment key={lecture.id}>
+                        <li>
+                          <span
+                            className={
+                              lecture.isHidden ? styles.hiddenLecture : ""
                             }
                           >
-                            Manage Lecture
-                          </button>
-                          <button
-                            disabled={lectureQuizzesReady[lecture.id] !== true}
+                            {lecture.title} ({lecture.order + 1}) -{" "}
+                            <strong>
+                              {lecture.isHidden ? "Hidden" : "Visible"}
+                            </strong>
+                          </span>
+                          <div
                             style={{
-                              backgroundColor:
-                                lectureQuizzesReady[lecture.id] !== true
-                                  ? "grey"
-                                  : "var(--blue)",
-                              cursor:
-                                lectureQuizzesReady[lecture.id] !== true
-                                  ? "not-allowed"
-                                  : "pointer",
-                            }}
-                            onClick={() => {
-                              if (lectureQuizzesReady[lecture.id] !== true)
-                                return;
-
-                              handleToggleLectureVisibility(
-                                course.id,
-                                lecture.id,
-                                !!lecture.isHidden
-                              );
+                              display: "flex",
+                              gap: "0.5rem",
+                              flexWrap: "wrap",
                             }}
                           >
-                            {lecture.isHidden ? "Make Visible" : "Hide Lecture"}
-                          </button>
+                            <button
+                              onClick={() =>
+                                router.push(
+                                  `/admin/lectures?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}`
+                                )
+                              }
+                            >
+                              Manage Lecture
+                            </button>
+                            <button
+                              disabled={
+                                lectureQuizzesReady[lecture.id] !== true
+                              }
+                              style={{
+                                backgroundColor:
+                                  lectureQuizzesReady[lecture.id] !== true
+                                    ? "grey"
+                                    : "var(--blue)",
+                                cursor:
+                                  lectureQuizzesReady[lecture.id] !== true
+                                    ? "not-allowed"
+                                    : "pointer",
+                              }}
+                              onClick={() => {
+                                if (lectureQuizzesReady[lecture.id] !== true)
+                                  return;
 
-                          {/* NEW: Button to toggle enabled/disabled status */}
-                          <button
-                            style={{ backgroundColor: "var(--red)" }}
-                            onClick={() =>
-                              handleToggleLectureEnabled(
-                                course.id,
-                                lecture.id,
-                                !!lecture.isEnabled
-                              )
-                            }
-                          >
-                            {lecture.isEnabled ? "Disable" : "Enable"}
-                          </button>
-                          <button
-                            onClick={() =>
-                              router.push(
-                                `/admin/viewLecture?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}&odyseeName=${lecture.odyseeName}&odyseeId=${lecture.odyseeId}`
-                              )
-                            }
-                          >
-                            View Lecture
-                          </button>
-                        </div>
-                      </li>
+                                handleToggleLectureVisibility(
+                                  course.id,
+                                  lecture.id,
+                                  !!lecture.isHidden
+                                );
+                              }}
+                            >
+                              {lecture.isHidden
+                                ? "Make Visible"
+                                : "Hide Lecture"}
+                            </button>
+
+                            {/* NEW: Button to toggle enabled/disabled status for center students */}
+                            <button
+                              style={{
+                                backgroundColor:
+                                  lecture.isEnabledCenter !== false
+                                    ? "var(--green)"
+                                    : "var(--red)",
+                                color: "white",
+                              }}
+                              onClick={() =>
+                                handleToggleLectureEnabledCenter(
+                                  course.id,
+                                  lecture.id,
+                                  lecture.isEnabledCenter !== false // Default to true if undefined
+                                )
+                              }
+                            >
+                              Center:{" "}
+                              {lecture.isEnabledCenter !== false
+                                ? "Enabled"
+                                : "Disabled"}
+                            </button>
+
+                            {/* NEW: Button to toggle enabled/disabled status for online students */}
+                            <button
+                              style={{
+                                backgroundColor:
+                                  lecture.isEnabledOnline !== false
+                                    ? "var(--green)"
+                                    : "var(--red)",
+                                color: "white",
+                              }}
+                              onClick={() =>
+                                handleToggleLectureEnabledOnline(
+                                  course.id,
+                                  lecture.id,
+                                  lecture.isEnabledOnline !== false // Default to true if undefined
+                                )
+                              }
+                            >
+                              Online:{" "}
+                              {lecture.isEnabledOnline !== false
+                                ? "Enabled"
+                                : "Disabled"}
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                router.push(
+                                  `/admin/viewLecture?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}&odyseeName=${lecture.odyseeName}&odyseeId=${lecture.odyseeId}`
+                                )
+                              }
+                            >
+                              View Lecture
+                            </button>
+                          </div>
+                        </li>
+                        <hr />
+                      </React.Fragment>
                     ))}
                   </ul>
                 ) : (
