@@ -288,8 +288,7 @@ function LecturesContent() {
                 }`}
               >
                 <h3>
-                  {isLocked ? <IoLockClosed /> : <IoLockOpen />} Lecture{" "}
-                  {index + 1}
+                  {isLocked ? <IoLockClosed /> : <IoLockOpen />} {lecture.title}
                 </h3>
 
                 {isLocked ? (
