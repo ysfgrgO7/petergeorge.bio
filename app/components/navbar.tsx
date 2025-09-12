@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { RiAdminFill } from "react-icons/ri";
 import {
   doc,
   getDoc,
@@ -327,10 +328,10 @@ export default function Navbar({
               )}
 
               {isSuperAdmin && (
-                <li className={pathname === "/students" ? styles.active : ""}>
-                  <Link href="/students" onClick={toggleSidebar}>
-                    <VscAccount className={styles.icon} />
-                    {!isCollapsed && <span>Students</span>}
+                <li className={pathname === "/sadmins" ? styles.active : ""}>
+                  <Link href="/sadmins" onClick={toggleSidebar}>
+                    <RiAdminFill className={styles.icon} />
+                    {!isCollapsed && <span>S. Admin</span>}
                   </Link>
                 </li>
               )}
