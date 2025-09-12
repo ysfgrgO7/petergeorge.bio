@@ -23,6 +23,14 @@
   padding-top: 1rem;
 }
 
+.courseCardDetails {
+  padding-top: 1rem;
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  justify-content: space-between;
+}
+
 .lecture {
   margin-top: 2rem;
 }
@@ -147,5 +155,13 @@
     height: auto; /* Maintain aspect ratio */
     border-radius: var(--border-radius); /* Slightly rounded corners */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  }
+
+  .courseCardDetails {
+    padding-top: 1rem;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    justify-content: space-between;
   }
 }

@@ -12,11 +12,12 @@ import { db } from "@/lib/firebase";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import styles from "./courses.module.css";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface Course extends DocumentData {
   id: string;
   title: string;
-  description: string;
+  thumbnailUrl: string;
   year: "year1" | "year3 (Biology)" | "year3 (Geology)";
 }
 
@@ -46,6 +47,7 @@ export default function CoursesPage() {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loadingCourses, setLoadingCourses] = useState(true);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
   const router = useRouter();
 
   // --- Get student info and check for admin status ---
@@ -134,6 +136,10 @@ export default function CoursesPage() {
     router.push(`/courses/lectures?year=${course.year}&courseId=${course.id}`);
   };
 
+  const handleImageError = (courseId: string) => {
+    setImageErrors((prev) => ({ ...prev, [courseId]: true }));
+  };
+
   const groupedCourses = groupAndSortCourses(courses);
 
   return (
@@ -153,14 +159,38 @@ export default function CoursesPage() {
                 </h2>
                 {groupedCourses[year].map((course) => (
                   <div key={course.id} className={styles.courseCard}>
-                    <h3>{course.title}</h3>
-                    <p>{course.description}</p>
-                    <p>
-                      <strong>Year:</strong> {course.year}
-                    </p>
-                    <button onClick={() => handleCourseClick(course)}>
-                      View Lectures
-                    </button>
+                    <div className={styles.courseCardDetails}>
+                      <div className={styles.thumbnailContainer}>
+                        {course.thumbnailUrl && !imageErrors[course.id] ? (
+                          <img
+                            src={course.thumbnailUrl}
+                            alt={`${course.title} thumbnail`}
+                            style={{
+                              height: "auto",
+                              borderRadius: "5px",
+                            }}
+                            width={200}
+                            draggable={false}
+                            onError={() => handleImageError(course.id)}
+                          />
+                        ) : (
+                          <div></div>
+                        )}
+                      </div>
+
+                      {/* Course Details */}
+                      <div>
+                        <div className={styles.courseDetails}>
+                          <h3>{course.title}</h3>
+                          <p>
+                            <strong>Stage:</strong> {course.year}
+                          </p>
+                        </div>
+                        <button onClick={() => handleCourseClick(course)}>
+                          View Lectures
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

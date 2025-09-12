@@ -49,7 +49,7 @@ export default function AdminDashboard() {
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [thumbnailUrl, setThumbnailUrl] = useState(""); // NEW: Added thumbnailUrl state
   const [yearForNewCourse, setYearForNewCourse] = useState<
     "year1" | "year3 (Biology)" | "year3 (Geology)"
   >("year1");
@@ -240,21 +240,21 @@ export default function AdminDashboard() {
     }
   };
 
-  // NEW: Handler to create a new course
+  // UPDATED: Handler to create a new course with thumbnailUrl instead of description
   const handleCreate = async () => {
-    if (!title.trim() || !description.trim()) {
-      setModalMessage("Course title and description cannot be empty.");
+    if (!title.trim()) {
+      setModalMessage("Course title cannot be empty.");
       setShowModal(true);
       return;
     }
     try {
       await addDoc(collection(db, "years", yearForNewCourse, "courses"), {
         title,
-        description,
-        thumbnailUrl: "",
+        description: "", // Set empty description since we removed the input
+        thumbnailUrl: thumbnailUrl.trim(), // Use the thumbnailUrl from state
       });
       setTitle("");
-      setDescription("");
+      setThumbnailUrl(""); // Clear thumbnailUrl after creation
       fetchCourses(activeYearTab); // Re-fetch courses for the currently active tab
       setModalMessage("Course created successfully!");
       setShowModal(true);
@@ -507,10 +507,11 @@ export default function AdminDashboard() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <textarea
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+        <input
+          type="url"
+          placeholder="Thumbnail URL (optional)"
+          value={thumbnailUrl}
+          onChange={(e) => setThumbnailUrl(e.target.value)}
         />
         <select
           value={yearForNewCourse}
