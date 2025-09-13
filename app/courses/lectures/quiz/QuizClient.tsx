@@ -609,6 +609,10 @@ export default function QuizClient() {
         </div>
       )}
 
+      <div className={styles.floatingTime}>
+        Time Left: <strong>{formatTime(timeLeft)}</strong>
+      </div>
+
       {questions.length > 0 && (
         <div className={styles.quizSummaryFloating}>
           <div>

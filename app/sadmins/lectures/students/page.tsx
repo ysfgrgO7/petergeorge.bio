@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+
 import { useSearchParams, useRouter } from "next/navigation";
 import { db, auth } from "@/lib/firebase";
 import {
@@ -21,6 +22,7 @@ import {
   IoLockClosed,
 } from "react-icons/io5";
 import styles from "../sadmins.module.css";
+import { BiChevronLeft } from "react-icons/bi";
 
 interface StudentProgress {
   studentId: string;
@@ -243,11 +245,9 @@ export default function StudentsPage() {
   if (loading) {
     return (
       <div className="wrapper">
-        <div className={styles.maxWidth}>
-          <div className={styles.loadingContainer}>
-            <div className={styles.spinner}></div>
-            <p className={styles.loadingText}>Loading students...</p>
-          </div>
+        <div className={styles.loadingContainer}>
+          <div className={styles.spinner}></div>
+          <p className={styles.loadingText}>Loading students...</p>
         </div>
       </div>
     );
@@ -256,15 +256,12 @@ export default function StudentsPage() {
   if (error) {
     return (
       <div className="wrapper">
-        <div className={styles.maxWidth}>
-          <div className={styles.errorContainer}>
-            <h2>Error Loading Students</h2>
-            <p>{error}</p>
-            <Link href="/sadmins/lectures" className={styles.backLink}>
-              <IoArrowBack className={styles.backIcon} />
-              Back to Lectures
-            </Link>
-          </div>
+        <div className={styles.errorContainer}>
+          <h2>Error Loading Students</h2>
+          <p>{error}</p>
+          <button onClick={() => router.push("/sadmins/lectures")}>
+            Back to Lectures
+          </button>
         </div>
       </div>
     );
@@ -275,214 +272,177 @@ export default function StudentsPage() {
 
   return (
     <div className="wrapper">
-      <div className={styles.maxWidth}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.headerContent}>
-            <div style={{ flex: 1 }}>
-              <Link href="/sadmins/lectures" className={styles.backLink}>
-                <IoArrowBack className={styles.backIcon} />
-                Back to Lectures
-              </Link>
+      <button
+        style={{ marginBottom: "1rem" }}
+        onClick={() => router.push("/sadmins/lectures")}
+      >
+        <BiChevronLeft />
+        Back to Lectures
+      </button>
 
-              <div className={styles.lectureHeader}>
-                <IoPeople className={styles.lectureIconLarge} />
-                <div className={styles.lectureDetails}>
-                  <h1>{lectureInfo?.title}</h1>
-                  <p className={styles.lectureMeta}>
-                    {lectureInfo?.year} • Course: {courseId}
-                  </p>
-                  {lectureInfo?.description && (
-                    <p className={styles.lectureDesc}>
-                      {lectureInfo.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+      {/* Header */}
+      <div className={styles.header}>
+        <div style={{ flex: 1 }}>
+          <div className={styles.lectureDetails}>
+            <h1>{lectureInfo?.title}</h1>
           </div>
+        </div>
+      </div>
 
-          {/* Stats */}
-          <div className={styles.statsGrid}>
-            <div className={`${styles.statCard} ${styles.blue}`}>
-              <IoPeople className={`${styles.statIcon} ${styles.blue}`} />
-              <div>
-                <div className={`${styles.statValue} ${styles.blue}`}>
-                  {stats.totalEnrolled}
-                </div>
-                <div className={`${styles.statLabel} ${styles.blue}`}>
-                  Students Enrolled
-                </div>
-              </div>
-            </div>
-
-            <div className={`${styles.statCard} ${styles.green}`}>
-              <IoCheckmarkCircle
-                className={`${styles.statIcon} ${styles.green}`}
-              />
-              <div>
-                <div className={`${styles.statValue} ${styles.green}`}>
-                  {stats.completed}
-                </div>
-                <div className={`${styles.statLabel} ${styles.green}`}>
-                  Quiz Completed
-                </div>
-              </div>
-            </div>
-
-            <div className={`${styles.statCard} ${styles.purple}`}>
-              <IoTrophy className={`${styles.statIcon} ${styles.purple}`} />
-              <div>
-                <div className={`${styles.statValue} ${styles.purple}`}>
-                  {stats.averageScore}%
-                </div>
-                <div className={`${styles.statLabel} ${styles.purple}`}>
-                  Average Score
-                </div>
-              </div>
-            </div>
+      {/* Stats */}
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}>
+          <IoPeople className={styles.statIcon} />
+          <div>
+            <div className={styles.statValue}>{stats.totalEnrolled}</div>
+            <div className={styles.statLabel}>Students Enrolled</div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className={styles.filterBar}>
-          <div className={styles.filterButtons}>
-            <button
-              onClick={() => setFilter("unlocked")}
-              className={
-                filter === "unlocked"
-                  ? `${styles.filterButton} ${styles.active}`
-                  : `${styles.filterButton} ${styles.inactive}`
-              }
-            >
-              Enrolled ({stats.totalEnrolled})
-            </button>
-            <button
-              onClick={() => setFilter("completed")}
-              className={
-                filter === "completed"
-                  ? `${styles.filterButton} ${styles.active}`
-                  : `${styles.filterButton} ${styles.inactive}`
-              }
-            >
-              Completed ({stats.completed})
-            </button>
+        <div className={styles.statCard}>
+          <IoCheckmarkCircle className={styles.statIcon} />
+          <div>
+            <div className={styles.statValue}>{stats.completed}</div>
+            <div className={styles.statLabel}>Completed the Quiz</div>
           </div>
         </div>
 
-        {/* Students List */}
-        <div className={styles.studentsCard}>
-          <div className={styles.studentsHeader}>
-            <h2 className={styles.studentsTitle}>
-              Students ({filteredStudents.length})
-            </h2>
+        <div className={styles.statCard}>
+          <IoPeople className={styles.statIcon} />
+          <div>
+            <div className={styles.statValue}>{stats.averageScore}%</div>
+            <div className={styles.statLabel}>Average Score</div>
           </div>
+        </div>
+      </div>
 
-          <div className={styles.studentsList}>
-            {filteredStudents.map((student) => (
-              <div key={student.studentId} className={styles.studentRow}>
-                <div className={styles.studentContent}>
-                  <div className={styles.studentInfo}>
-                    <div className={styles.studentAvatar}>
-                      {student.studentName?.charAt(0).toUpperCase() || "S"}
-                    </div>
-                    <div>
-                      <h3 className={styles.studentName}>
-                        {student.studentName || "Unknown Student"}
-                      </h3>
-                      <p className={styles.studentEmail}>
-                        {student.studentEmail}
-                      </p>
-                    </div>
+      {/* Filters */}
+      <div className={styles.filterBar}>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            onClick={() => setFilter("unlocked")}
+            className={
+              filter === "unlocked"
+                ? `${styles.filterButton} ${styles.active}`
+                : `${styles.filterButton} ${styles.inactive}`
+            }
+          >
+            Enrolled ({stats.totalEnrolled})
+          </button>
+          <button
+            onClick={() => setFilter("completed")}
+            className={
+              filter === "completed"
+                ? `${styles.filterButton} ${styles.active}`
+                : `${styles.filterButton} ${styles.inactive}`
+            }
+          >
+            Completed ({stats.completed})
+          </button>
+        </div>
+      </div>
+
+      {/* Students List */}
+      <div className={styles.studentsCard}>
+        <h2 className={styles.studentsTitle} style={{ padding: "1.5rem" }}>
+          Students ({filteredStudents.length})
+        </h2>
+
+        <div style={{ borderTop: "2px solid var(--light)" }}>
+          {filteredStudents.map((student) => (
+            <div key={student.studentId} className={styles.studentRow}>
+              <div className={styles.studentContent}>
+                <div className={styles.studentInfo}>
+                  <div className={styles.studentAvatar}>
+                    {student.studentName?.charAt(0).toUpperCase() || "S"}
                   </div>
+                  <div>
+                    <h3>{student.studentName || "Unknown Student"}</h3>
+                  </div>
+                </div>
 
-                  <div className={styles.studentStats}>
-                    {/* Quiz Status */}
-                    <div className={styles.statusSection}>
-                      {!student.unlocked ? (
-                        <div className={styles.statusLocked}>
-                          <IoLockClosed className={styles.statusIcon} />
-                          <span>Not Unlocked</span>
-                        </div>
-                      ) : student.quizCompleted ? (
-                        <div className={styles.statusCompleted}>
-                          <IoCheckmarkCircle className={styles.statusIcon} />
-                          <span>Completed</span>
-                        </div>
-                      ) : (
-                        <div className={styles.statusInProgress}>
-                          <IoTime className={styles.statusIcon} />
-                          <span>In Progress</span>
-                        </div>
-                      )}
-                      <div className={styles.attemptsText}>
-                        {student.attempts} attempt
-                        {student.attempts !== 1 ? "s" : ""}
+                <div className={styles.studentStats}>
+                  <div className={styles.statusSection}>
+                    {!student.unlocked ? (
+                      <div className={styles.statusLocked}>
+                        <IoLockClosed className={styles.statusIcon} />
+                        <span>Not Unlocked</span>
                       </div>
-                    </div>
-
-                    {/* Score */}
-                    {student.quizCompleted &&
-                      student.earnedMarks !== undefined &&
-                      student.total && (
-                        <div className={styles.scoreSection}>
-                          <div className={styles.scoreValue}>
-                            {student.earnedMarks}/{student.total}
-                          </div>
-                          <div
-                            className={`${styles.scorePercentage} ${
-                              getPercentage(
-                                student.earnedMarks,
-                                student.total
-                              ) >= 70
-                                ? styles.high
-                                : getPercentage(
-                                    student.earnedMarks,
-                                    student.total
-                                  ) >= 50
-                                ? styles.medium
-                                : styles.low
-                            }`}
-                          >
-                            {getPercentage(student.earnedMarks, student.total)}%
-                          </div>
-                        </div>
-                      )}
-
-                    {/* Status Badge */}
+                    ) : student.quizCompleted ? (
+                      <div className={styles.statusCompleted}>
+                        <IoCheckmarkCircle className={styles.statusIcon} />
+                        <span>Completed</span>
+                      </div>
+                    ) : (
+                      <div className={styles.statusInProgress}>
+                        <IoTime className={styles.statusIcon} />
+                        <span>In Progress</span>
+                      </div>
+                    )}
                     <div>
-                      {student.unlocked ? (
-                        <span className={styles.statusBadge}>
-                          <IoCheckmarkCircle className={styles.badgeIcon} />
-                          Unlocked
-                        </span>
-                      ) : (
-                        <span
-                          className={`${styles.statusBadge} ${styles.locked}`}
-                        >
-                          <IoLockClosed className={styles.badgeIcon} />
-                          Locked
-                        </span>
-                      )}
+                      {student.attempts} attempt
+                      {student.attempts !== 1 ? "s" : ""}
                     </div>
+                  </div>
+
+                  {/* Score */}
+                  {student.quizCompleted &&
+                    student.earnedMarks !== undefined &&
+                    student.total && (
+                      <div className={styles.scoreSection}>
+                        <div>
+                          {student.earnedMarks}/{student.total}
+                        </div>
+                        <div
+                          className={`${styles.scorePercentage} ${
+                            getPercentage(student.earnedMarks, student.total) >=
+                            70
+                              ? styles.high
+                              : getPercentage(
+                                  student.earnedMarks,
+                                  student.total
+                                ) >= 50
+                              ? styles.medium
+                              : styles.low
+                          }`}
+                        >
+                          {getPercentage(student.earnedMarks, student.total)}%
+                        </div>
+                      </div>
+                    )}
+
+                  {/* Status Badge */}
+                  <div>
+                    {student.unlocked ? (
+                      <span className={styles.statusBadge}>
+                        <IoCheckmarkCircle className={styles.badgeIcon} />
+                        Unlocked
+                      </span>
+                    ) : (
+                      <span
+                        className={`${styles.statusBadge} ${styles.locked}`}
+                      >
+                        <IoLockClosed className={styles.badgeIcon} />
+                        Locked
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {filteredStudents.length === 0 && (
-            <div className={styles.emptyState}>
-              <IoPeople className={styles.emptyIcon} />
-              <h3 className={styles.emptyTitle}>No Students Found</h3>
-              <p className={styles.emptyDescription}>
-                {filter === "completed"
-                  ? "No students have completed the quiz yet."
-                  : "No students have enrolled in this lecture yet."}
-              </p>
             </div>
-          )}
+          ))}
         </div>
+
+        {filteredStudents.length === 0 && (
+          <div>
+            <h3>No Students Found</h3>
+            <p>
+              {filter === "completed"
+                ? "No students have completed the quiz yet."
+                : "No students have enrolled in this lecture yet."}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

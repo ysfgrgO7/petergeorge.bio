@@ -12,6 +12,7 @@ html[data-theme="dark"] {
   --red: #976061;
   --magenta: #836e9f;
   --border-radius: 10px;
+  --box-shadow: 0px 0px 20px 2px var(--dark);
 }
 html[data-theme="light"] {
   /* dark */
@@ -27,6 +28,7 @@ html[data-theme="light"] {
   --red: #976061;
   --magenta: #836e9f;
   --border-radius: 10px;
+  --box-shadow: 0px 0px 20px 2px var(--dark);
 }
 
 * {
