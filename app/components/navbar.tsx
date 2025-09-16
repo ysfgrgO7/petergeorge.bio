@@ -304,10 +304,10 @@ export default function Navbar({
                 </Link>
               </li>
 
-              <li className={pathname === "/progress" ? styles.active : ""}>
-                <Link href="/progress" onClick={toggleSidebar}>
-                  <GiProgression className={styles.icon} />
-                  {!isCollapsed && <span>Progress</span>}
+              <li className={pathname === "/profile" ? styles.active : ""}>
+                <Link href="/profile" onClick={toggleSidebar}>
+                  <VscAccount className={styles.icon} />
+                  {!isCollapsed && <span>My Profile</span>}
                 </Link>
               </li>
 
@@ -383,33 +383,56 @@ export default function Navbar({
             </button>
           </>
         ) : (
-          <ul className={styles.links}>
-            <li className={pathname === "/" ? styles.active : ""}>
-              <Link href="/" onClick={toggleSidebar}>
-                <MdHome className={styles.icon} />
-                {!isCollapsed && <span>Home</span>}
-              </Link>
-            </li>
-            <li className={pathname === "/register" ? styles.active : ""}>
-              <Link href="/register" onClick={toggleSidebar}>
-                <MdAppRegistration className={styles.icon} />
-                {!isCollapsed && <span>Register</span>}
-              </Link>
-            </li>
-            <li className={pathname === "/login" ? styles.active : ""}>
-              <Link href="/login" onClick={toggleSidebar}>
-                <MdLogin className={styles.icon} />
-                {!isCollapsed && <span>Login</span>}
-              </Link>
-            </li>
+          <>
+            <ul className={styles.links}>
+              <li className={pathname === "/" ? styles.active : ""}>
+                <Link href="/" onClick={toggleSidebar}>
+                  <MdHome className={styles.icon} />
+                  {!isCollapsed && <span>Home</span>}
+                </Link>
+              </li>
+              <li className={pathname === "/register" ? styles.active : ""}>
+                <Link href="/register" onClick={toggleSidebar}>
+                  <MdAppRegistration className={styles.icon} />
+                  {!isCollapsed && <span>Register</span>}
+                </Link>
+              </li>
+              <li className={pathname === "/login" ? styles.active : ""}>
+                <Link href="/login" onClick={toggleSidebar}>
+                  <MdLogin className={styles.icon} />
+                  {!isCollapsed && <span>Login</span>}
+                </Link>
+              </li>
 
-            <li className={pathname === "/help" ? styles.active : ""}>
-              <Link href="/help" onClick={toggleSidebar}>
-                <MdOutlineHelp className={styles.icon} />
-                {!isCollapsed && <span>Help</span>}
-              </Link>
-            </li>
-          </ul>
+              <li className={pathname === "/help" ? styles.active : ""}>
+                <Link href="/help" onClick={toggleSidebar}>
+                  <MdOutlineHelp className={styles.icon} />
+                  {!isCollapsed && <span>Help</span>}
+                </Link>
+              </li>
+            </ul>
+
+            <button
+              onClick={toggleDesktopSidebar}
+              className={styles.collapseToggle}
+              style={{
+                gap: "9px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--white)",
+              }}
+              aria-label="Toggle sidebar"
+              title="Toggle sidebar"
+            >
+              {isCollapsed ? (
+                <VscLayoutSidebarLeftOff size={24} />
+              ) : (
+                <VscLayoutSidebarLeft size={24} />
+              )}
+              {isCollapsed ? "" : <strong>Collapse</strong>}
+            </button>
+          </>
         )}
       </aside>
     </>

@@ -63,3 +63,102 @@
     font-size: 2.5rem;
   }
 }
+
+/* .bg {
+  background-image: linear-gradient(
+    to bottom right,
+    var(--bg),
+    var(--light),
+    var(--blue)
+  );
+}
+
+.signButtons {
+  display: none;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2rem;
+}
+
+.buttonContainer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.buttonContainer button {
+  background: rgba(47, 56, 67, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  padding: 1.5rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  cursor: pointer;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  width: 45%;
+  max-width: 300px;
+  height: 350px;
+  text-align: center;
+  gap: 1rem;
+}
+
+.buttonContainer button:hover {
+  transform: translateY(-10px);
+  box-shadow: 0px 10px 30px 5px var(--dark);
+  filter: brightness(1);
+}
+
+@media (max-width: 768px) {
+  .signButtons {
+    display: flex;
+    text-align: center;
+    margin-bottom: 2rem;
+    justify-content: center;
+    gap: 1rem;
+  }
+  .signButtons button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .page {
+    gap: 2rem;
+  }
+
+  .page h1 {
+    font-size: 2rem;
+  }
+
+  .buttonContainer {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .buttonContainer button {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .socialMedia {
+    gap: 1rem;
+  }
+
+  .icon {
+    font-size: 2.5rem;
+  }
+} */

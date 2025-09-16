@@ -152,7 +152,7 @@
 
   .floatingTime {
     visibility: visible;
-    position: fixed; /* Keep it in place while scrolling */
+    position: fixed;
     top: 30; /* Adjust as needed */
     background-color: var(--bg); /* Light background */
     filter: brightness(0.95);

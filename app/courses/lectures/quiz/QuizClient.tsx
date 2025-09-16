@@ -142,7 +142,7 @@ export default function QuizClient() {
           question: q.question,
           type: "essay",
           answerText: essayAnswers[q.id] ?? "",
-          marks: questionMarks,
+          marks: 0,
         });
       }
     }

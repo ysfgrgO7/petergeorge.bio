@@ -265,23 +265,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleDelete = async (
-    courseYear: "year1" | "year3 (Biology)" | "year3 (Geology)",
-    courseId: string
-  ) => {
-    try {
-      await deleteDoc(doc(db, "years", courseYear, "courses", courseId));
-      if (selectedCourse?.id === courseId) setSelectedCourse(null);
-      fetchCourses(activeYearTab); // Re-fetch courses for the current active tab
-      setModalMessage("Course deleted successfully!");
-      setShowModal(true);
-    } catch (error: unknown) {
-      console.error("Error deleting course:", error);
-      setModalMessage("Failed to delete course: " + (error as Error).message);
-      setShowModal(true);
-    }
-  };
-
   const extractOdyseeInfo = (
     url: string
   ): { name: string; id: string } | null => {
@@ -606,9 +589,6 @@ export default function AdminDashboard() {
               <strong>Year:</strong> {activeYearTab.toUpperCase()}
             </p>
             <div style={{ display: "flex", gap: "0.5rem" }}>
-              <button onClick={() => handleDelete(activeYearTab, course.id)}>
-                Delete
-              </button>
               <button onClick={() => toggleLecturePanel(course.id)}>
                 {openLecturePanels.has(course.id)
                   ? "Hide Lectures"
