@@ -97,52 +97,59 @@ export default function QuizClient() {
     }
 
     let correctAnswersCount = 0;
-    let totalPossibleMarks = 0; // Track total possible marks
-    let earnedMarks = 0; // Track earned marks
+    let totalPossibleMarks = 0;
+    let earnedMarks = 0;
     const submittedMCQAnswers: SubmittedMCQAnswer[] = [];
     const submittedEssayAnswers: SubmittedEssayAnswer[] = [];
     let totalMCQQuestions = 0;
-    let mcqQuestionIndex = 0;
 
-    questions.forEach((q) => {
-      const questionMarks = q.marks || 1; // Default to 1 if marks doesn't exist
+    // iterate explicitly so mcqIndex stays in sync
+    let mcqIndex = 0;
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      const questionMarks = Number(q.marks ?? 1); // coerce to number
       totalPossibleMarks += questionMarks;
 
       if (q.type === "mcq") {
         totalMCQQuestions++;
-        const isCorrect = mcqAnswers[mcqQuestionIndex] === q.correctAnswerIndex;
+        // coerce selected answer to number, fallback to -1 if missing
+        const rawSelected = mcqAnswers[mcqIndex];
+        const selectedIndex = Number.isFinite(Number(rawSelected))
+          ? Number(rawSelected)
+          : -1;
+        const correctIndex = Number(q.correctAnswerIndex ?? -1);
+        const isCorrect = selectedIndex === correctIndex;
+
         if (isCorrect) {
           correctAnswersCount++;
           earnedMarks += questionMarks;
         }
+
         submittedMCQAnswers.push({
           question: q.question,
           type: "mcq",
-          selectedIndex: mcqAnswers[mcqQuestionIndex],
+          selectedIndex,
           selectedText:
-            mcqAnswers[mcqQuestionIndex] !== -1
-              ? q.options![mcqAnswers[mcqQuestionIndex]]
-              : null,
-          correctAnswer: q.options![q.correctAnswerIndex!],
+            selectedIndex !== -1 ? q.options?.[selectedIndex] ?? null : null,
+          correctAnswer: q.options?.[correctIndex ?? -1] ?? "",
           isCorrect,
           marks: questionMarks,
         });
-        mcqQuestionIndex++;
+
+        mcqIndex++;
       } else {
         submittedEssayAnswers.push({
           question: q.question,
           type: "essay",
-          answerText: essayAnswers[q.id] || "",
+          answerText: essayAnswers[q.id] ?? "",
           marks: questionMarks,
         });
       }
-      setPopupModal("Are you sure you want to submit this quiz?");
-    });
+    }
 
-    const requiredScore = Math.floor(totalMCQQuestions / 2) + 1;
-    const hasPassed = correctAnswersCount >= requiredScore;
+    // only show modal once
+    setPopupModal("Are you sure you want to submit this quiz?");
 
-    // Save results in Firestore with enhanced marking system and explicit quizCompleted field
     const attemptRef = doc(
       db,
       "students",
@@ -159,9 +166,10 @@ export default function QuizClient() {
         lectureId,
         score: correctAnswersCount,
         total: totalMCQQuestions,
-        earnedMarks, // New field for actual marks earned
-        totalPossibleMarks, // New field for total possible marks
-        quizCompleted: hasPassed, // Explicitly set based on pass/fail
+        earnedMarks,
+        totalPossibleMarks,
+        quizCompleted:
+          correctAnswersCount >= Math.floor(totalMCQQuestions / 2) + 1,
         answers: {
           mcq: submittedMCQAnswers,
           essay: submittedEssayAnswers,
@@ -179,16 +187,20 @@ export default function QuizClient() {
       lectureId
     );
 
+    const requiredScore = Math.floor(totalMCQQuestions / 2) + 1;
+    const hasPassed = correctAnswersCount >= requiredScore;
+
     if (hasPassed) {
       try {
         await deleteDoc(quizStateDocRef);
+        // <-- IMPORTANT: update markQuizComplete to accept earnedMarks and totalPossibleMarks
         await markQuizComplete(
           user.uid,
           year,
           courseId,
           lectureId,
-          correctAnswersCount,
-          totalMCQQuestions
+          earnedMarks,
+          totalPossibleMarks
         );
         await unlockLecture(user.uid, year, courseId, lectureId);
       } catch (error: unknown) {
@@ -202,7 +214,15 @@ export default function QuizClient() {
       }
     }
 
-    // Redirect to results page
+    // debug (remove in production)
+    console.log({
+      correctAnswersCount,
+      totalMCQQuestions,
+      earnedMarks,
+      totalPossibleMarks,
+      submittedMCQAnswers,
+    });
+
     router.push(
       `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
     );
@@ -447,9 +467,6 @@ export default function QuizClient() {
   const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
 
   const totalMCQQuestions = questions.filter((q) => q.type === "mcq").length;
-  const totalEssayQuestions = questions.filter(
-    (q) => q.type === "essay"
-  ).length;
   const answeredMCQs = mcqAnswers.filter((ans) => ans !== -1).length;
   const answeredEssays = Object.keys(essayAnswers).filter(
     (key) => essayAnswers[key].trim() !== ""
