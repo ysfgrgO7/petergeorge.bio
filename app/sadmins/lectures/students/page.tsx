@@ -355,21 +355,19 @@ export default function StudentsPage() {
               key={student.studentId}
               className={`${styles.studentRow} ${styles.clickableRow}`}
               onClick={() => {
-                if (student.quizCompleted) {
-                  router.push(
-                    `/sadmins/lectures/students/review?studentId=${
-                      student.studentId
-                    }&courseId=${courseId}&lectureId=${lectureId}&year=${
-                      lectureInfo?.year ?? ""
-                    }&studentName=${encodeURIComponent(
-                      student.studentName || "Unknown"
-                    )}`
-                  );
-                }
+                router.push(
+                  `/sadmins/lectures/students/review?studentId=${
+                    student.studentId
+                  }&courseId=${courseId}&lectureId=${lectureId}&year=${
+                    lectureInfo?.year ?? ""
+                  }&studentName=${encodeURIComponent(
+                    student.studentName || "Unknown"
+                  )}`
+                );
               }}
               style={{
-                cursor: student.quizCompleted ? "pointer" : "default",
-                opacity: student.quizCompleted ? 1 : 0.7,
+                cursor: "pointer",
+                opacity: 1,
               }}
             >
               <div className={styles.studentContent}>
@@ -379,13 +377,11 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <h3>{student.studentName || "Unknown Student"}</h3>
-                    {student.quizCompleted && (
-                      <small
-                        style={{ color: "var(--primary)", fontSize: "0.85rem" }}
-                      >
-                        Click to view quiz answers
-                      </small>
-                    )}
+                    <small
+                      style={{ color: "var(--primary)", fontSize: "0.85rem" }}
+                    >
+                      Click to view quiz answers
+                    </small>
                   </div>
                 </div>
 
