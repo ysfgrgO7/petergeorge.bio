@@ -11,14 +11,11 @@ import {
   getDoc,
   DocumentData,
 } from "firebase/firestore";
-import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
 import {
-  IoArrowBack,
   IoPeople,
   IoCheckmarkCircle,
   IoTime,
-  IoTrophy,
   IoLockClosed,
 } from "react-icons/io5";
 import styles from "../sadmins.module.css";
@@ -31,7 +28,7 @@ interface StudentProgress {
   unlocked: boolean;
   quizCompleted: boolean;
   earnedMarks?: number;
-  total?: number;
+  totalPossibleMark?: number;
   attempts: number;
   lastAttempt?: string;
   studentYear?: string;
@@ -179,7 +176,9 @@ export default function StudentsPage() {
             unlocked: (progressData.unlocked as boolean) || false,
             quizCompleted: (progressData.quizCompleted as boolean) || false,
             earnedMarks: progressData.earnedMarks as number | undefined,
-            total: progressData.total as number | undefined,
+            totalPossibleMark: progressData.totalPossibleMarks as
+              | number
+              | undefined,
             attempts: (progressData.attempts as number) || 0,
             lastAttempt: progressData.lastAttempt as string | undefined,
           };
@@ -219,9 +218,9 @@ export default function StudentsPage() {
     }
   };
 
-  const getPercentage = (earned: number, total: number) => {
-    if (!total) return 0;
-    return Math.round((earned / total) * 100);
+  const getPercentage = (earned: number, totalPossibleMarks: number) => {
+    if (!totalPossibleMarks) return 0;
+    return Math.round((earned / totalPossibleMarks) * 100);
   };
 
   const getCompletionStats = () => {
@@ -230,9 +229,11 @@ export default function StudentsPage() {
     const completed = students.filter((s) => s.quizCompleted).length;
     const averageScore =
       students
-        .filter((s) => s.earnedMarks !== undefined && s.total)
-        .reduce((sum, s) => sum + getPercentage(s.earnedMarks!, s.total!), 0) /
-      (completed || 1);
+        .filter((s) => s.earnedMarks !== undefined && s.totalPossibleMark)
+        .reduce(
+          (sum, s) => sum + getPercentage(s.earnedMarks!, s.totalPossibleMark!),
+          0
+        ) / (completed || 1);
 
     return {
       totalEnrolled,
@@ -350,7 +351,27 @@ export default function StudentsPage() {
 
         <div style={{ borderTop: "2px solid var(--light)" }}>
           {filteredStudents.map((student) => (
-            <div key={student.studentId} className={styles.studentRow}>
+            <div
+              key={student.studentId}
+              className={`${styles.studentRow} ${styles.clickableRow}`}
+              onClick={() => {
+                if (student.quizCompleted) {
+                  router.push(
+                    `/sadmins/lectures/students/review?studentId=${
+                      student.studentId
+                    }&courseId=${courseId}&lectureId=${lectureId}&year=${
+                      lectureInfo?.year ?? ""
+                    }&studentName=${encodeURIComponent(
+                      student.studentName || "Unknown"
+                    )}`
+                  );
+                }
+              }}
+              style={{
+                cursor: student.quizCompleted ? "pointer" : "default",
+                opacity: student.quizCompleted ? 1 : 0.7,
+              }}
+            >
               <div className={styles.studentContent}>
                 <div className={styles.studentInfo}>
                   <div className={styles.studentAvatar}>
@@ -358,6 +379,13 @@ export default function StudentsPage() {
                   </div>
                   <div>
                     <h3>{student.studentName || "Unknown Student"}</h3>
+                    {student.quizCompleted && (
+                      <small
+                        style={{ color: "var(--primary)", fontSize: "0.85rem" }}
+                      >
+                        Click to view quiz answers
+                      </small>
+                    )}
                   </div>
                 </div>
 
@@ -388,25 +416,31 @@ export default function StudentsPage() {
                   {/* Score */}
                   {student.quizCompleted &&
                     student.earnedMarks !== undefined &&
-                    student.total && (
+                    student.totalPossibleMark && (
                       <div className={styles.scoreSection}>
                         <div>
-                          {student.earnedMarks}/{student.total}
+                          {student.earnedMarks}/{student.totalPossibleMark}
                         </div>
                         <div
                           className={`${styles.scorePercentage} ${
-                            getPercentage(student.earnedMarks, student.total) >=
-                            70
+                            getPercentage(
+                              student.earnedMarks,
+                              student.totalPossibleMark
+                            ) >= 70
                               ? styles.high
                               : getPercentage(
                                   student.earnedMarks,
-                                  student.total
+                                  student.totalPossibleMark
                                 ) >= 50
                               ? styles.medium
                               : styles.low
                           }`}
                         >
-                          {getPercentage(student.earnedMarks, student.total)}%
+                          {getPercentage(
+                            student.earnedMarks,
+                            student.totalPossibleMark
+                          )}
+                          %
                         </div>
                       </div>
                     )}

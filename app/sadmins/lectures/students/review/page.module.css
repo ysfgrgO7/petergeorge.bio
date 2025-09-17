@@ -1,0 +1,461 @@
+/* Clickable row styles */
+.clickableRow:hover {
+  background-color: var(--light);
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.clickableRow {
+  transition: all 0.2s ease;
+}
+
+/* Save Button */
+.saveButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.saveButton:hover {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Score Display with Editable Total */
+.scoreDisplay {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.editableTotal {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.totalInput {
+  width: 60px;
+  padding: 0.25rem 0.5rem;
+  border: 2px solid var(--primary);
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.totalInput:focus {
+  outline: none;
+  border-color: var(--primary-dark);
+}
+
+.editButton {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+}
+
+.editButton:hover {
+  background: var(--light);
+  color: var(--primary-dark);
+}
+
+.percentage {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Student Info Card */
+.studentInfoCard {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--light);
+}
+
+.studentHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.quizMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.metaIcon {
+  font-size: 1.25rem;
+  color: var(--primary);
+}
+
+.metaLabel {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.metaValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Quiz Answers Container */
+.quizAnswersContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.sectionContainer {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--light);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  margin: 0;
+  background: var(--light);
+  border-bottom: 1px solid var(--border);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.sectionIcon {
+  font-size: 1.25rem;
+  color: var(--primary);
+}
+
+/* Question Cards */
+.questionCard {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--light);
+}
+
+.questionCard:last-child {
+  border-bottom: none;
+}
+
+.questionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.questionNumber {
+  background: var(--primary);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.questionStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.correctBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #dcfce7;
+  color: #166534;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.incorrectBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+/* Essay Grading Section */
+.essayGradingSection {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.marksInput {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 0.375rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.marksField {
+  width: 50px;
+  background: white;
+  border: 1px solid #3b82f6;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.marksField:focus {
+  outline: none;
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Essay Answer Sections */
+.essaySection {
+  margin-bottom: 1rem;
+}
+
+.essaySection strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.feedbackSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.feedbackSection strong {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.feedbackTextarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 0.2s ease;
+}
+
+.feedbackTextarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.feedbackTextarea::placeholder {
+  color: #9ca3af;
+}
+
+.questionText {
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+/* Answer Sections */
+.answerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.studentAnswer,
+.correctAnswer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.studentAnswer strong,
+.correctAnswer strong {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.correctText {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.incorrectText {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+/* Essay Answers */
+.essayAnswer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.essayText {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--primary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  font-family: inherit;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.feedback {
+  background: #fef3c7;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #f59e0b;
+}
+
+.feedback strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #92400e;
+}
+
+.feedback p {
+  margin: 0;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+/* Summary Card */
+.summaryCard {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--light);
+}
+
+.summaryCard h3 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text);
+}
+
+.summaryStats {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.summaryItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--light);
+}
+
+.summaryItem:last-child {
+  border-bottom: none;
+}
+
+.goodScore {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.averageScore {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.poorScore {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .questionHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .quizMetaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .summaryItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .scoreDisplay {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .saveButton {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .essayGradingSection {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
