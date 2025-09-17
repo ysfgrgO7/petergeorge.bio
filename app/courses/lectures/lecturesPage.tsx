@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import { useEffect, useState, Suspense, useCallback, useMemo } from "react";
 import {
   collection,
   getDocs,
@@ -9,6 +9,8 @@ import {
   orderBy,
   where,
   updateDoc,
+  doc,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
@@ -32,6 +34,7 @@ interface Lecture extends DocumentData {
   homeworkLink?: string;
   order: number;
   hasQuiz?: boolean;
+  hasHomework?: boolean;
   isHidden?: boolean;
 }
 
@@ -42,8 +45,17 @@ interface ProgressData {
   totalQuestions?: number;
   unlocked?: boolean;
   attempts?: number;
-  usedVariants?: string[]; // Add this line
+  usedVariants?: string[];
 }
+
+interface HomeworkProgressData {
+  homeworkCompleted?: boolean;
+  score?: number;
+}
+
+// Constants
+const MAX_ATTEMPTS = 3;
+const ACCESS_CODE_PAYMENT = "150egp via Vodafone Cash";
 
 function LecturesContent() {
   const router = useRouter();
@@ -52,10 +64,14 @@ function LecturesContent() {
   const courseId = searchParams.get("courseId") as string;
   const year = searchParams.get("year") as string;
 
+  // State
   const [courseLectures, setCourseLectures] = useState<Lecture[]>([]);
   const [user, setUser] = useState<User | null>(null);
-  const [progressMap, setProgressMap] = useState<
-    Record<string, ProgressData | undefined>
+  const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>(
+    {}
+  );
+  const [homeworkProgressMap, setHomeworkProgressMap] = useState<
+    Record<string, HomeworkProgressData>
   >({});
   const [loadingLectures, setLoadingLectures] = useState(true);
   const [accessCode, setAccessCode] = useState("");
@@ -63,6 +79,166 @@ function LecturesContent() {
   const [unlocking, setUnlocking] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // Helper functions
+  const getProgressKey = useCallback(
+    (lectureId: string) => `${year}_${courseId}_${lectureId}`,
+    [year, courseId]
+  );
+
+  const resetCodeInput = useCallback(() => {
+    setShowCodeInput(null);
+    setAccessCode("");
+    setErrorMessage("");
+  }, []);
+
+  // Check if lecture has homework
+  const checkLectureHasHomework = useCallback(
+    async (lectureId: string): Promise<boolean> => {
+      try {
+        const homeworkQuestionsRef = collection(
+          db,
+          `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`
+        );
+        const homeworkSnapshot = await getDocs(homeworkQuestionsRef);
+        return !homeworkSnapshot.empty;
+      } catch (error) {
+        console.warn(
+          `Failed to check homework for lecture ${lectureId}:`,
+          error
+        );
+        return false;
+      }
+    },
+    [year, courseId]
+  );
+
+  // Get homework progress for a lecture
+  const getHomeworkProgress = useCallback(
+    async (lectureId: string): Promise<HomeworkProgressData> => {
+      if (!user) return {};
+
+      try {
+        const homeworkProgressRef = doc(
+          db,
+          `students/${user.uid}/homeworkProgress/${year}_${courseId}_${lectureId}`
+        );
+        const homeworkProgressSnap = await getDoc(homeworkProgressRef);
+        return homeworkProgressSnap.exists()
+          ? (homeworkProgressSnap.data() as HomeworkProgressData)
+          : {};
+      } catch (error) {
+        console.warn(
+          `Failed to get homework progress for lecture ${lectureId}:`,
+          error
+        );
+        return {};
+      }
+    },
+    [user, year, courseId]
+  );
+
+  // Memoized calculations
+  const { quizzesCompleted, totalQuizzes, progressPercentage } = useMemo(() => {
+    const lecturesWithQuiz = courseLectures.filter(
+      (lecture) => lecture.hasQuiz
+    );
+    const completed = lecturesWithQuiz.filter(
+      (lecture) => progressMap[getProgressKey(lecture.id)]?.quizCompleted
+    ).length;
+
+    return {
+      quizzesCompleted: completed,
+      totalQuizzes: lecturesWithQuiz.length,
+      progressPercentage:
+        lecturesWithQuiz.length > 0
+          ? (completed / lecturesWithQuiz.length) * 100
+          : 0,
+    };
+  }, [courseLectures, progressMap, getProgressKey]);
+
+  // Enhanced lecture access logic with homework checking
+  const getLectureAccessInfo = useCallback(
+    (lecture: Lecture, index: number) => {
+      const progress = progressMap[getProgressKey(lecture.id)];
+      const previousLecture = courseLectures[index - 1];
+
+      // First lecture is always unlockable with code
+      if (index === 0) {
+        return {
+          isLocked: !progress?.unlocked,
+          canUnlockWithCode: !progress?.unlocked,
+          lockReason: progress?.unlocked
+            ? null
+            : "Enter a code to unlock this lecture.",
+        };
+      }
+
+      const previousProgress = progressMap[getProgressKey(previousLecture.id)];
+      const previousHomeworkProgress =
+        homeworkProgressMap[getProgressKey(previousLecture.id)];
+
+      const isPreviousUnlocked = previousProgress?.unlocked ?? false;
+      const isPreviousQuizCompleted =
+        (!previousLecture.hasQuiz || previousProgress?.quizCompleted) ?? false;
+      const isPreviousHomeworkCompleted =
+        (!previousLecture.hasHomework ||
+          previousHomeworkProgress?.homeworkCompleted) ??
+        false;
+
+      const isUnlockedByCode = progress?.unlocked ?? false;
+      const isLocked =
+        !isUnlockedByCode ||
+        !isPreviousQuizCompleted ||
+        !isPreviousHomeworkCompleted;
+
+      let lockReason = null;
+      let canUnlockWithCode = false;
+
+      if (!isPreviousUnlocked) {
+        lockReason = "Previous lecture must be unlocked first.";
+        canUnlockWithCode = false;
+      } else if (!isPreviousQuizCompleted) {
+        lockReason = "Complete the quiz for the previous lecture to unlock.";
+        canUnlockWithCode = false;
+      } else if (!isPreviousHomeworkCompleted) {
+        lockReason =
+          "Complete the homework for the previous lecture to unlock.";
+        canUnlockWithCode = false;
+      } else if (!isUnlockedByCode) {
+        lockReason = "Enter a code to unlock this lecture.";
+        canUnlockWithCode = true;
+      }
+
+      return {
+        isLocked,
+        canUnlockWithCode,
+        lockReason,
+      };
+    },
+    [courseLectures, progressMap, homeworkProgressMap, getProgressKey]
+  );
+
+  // Get lecture URL based on state
+  const getLectureUrl = useCallback(
+    (lecture: Lecture, isLocked: boolean, progress?: ProgressData) => {
+      if (isLocked) return "#";
+
+      const baseParams = `year=${year}&courseId=${courseId}&lectureId=${lecture.id}`;
+
+      if (lecture.hasQuiz && !progress?.quizCompleted) {
+        return `/courses/lectures/quiz?${baseParams}`;
+      }
+
+      return `/courses/lectures/lecture?${baseParams}&odyseeName=${
+        lecture.odyseeName
+      }&odyseeId=${lecture.odyseeId}&title=${encodeURIComponent(
+        lecture.title
+      )}`;
+    },
+    [year, courseId]
+  );
+
+  // Auth effect
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -75,6 +251,7 @@ function LecturesContent() {
     return () => unsubscribe();
   }, [router]);
 
+  // Fetch lectures effect
   useEffect(() => {
     const fetchLectures = async () => {
       if (!courseId || !year) {
@@ -95,12 +272,12 @@ function LecturesContent() {
         );
         const snapshot = await getDocs(q);
 
-        const fetchedLectures: Lecture[] = await Promise.all(
-          snapshot.docs.map(async (docSnap) => {
-            const lectureData = {
-              id: docSnap.id,
-              ...docSnap.data(),
-            } as Lecture;
+        // Check for quizzes and homework in parallel
+        const lecturePromises = snapshot.docs.map(async (docSnap) => {
+          const lectureData = { id: docSnap.id, ...docSnap.data() } as Lecture;
+
+          try {
+            // Check for quiz
             const randomVariant = getRandomQuizVariant();
             const quizRef = collection(
               db,
@@ -108,61 +285,100 @@ function LecturesContent() {
             );
             const quizSnapshot = await getDocs(quizRef);
             lectureData.hasQuiz = !quizSnapshot.empty;
-            return lectureData;
-          })
-        );
 
+            // Check for homework
+            const hasHomework = await checkLectureHasHomework(lectureData.id);
+            lectureData.hasHomework = hasHomework;
+          } catch (error) {
+            console.warn(
+              `Failed to check quiz/homework for lecture ${lectureData.id}:`,
+              error
+            );
+            lectureData.hasQuiz = false;
+            lectureData.hasHomework = false;
+          }
+
+          return lectureData;
+        });
+
+        const fetchedLectures = await Promise.all(lecturePromises);
         setCourseLectures(fetchedLectures);
       } catch (error) {
         console.error("Error fetching lectures:", error);
+        setCourseLectures([]);
       } finally {
         setLoadingLectures(false);
       }
     };
-    fetchLectures();
-  }, [courseId, year]);
 
+    fetchLectures();
+  }, [courseId, year, checkLectureHasHomework]);
+
+  // Load progress effect
   useEffect(() => {
     if (!user || courseLectures.length === 0) {
       setProgressMap({});
+      setHomeworkProgressMap({});
       return;
     }
 
     const loadProgress = async () => {
-      const progressPromises = courseLectures.map((lecture) =>
-        getLectureProgress(user.uid, year, courseId, lecture.id)
-      );
+      try {
+        // Load lecture progress
+        const progressPromises = courseLectures.map((lecture) =>
+          getLectureProgress(user.uid, year, courseId, lecture.id)
+        );
 
-      const allProgress = await Promise.all(progressPromises);
-      const map: Record<string, ProgressData> = {};
+        // Load homework progress
+        const homeworkProgressPromises = courseLectures.map((lecture) =>
+          getHomeworkProgress(lecture.id)
+        );
 
-      allProgress.forEach((progress, index) => {
-        const lecture = courseLectures[index];
-        const key = `${year}_${courseId}_${lecture.id}`;
-        map[key] = progress;
-      });
+        const [allProgress, allHomeworkProgress] = await Promise.all([
+          Promise.all(progressPromises),
+          Promise.all(homeworkProgressPromises),
+        ]);
 
-      setProgressMap(map);
+        // Build progress maps
+        const progressMap: Record<string, ProgressData> = {};
+        const homeworkMap: Record<string, HomeworkProgressData> = {};
+
+        allProgress.forEach((progress, index) => {
+          const lecture = courseLectures[index];
+          const key = getProgressKey(lecture.id);
+          progressMap[key] = progress || {};
+        });
+
+        allHomeworkProgress.forEach((homeworkProgress, index) => {
+          const lecture = courseLectures[index];
+          const key = getProgressKey(lecture.id);
+          homeworkMap[key] = homeworkProgress || {};
+        });
+
+        setProgressMap(progressMap);
+        setHomeworkProgressMap(homeworkMap);
+      } catch (error) {
+        console.error("Error loading progress:", error);
+        setProgressMap({});
+        setHomeworkProgressMap({});
+      }
     };
 
     loadProgress();
-  }, [user, courseLectures, courseId, year]);
+  }, [
+    user,
+    courseLectures,
+    courseId,
+    year,
+    getProgressKey,
+    getHomeworkProgress,
+  ]);
 
-  const quizzesCompleted = courseLectures.filter(
-    (lecture) =>
-      lecture.hasQuiz &&
-      progressMap[`${year}_${courseId}_${lecture.id}`]?.quizCompleted
-  ).length;
-  const totalQuizzes = courseLectures.filter(
-    (lecture) => lecture.hasQuiz
-  ).length;
-  const progressPercentage =
-    totalQuizzes > 0 ? (quizzesCompleted / totalQuizzes) * 100 : 0;
-
+  // Enhanced code submission
   const handleCodeSubmit = useCallback(
     async (lectureId: string) => {
-      if (!user || !accessCode) {
-        setErrorMessage("Please enter a code.");
+      if (!user || !accessCode.trim()) {
+        setErrorMessage("Please enter a valid code.");
         return;
       }
 
@@ -170,27 +386,25 @@ function LecturesContent() {
       setErrorMessage("");
 
       try {
-        const codesRef = collection(db, `accessCodes`);
-        const q = query(codesRef, where("code", "==", accessCode));
+        const codesRef = collection(db, "accessCodes");
+        const q = query(codesRef, where("code", "==", accessCode.trim()));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          setErrorMessage("Invalid or already used code.");
-          setUnlocking(false);
+          setErrorMessage("Invalid code. Please check and try again.");
           return;
         }
 
         const codeDoc = querySnapshot.docs[0];
-        const codeDocData = codeDoc.data();
-        const codeDocRef = codeDoc.ref;
+        const codeData = codeDoc.data();
 
-        if (codeDocData?.isUsed) {
-          setErrorMessage("Invalid or already used code.");
-          setUnlocking(false);
+        if (codeData?.isUsed) {
+          setErrorMessage("This code has already been used.");
           return;
         }
 
-        await updateDoc(codeDocRef, {
+        // Update code as used
+        await updateDoc(codeDoc.ref, {
           isUsed: true,
           usedBy: user.uid,
           usedAt: new Date(),
@@ -199,34 +413,217 @@ function LecturesContent() {
           year,
         });
 
-        // ✅ Save unlocked flag in correct path
+        // Unlock lecture
         await unlockLecture(user.uid, year, courseId, lectureId);
 
+        // Update local state
         setProgressMap((prev) => ({
           ...prev,
-          [`${year}_${courseId}_${lectureId}`]: {
-            ...(prev[`${year}_${courseId}_${lectureId}`] || {}),
+          [getProgressKey(lectureId)]: {
+            ...prev[getProgressKey(lectureId)],
             unlocked: true,
           },
         }));
 
-        setShowCodeInput(null);
-        setAccessCode("");
+        resetCodeInput();
       } catch (error) {
         console.error("Error unlocking lecture:", error);
-        setErrorMessage("An error occurred. Please try again.");
+        setErrorMessage("An error occurred. Please try again later.");
       } finally {
         setUnlocking(false);
       }
     },
-    [user, accessCode, courseId, year]
+    [user, accessCode, courseId, year, getProgressKey, resetCodeInput]
   );
+
+  // Render quiz score information
+  const renderQuizInfo = useCallback(
+    (lecture: Lecture, progress: ProgressData) => {
+      if (!lecture.hasQuiz) return null;
+
+      const hasAttempted =
+        progress.earnedMarks !== undefined && progress.earnedMarks !== null;
+      const maxAttemptsReached = (progress.attempts || 0) >= MAX_ATTEMPTS;
+      const quizCompleted = progress.quizCompleted;
+
+      return (
+        <div className={styles.quizInfo}>
+          {hasAttempted && (
+            <p
+              className={`${styles.quizScore} ${
+                !quizCompleted ? styles.failedQuiz : ""
+              }`}
+            >
+              {quizCompleted ? "Quiz Completed" : "Last Score"}:{" "}
+              {progress.earnedMarks} /{" "}
+              {progress.totalPossibleMarks || progress.totalQuestions}
+            </p>
+          )}
+
+          {progress.attempts && progress.attempts > 0 && (
+            <p className={styles.attemptCount}>
+              Attempts: {progress.attempts} / {MAX_ATTEMPTS}
+            </p>
+          )}
+
+          {maxAttemptsReached && !quizCompleted && (
+            <p className={styles.maxAttemptsMessage}>
+              Maximum attempts reached. Contact Support for help.
+            </p>
+          )}
+        </div>
+      );
+    },
+    []
+  );
+
+  // Render homework info
+  const renderHomeworkInfo = useCallback(
+    (lecture: Lecture) => {
+      if (!lecture.hasHomework) return null;
+
+      const homeworkProgress =
+        homeworkProgressMap[getProgressKey(lecture.id)] || {};
+      const isCompleted = homeworkProgress.homeworkCompleted;
+
+      return (
+        <div className={styles.homeworkInfo}>
+          <p
+            className={`${styles.homeworkStatus} ${
+              isCompleted ? styles.completedHomework : styles.pendingHomework
+            }`}
+          >
+            Homework: {isCompleted ? "Completed" : "Pending"}
+            {homeworkProgress.score !== undefined && (
+              <span> - Score: {homeworkProgress.score}</span>
+            )}
+          </p>
+        </div>
+      );
+    },
+    [homeworkProgressMap, getProgressKey]
+  );
+
+  // Render unlock interface
+  const renderUnlockInterface = useCallback(
+    (lecture: Lecture, lockReason: string, canUnlockWithCode: boolean) => (
+      <>
+        <p>{lockReason}</p>
+        {canUnlockWithCode && (
+          <>
+            <button onClick={() => setShowCodeInput(lecture.id)}>
+              Unlock with Code
+            </button>
+            {showCodeInput === lecture.id && (
+              <div className={styles.codeInput}>
+                <div className={styles.inputGroup}>
+                  <input
+                    type="text"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    placeholder="Enter access code"
+                    disabled={unlocking}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && handleCodeSubmit(lecture.id)
+                    }
+                  />
+                  <button
+                    onClick={() => handleCodeSubmit(lecture.id)}
+                    disabled={unlocking || !accessCode.trim()}
+                  >
+                    {unlocking ? "Unlocking..." : "Submit"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetCodeInput}
+                    disabled={unlocking}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {errorMessage && (
+                  <p className={styles.errorMessage}>{errorMessage}</p>
+                )}
+                <p className={styles.paymentInfo}>
+                  To get codes, send {ACCESS_CODE_PAYMENT}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </>
+    ),
+    [
+      accessCode,
+      showCodeInput,
+      unlocking,
+      errorMessage,
+      handleCodeSubmit,
+      resetCodeInput,
+    ]
+  );
+
+  // Render lecture action button
+  const renderActionButton = useCallback(
+    (lecture: Lecture, progress: ProgressData, lectureUrl: string) => {
+      if (!lecture.hasQuiz) {
+        return (
+          <button onClick={() => router.push(lectureUrl)}>
+            <FaPlay /> View Lecture
+          </button>
+        );
+      }
+
+      const maxAttemptsReached = (progress.attempts || 0) >= MAX_ATTEMPTS;
+      const quizCompleted = progress.quizCompleted;
+      const hasAttempted = progress.earnedMarks !== undefined;
+
+      if (maxAttemptsReached && !quizCompleted) {
+        return null; // No button for max attempts reached
+      }
+
+      if (quizCompleted) {
+        return (
+          <button onClick={() => router.push(lectureUrl)}>
+            <FaPlay /> View Lecture
+          </button>
+        );
+      }
+
+      return (
+        <button onClick={() => router.push(lectureUrl)}>
+          <MdQuiz /> {hasAttempted ? "Retake Quiz" : "Take Quiz"}
+        </button>
+      );
+    },
+    [router]
+  );
+
+  if (loadingLectures) {
+    return (
+      <div className="wrapper">
+        <p>Loading lectures...</p>
+      </div>
+    );
+  }
+
+  if (!courseId || !year) {
+    return (
+      <div className="wrapper">
+        <p>Invalid course parameters.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="wrapper">
-      <button onClick={() => router.push("/courses")}>
+      <button
+        onClick={() => router.push("/courses")}
+        className={styles.backButton}
+      >
         <IoChevronBackCircleSharp /> Back to Courses
       </button>
+
       <h1>Lectures</h1>
 
       {totalQuizzes > 0 && (
@@ -244,41 +641,15 @@ function LecturesContent() {
         </div>
       )}
 
-      {loadingLectures ? (
-        <p>Loading lectures...</p>
-      ) : courseLectures.length === 0 ? (
+      {courseLectures.length === 0 ? (
         <p>No lectures available for this course.</p>
       ) : (
         <div className={styles.lectureList}>
           {courseLectures.map((lecture, index) => {
-            const key = `${year}_${courseId}_${lecture.id}`;
-            const progress = progressMap[key];
-
-            const previousLecture = courseLectures[index - 1];
-
-            // 💡 NEW LOGIC: check if the previous lecture itself is unlocked
-            const isPreviousLectureUnlocked =
-              !previousLecture ||
-              progressMap[`${year}_${courseId}_${previousLecture.id}`]
-                ?.unlocked;
-
-            const previousQuizIsCompleted =
-              !previousLecture ||
-              !previousLecture.hasQuiz ||
-              progressMap[`${year}_${courseId}_${previousLecture.id}`]
-                ?.quizCompleted;
-            const isUnlockedByCode = progress?.unlocked;
-
-            // 💡 NEW LOGIC: A lecture is locked if it's not unlocked by a code OR if the previous one isn't fully completed
-            const isLocked = !isUnlockedByCode || !previousQuizIsCompleted;
-            const canUnlockWithCode =
-              isPreviousLectureUnlocked && !isUnlockedByCode;
-
-            const lectureUrl = isLocked
-              ? "#"
-              : lecture.hasQuiz && !progress?.quizCompleted
-              ? `/courses/lectures/quiz?year=${year}&courseId=${courseId}&lectureId=${lecture.id}`
-              : `/courses/lectures/lecture?year=${year}&courseId=${courseId}&lectureId=${lecture.id}&odyseeName=${lecture.odyseeName}&odyseeId=${lecture.odyseeId}&title=${lecture.title}`;
+            const progress = progressMap[getProgressKey(lecture.id)] || {};
+            const { isLocked, canUnlockWithCode, lockReason } =
+              getLectureAccessInfo(lecture, index);
+            const lectureUrl = getLectureUrl(lecture, isLocked, progress);
 
             return (
               <div
@@ -292,112 +663,13 @@ function LecturesContent() {
                 </h3>
 
                 {isLocked ? (
-                  <>
-                    <p>
-                      {previousQuizIsCompleted
-                        ? "Enter a code to unlock this lecture."
-                        : "Complete the quiz for the previous lecture to unlock."}
-                    </p>
-                    {/* Only show "Unlock with Code" if the previous lecture is completely unlocked */}
-                    {canUnlockWithCode && (
-                      <button onClick={() => setShowCodeInput(lecture.id)}>
-                        Unlock with Code
-                      </button>
-                    )}
-                    {showCodeInput === lecture.id && (
-                      <div
-                        style={{
-                          paddingTop: "10px",
-                          display: "flex",
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: "10px",
-                        }}
-                      >
-                        <input
-                          type="text"
-                          value={accessCode}
-                          onChange={(e) => setAccessCode(e.target.value)}
-                          placeholder="Enter code"
-                          disabled={unlocking}
-                        />
-                        <button
-                          onClick={() => handleCodeSubmit(lecture.id)}
-                          disabled={unlocking}
-                        >
-                          {unlocking ? "Unlocking..." : "Submit"}
-                        </button>
-                        {errorMessage && (
-                          <p className={styles.errorMessage}>{errorMessage}</p>
-                        )}
-                        To get Codes send 150egp via Vodafone Cash
-                      </div>
-                    )}
-                  </>
+                  renderUnlockInterface(lecture, lockReason!, canUnlockWithCode)
                 ) : (
                   <>
-                    {lecture.hasQuiz &&
-                      progress?.earnedMarks !== undefined &&
-                      progress?.earnedMarks !== null && (
-                        <p
-                          className={`${styles.quizScore} ${
-                            !progress?.quizCompleted ? styles.failedQuiz : ""
-                          }`}
-                        >
-                          {progress?.quizCompleted
-                            ? "Quiz Completed"
-                            : "Last Score"}
-                          : {progress?.earnedMarks} /{" "}
-                          {progress?.totalPossibleMarks ||
-                            progress?.totalQuestions}
-                        </p>
-                      )}
-
-                    {lecture.hasQuiz &&
-                      progress?.attempts &&
-                      progress.attempts > 0 && (
-                        <p className={styles.attemptCount}>
-                          Attempts: {progress.attempts}
-                        </p>
-                      )}
-                    {lecture.hasQuiz &&
-                      progress?.attempts &&
-                      progress.attempts >= 3 &&
-                      !progress?.quizCompleted && (
-                        <p className={styles.maxAttemptsMessage}>
-                          Maximum attempts reached. Contact Support for help.
-                        </p>
-                      )}
+                    {renderQuizInfo(lecture, progress)}
+                    {renderHomeworkInfo(lecture)}
                     <div className={styles.buttonGroup}>
-                      {/* Show button if quiz is completed OR if max attempts not reached */}
-                      {(lecture.hasQuiz && progress?.quizCompleted) ||
-                      !(
-                        lecture.hasQuiz &&
-                        progress?.attempts &&
-                        progress.attempts >= 3 &&
-                        !progress?.quizCompleted
-                      ) ? (
-                        <button onClick={() => router.push(lectureUrl)}>
-                          {lecture.hasQuiz && progress?.quizCompleted ? (
-                            <>
-                              <FaPlay /> View Lecture
-                            </>
-                          ) : lecture.hasQuiz &&
-                            progress?.earnedMarks !== undefined ? (
-                            <>
-                              <MdQuiz /> Retake Quiz
-                            </>
-                          ) : lecture.hasQuiz ? (
-                            <>
-                              <MdQuiz /> Take Quiz
-                            </>
-                          ) : (
-                            <>
-                              <FaPlay /> View Lecture
-                            </>
-                          )}
-                        </button>
-                      ) : null}
+                      {renderActionButton(lecture, progress, lectureUrl)}
                     </div>
                   </>
                 )}
@@ -412,7 +684,13 @@ function LecturesContent() {
 
 export default function LecturesPage() {
   return (
-    <Suspense fallback={<p>Loading...</p>}>
+    <Suspense
+      fallback={
+        <div className="wrapper">
+          <p>Loading...</p>
+        </div>
+      }
+    >
       <LecturesContent />
     </Suspense>
   );
