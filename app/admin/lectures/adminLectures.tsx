@@ -393,6 +393,12 @@ export default function LectureManagerPage() {
     );
   };
 
+  const handleManageHw = () => {
+    router.push(
+      `/admin/hw?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+    );
+  };
+
   if (!lectureId || !courseId || !year) {
     return (
       <div className={styles.wrapper}>
@@ -421,6 +427,12 @@ export default function LectureManagerPage() {
             className={styles.fullWidthButton}
           >
             Manage Lecture Quiz
+          </button>
+          <button
+            onClick={handleManageHw}
+            className={styles.fullWidthButton}
+          >
+            Manage Lecture H.W.
           </button>
           <button onClick={handleDeleteLecture} className={styles.deleteButton}>
             Delete Lecture

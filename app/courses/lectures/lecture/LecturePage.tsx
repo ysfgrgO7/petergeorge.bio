@@ -44,7 +44,7 @@ interface StudentData {
   studentCode?: string;
   firstName?: string;
   secondName?: string;
-  system?: "center" | "online"; // NEW: Add system field
+  system?: "center" | "online";
 }
 
 export default function LecturePage() {
@@ -68,6 +68,10 @@ export default function LecturePage() {
   const [loading, setLoading] = useState(true);
   const [isExpired, setIsExpired] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // New states for homework
+  const [homeworkCompleted, setHomeworkCompleted] = useState(false);
+  const [hasHomework, setHasHomework] = useState(false); // ✅ New state variable
 
   useEffect(() => {
     // This code only runs on the client
@@ -187,6 +191,30 @@ export default function LecturePage() {
               lectureId
             );
             setProgress(lectureProgress);
+
+            // ✅ Fetch homework completion status
+            const hwRef = doc(
+              db,
+              "students",
+              currentUser.uid,
+              "homeworkProgress",
+              `${year}_${courseId}_${lectureId}`
+            );
+            const hwSnap = await getDoc(hwRef);
+            if (hwSnap.exists()) {
+              const hwData = hwSnap.data();
+              setHomeworkCompleted(hwData.homeworkCompleted === true);
+            }
+
+            // ✅ Check for homework existence
+            const homeworkQuestionsRef = collection(
+              db,
+              `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`
+            );
+            const homeworkQuestionsSnapshot = await getDocs(
+              homeworkQuestionsRef
+            );
+            setHasHomework(!homeworkQuestionsSnapshot.empty);
           }
         } catch (error) {
           console.error("Error fetching data:", error);
@@ -407,8 +435,33 @@ export default function LecturePage() {
 
           <hr />
 
-          {/* Homework Videos */}
-          {homeworkVideos.length > 0 && (
+          {/* Homework button - Updated rendering logic */}
+          {hasHomework && !homeworkCompleted && (
+            <button
+              onClick={() =>
+                router.push(
+                  `/courses/lectures/lecture/hw?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+                )
+              }
+            >
+              📝 Start Homework
+            </button>
+          )}
+
+          {hasHomework && homeworkCompleted && (
+            <button
+              onClick={() =>
+                router.push(
+                  `/courses/lectures/lecture/hw/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+                )
+              }
+            >
+              📝 Homework Result
+            </button>
+          )}
+
+          {/* Related Videos -> only show if homework completed */}
+          {(!hasHomework || homeworkCompleted) && homeworkVideos.length > 0 && (
             <>
               <section>
                 <h1>Related Videos</h1>
@@ -472,31 +525,39 @@ export default function LecturePage() {
               <p>
                 <strong>Extra Links</strong>
               </p>
-              <ul className={styles.linkList}>
-                {links.length > 0 ? (
-                  links.map((link) => (
-                    <li
-                      key={link.id}
-                      style={{
-                        color: "var(--blue)",
-                        filter: "brightness(1.9)",
-                        textDecoration: "underline",
-                        listStyle: "none",
-                      }}
-                    >
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {link.text}
-                      </a>
-                    </li>
-                  ))
-                ) : (
-                  <li>No extra links found.</li>
+              {hasHomework &&
+                !homeworkCompleted &&
+                " (Complete Homework to Unlock)"}
+
+              {(!hasHomework || homeworkCompleted) &&
+                homeworkVideos.length > 0 && (
+                  <ul className={styles.linkList}>
+                    {links.length > 0 ? (
+                      links.map((link) => (
+                        <li
+                          key={link.id}
+                          style={{
+                            color: "var(--blue)",
+                            filter: "brightness(1.9)",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          <a
+                            href={link.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {link.text}
+                          </a>
+
+                          <hr style={{ width: "40%", margin: "0.4rem" }} />
+                        </li>
+                      ))
+                    ) : (
+                      <li>No extra links found.</li>
+                    )}
+                  </ul>
                 )}
-              </ul>
             </div>
           </div>
         </>
