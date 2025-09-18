@@ -18,8 +18,9 @@ import {
   IoTime,
   IoLockClosed,
 } from "react-icons/io5";
-import styles from "../sadmins.module.css";
+import styles from "./page.module.css";
 import { BiChevronLeft } from "react-icons/bi";
+import { FaChalkboardTeacher } from "react-icons/fa";
 
 interface StudentProgress {
   studentId: string;
@@ -246,10 +247,7 @@ export default function StudentsPage() {
   if (loading) {
     return (
       <div className="wrapper">
-        <div className={styles.loadingContainer}>
-          <div className={styles.spinner}></div>
-          <p className={styles.loadingText}>Loading students...</p>
-        </div>
+        <p>Loading lectures...</p>
       </div>
     );
   }
@@ -257,19 +255,36 @@ export default function StudentsPage() {
   if (error) {
     return (
       <div className="wrapper">
-        <div className={styles.errorContainer}>
-          <h2>Error Loading Students</h2>
-          <p>{error}</p>
-          <button onClick={() => router.push("/sadmins/lectures")}>
-            Back to Lectures
-          </button>
-        </div>
+        <h2>Error Loading Students</h2>
+        <p>{error}</p>
+        <button onClick={() => router.push("/sadmins/lectures")}>
+          Back to Lectures
+        </button>
       </div>
     );
   }
 
   const stats = getCompletionStats();
   const filteredStudents = getFilteredStudents();
+  const statsGrid = [
+    {
+      title: "Students Enrolled",
+      value: stats.totalEnrolled,
+      icon: IoPeople,
+    },
+
+    {
+      title: "Completed the Quiz",
+      value: stats.completed,
+      icon: IoCheckmarkCircle,
+    },
+
+    {
+      title: "Average Score",
+      value: stats.averageScore + "%",
+      icon: IoPeople,
+    },
+  ];
 
   return (
     <div className="wrapper">
@@ -281,135 +296,105 @@ export default function StudentsPage() {
         Back to Lectures
       </button>
 
-      {/* Header */}
-      <div className={styles.header}>
-        <div style={{ flex: 1 }}>
-          <div className={styles.lectureDetails}>
-            <h1>{lectureInfo?.title}</h1>
-          </div>
-        </div>
-      </div>
+      <h1 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <FaChalkboardTeacher /> {lectureInfo?.title}
+      </h1>
 
       {/* Stats */}
       <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <IoPeople className={styles.statIcon} />
-          <div>
-            <div className={styles.statValue}>{stats.totalEnrolled}</div>
-            <div className={styles.statLabel}>Students Enrolled</div>
+        {statsGrid.map((stat) => (
+          <div key={stat.title} className={styles.statCard}>
+            <stat.icon style={{ fontSize: "1.5rem" }} />
+            <div>
+              <h2>{stat.value}</h2>
+              <div style={{ fontSize: "0.875rem" }}>{stat.title}</div>
+            </div>
           </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <IoCheckmarkCircle className={styles.statIcon} />
-          <div>
-            <div className={styles.statValue}>{stats.completed}</div>
-            <div className={styles.statLabel}>Completed the Quiz</div>
-          </div>
-        </div>
-
-        <div className={styles.statCard}>
-          <IoPeople className={styles.statIcon} />
-          <div>
-            <div className={styles.statValue}>{stats.averageScore}%</div>
-            <div className={styles.statLabel}>Average Score</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className={styles.filterBar}>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button
-            onClick={() => setFilter("unlocked")}
-            className={
-              filter === "unlocked"
-                ? `${styles.filterButton} ${styles.active}`
-                : `${styles.filterButton} ${styles.inactive}`
-            }
-          >
-            Enrolled ({stats.totalEnrolled})
-          </button>
-          <button
-            onClick={() => setFilter("completed")}
-            className={
-              filter === "completed"
-                ? `${styles.filterButton} ${styles.active}`
-                : `${styles.filterButton} ${styles.inactive}`
-            }
-          >
-            Completed ({stats.completed})
-          </button>
-        </div>
+        ))}
       </div>
 
       {/* Students List */}
       <div className={styles.studentsCard}>
-        <h2 className={styles.studentsTitle} style={{ padding: "1.5rem" }}>
-          Students ({filteredStudents.length})
-        </h2>
-
-        <div style={{ borderTop: "2px solid var(--light)" }}>
-          {filteredStudents.map((student) => (
-            <div
-              key={student.studentId}
-              className={`${styles.studentRow} ${styles.clickableRow}`}
-              onClick={() => {
-                router.push(
-                  `/sadmins/lectures/students/review?studentId=${
-                    student.studentId
-                  }&courseId=${courseId}&lectureId=${lectureId}&year=${
-                    lectureInfo?.year ?? ""
-                  }&studentName=${encodeURIComponent(
-                    student.studentName || "Unknown"
-                  )}`
-                );
-              }}
-              style={{
-                cursor: "pointer",
-                opacity: 1,
-              }}
+        {/* Filters */}
+        <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
+          {[
+            { key: "unlocked", label: "Enrolled", count: stats.totalEnrolled },
+            { key: "completed", label: "Completed", count: stats.completed },
+          ].map(({ key, label, count }) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key as "unlocked" | "completed")}
+              className={`${styles.filterButton} ${
+                filter === key ? styles.active : styles.inactive
+              }`}
             >
-              <div className={styles.studentContent}>
-                <div className={styles.studentInfo}>
+              {label} ({count})
+            </button>
+          ))}
+        </div>
+
+        <table className={styles.studentsTable}>
+          <thead>
+            <tr>
+              <th>Students ({filteredStudents.length})</th>
+              <th>Status</th>
+              <th>Attempts</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredStudents.map((student) => (
+              <tr
+                key={student.studentId}
+                className={styles.clickableRow}
+                onClick={() =>
+                  router.push(
+                    `/sadmins/lectures/students/review?studentId=${
+                      student.studentId
+                    }&courseId=${courseId}&lectureId=${lectureId}&year=${
+                      lectureInfo?.year ?? ""
+                    }&studentName=${encodeURIComponent(
+                      student.studentName || "Unknown"
+                    )}`
+                  )
+                }
+              >
+                {/*Student name */}
+                <td
+                  style={{ display: "flex", alignItems: "center", gap: "1rem" }}
+                >
                   <div className={styles.studentAvatar}>
                     {student.studentName?.charAt(0).toUpperCase() || "S"}
                   </div>
                   <div>
                     <h3>{student.studentName || "Unknown Student"}</h3>
-                    <small
-                      style={{ color: "var(--primary)", fontSize: "0.85rem" }}
-                    >
-                      Click to view quiz answers
-                    </small>
+                    <small>Click to view quiz answers</small>
                   </div>
-                </div>
+                </td>
 
-                <div className={styles.studentStats}>
-                  <div className={styles.statusSection}>
-                    {!student.unlocked ? (
-                      <div className={styles.statusLocked}>
-                        <IoLockClosed className={styles.statusIcon} />
-                        <span>Not Unlocked</span>
-                      </div>
-                    ) : student.quizCompleted ? (
-                      <div className={styles.statusCompleted}>
-                        <IoCheckmarkCircle className={styles.statusIcon} />
-                        <span>Completed</span>
-                      </div>
-                    ) : (
-                      <div className={styles.statusInProgress}>
-                        <IoTime className={styles.statusIcon} />
-                        <span>In Progress</span>
-                      </div>
-                    )}
-                    <div>
-                      {student.attempts} attempt
-                      {student.attempts !== 1 ? "s" : ""}
-                    </div>
-                  </div>
+                {/* Status */}
+                <td style={{ fontSize: "2rem" }}>
+                  {student.quizCompleted ? (
+                    <IoCheckmarkCircle style={{ color: "var(--green)" }} />
+                  ) : (
+                    <IoTime
+                      style={{
+                        backgroundColor: "var(--red)",
+                        color: "var(--dark)",
+                        borderRadius: "var(--border-radius)",
+                        padding: "2px",
+                      }}
+                    />
+                  )}
+                </td>
 
-                  {/* Score */}
+                {/* Attempts */}
+                <td>
+                  {student.attempts} attempt{student.attempts !== 1 ? "s" : ""}
+                </td>
+
+                {/* Score */}
+                <td>
                   {student.quizCompleted &&
                     student.earnedMarks !== undefined &&
                     student.totalPossibleMark && (
@@ -440,28 +425,11 @@ export default function StudentsPage() {
                         </div>
                       </div>
                     )}
-
-                  {/* Status Badge */}
-                  <div>
-                    {student.unlocked ? (
-                      <span className={styles.statusBadge}>
-                        <IoCheckmarkCircle className={styles.badgeIcon} />
-                        Unlocked
-                      </span>
-                    ) : (
-                      <span
-                        className={`${styles.statusBadge} ${styles.locked}`}
-                      >
-                        <IoLockClosed className={styles.badgeIcon} />
-                        Locked
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
         {filteredStudents.length === 0 && (
           <div>

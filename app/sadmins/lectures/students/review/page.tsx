@@ -11,12 +11,10 @@ import {
   IoCloseCircle,
   IoDocumentText,
 } from "react-icons/io5";
+import { TbVersions } from "react-icons/tb";
 
-import sadminStyles from "../../sadmins.module.css";
-import pageStyles from "./page.module.css";
-
-// Merge styles if needed
-const styles = { ...sadminStyles, ...pageStyles };
+import styles from "./page.module.css";
+import { FaRedoAlt } from "react-icons/fa";
 
 interface MCQAnswer {
   question: string;
@@ -199,6 +197,16 @@ export default function QuizReviewPage() {
     quizData.totalPossibleMarks
   );
 
+  const meta = [
+    {
+      label: "Score",
+      value: `${quizData.earnedMarks}/${quizData.totalPossibleMarks} (${percentage}%)`,
+      icon: BiTrophy,
+    },
+    { label: "Attempts", value: quizData.attempts, icon: FaRedoAlt },
+    { label: "Variant", value: quizData.lastVariantUsed, icon: TbVersions },
+  ];
+
   return (
     <div className="wrapper">
       {/* Navigation */}
@@ -209,93 +217,68 @@ export default function QuizReviewPage() {
 
       {/* Header */}
       <div className={styles.header}>
-        <div style={{ flex: 1 }}>
-          <h1>Quiz Review</h1>
-          <p style={{ color: "var(--text-secondary)", marginTop: "0.5rem" }}>
-            {lectureTitle}
-          </p>
-        </div>
+        <h1>Quiz Review:</h1>
+        <h2>{lectureTitle}</h2>
       </div>
 
       {/* Student Info Card */}
-      <div className={styles.studentInfoCard} style={{ marginBottom: "2rem" }}>
-        <div className={styles.studentHeader}>
-          <div
-            className={styles.studentAvatar}
-            style={{ width: "60px", height: "60px", fontSize: "24px" }}
-          >
-            {(studentName || studentInfo?.name)?.charAt(0).toUpperCase() || "S"}
+      <div className={styles.sectionContainer}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: "0.5rem",
+            alignItems: "center",
+            marginBottom: "1rem",
+          }}
+        >
+          <div className={styles.studentAvatar}>
+            {studentName?.charAt(0).toUpperCase() || "S"}
           </div>
           <div>
-            <h2>
-              {decodeURIComponent(studentName || "") ||
-                studentInfo?.name ||
-                "Unknown Student"}
-            </h2>
-            <p style={{ color: "var(--text-secondary)" }}>
-              {studentInfo?.email}
-            </p>
+            <h2>{studentName}</h2>
+            {studentInfo?.email}
           </div>
         </div>
 
         <div className={styles.quizMetaGrid}>
-          <div className={styles.metaItem}>
-            <BiTrophy className={styles.metaIcon} />
-            <div>
-              <div className={styles.metaLabel}>Score</div>
-              <div className={styles.metaValue}>
-                {quizData.earnedMarks}/{quizData.totalPossibleMarks} (
-                {percentage}%)
+          {meta.map((item, index) => (
+            <div className={styles.metaItem} key={index}>
+              <item.icon style={{ fontSize: "1.5rem" }} />
+              <div>
+                <h2>{item.value}</h2>
+                <div style={{ fontSize: "0.875rem" }}>{item.label}</div>
               </div>
             </div>
-          </div>
-
-          <div className={styles.metaItem}>
-            <BiTrophy className={styles.metaIcon} />
-            <div>
-              <div className={styles.metaLabel}>Attempts</div>
-              <div className={styles.metaValue}>{quizData.attempts}</div>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
       {/* Quiz Answers */}
-      <div className={styles.quizAnswersContainer}>
-        {/* MCQ Questions */}
-        {quizData.answers.mcq && quizData.answers.mcq.length > 0 && (
+      <div>
+        {quizData.answers.mcq?.length > 0 && (
           <div className={styles.sectionContainer}>
-            <h3 className={styles.sectionTitle}>
+            <h3>
               <IoDocumentText className={styles.sectionIcon} />
               Multiple Choice Questions ({quizData.answers.mcq.length})
             </h3>
 
-            {quizData.answers.mcq.map((answer, index) => (
-              <div key={index} className={styles.questionCard}>
-                <div className={styles.questionHeader}>
-                  <span className={styles.questionNumber}>Q{index + 1}</span>
-                  <div className={styles.questionStatus}>
-                    {answer.isCorrect ? (
-                      <div className={styles.correctBadge}>
-                        <IoCheckmarkCircle />
-                        Correct ({answer.marks}{" "}
-                        {answer.marks === 1 ? "mark" : "marks"})
-                      </div>
-                    ) : (
-                      <div className={styles.incorrectBadge}>
-                        <IoCloseCircle />
-                        Incorrect (0 marks)
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className={styles.questionText}>{answer.question}</div>
-
-                <div className={styles.answerSection}>
-                  <div className={styles.studentAnswer}>
-                    <strong>Students Answer:</strong>
-                    <span
+            <table className={styles.quizTable}>
+              <thead>
+                <tr>
+                  <th>Question</th>
+                  <th>Student Answer</th>
+                  <th>Correct Answer</th>
+                  <th>Marks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quizData.answers.mcq.map((answer, index) => (
+                  <tr key={index}>
+                    <td>
+                      Q{index + 1}. {answer.question}
+                    </td>
+                    <td
                       className={
                         answer.isCorrect
                           ? styles.correctText
@@ -303,96 +286,52 @@ export default function QuizReviewPage() {
                       }
                     >
                       {answer.selectedText}
-                    </span>
-                  </div>
-
-                  {!answer.isCorrect && (
-                    <div className={styles.correctAnswer}>
-                      <strong>Correct Answer:</strong>
-                      <span className={styles.correctText}>
-                        {answer.correctAnswer}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+                    </td>
+                    <td> {answer.correctAnswer} </td>
+                    <td>
+                      {answer.isCorrect ? (
+                        <span style={{ color: "var(--green)" }}>
+                          <IoCheckmarkCircle /> {answer.marks}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--red)" }}>
+                          <IoCloseCircle /> 0
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
         {/* Essay Questions */}
-        {quizData.answers.essay && quizData.answers.essay.length > 0 && (
+        {quizData.answers.essay?.length > 0 && (
           <div className={styles.sectionContainer}>
             <h3 className={styles.sectionTitle}>
               <IoDocumentText className={styles.sectionIcon} />
               Essay Questions ({quizData.answers.essay.length})
             </h3>
 
-            {quizData.answers.essay.map((answer, index) => (
-              <div key={index} className={styles.questionCard}>
-                <div className={styles.questionHeader}>
-                  <span className={styles.questionNumber}>
-                    Essay {index + 1}
-                  </span>
-                  <div className={styles.questionStatus}>
-                    <div className={styles.essayBadge}>
-                      {answer.marks}/{answer.maxMarks} marks
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.questionText}>{answer.question}</div>
-
-                <div className={styles.essayAnswer}>
-                  <strong>Students Answer:</strong>
-                  <div className={styles.essayText}>
-                    {answer.answer || "No answer provided"}
-                  </div>
-
-                  {answer.feedback && (
-                    <div className={styles.feedback}>
-                      <strong>Feedback:</strong>
-                      <p>{answer.feedback}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+            <table className={styles.quizTable}>
+              <thead>
+                <tr>
+                  <th>Question</th>
+                  <th>Student Answer</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quizData.answers.essay.map((answer, index) => (
+                  <tr key={index}>
+                    <td>{answer.question}</td>
+                    <td>{answer.answer || "No answer provided"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-
-        {/* Summary */}
-        <div className={styles.summaryCard}>
-          <h3>Quiz Summary</h3>
-          <div className={styles.summaryStats}>
-            <div className={styles.summaryItem}>
-              <span>Total Questions:</span>
-              <span>
-                {(quizData.answers.mcq?.length || 0) +
-                  (quizData.answers.essay?.length || 0)}
-              </span>
-            </div>
-            <div className={styles.summaryItem}>
-              <span>Score:</span>
-              <span
-                className={
-                  percentage >= 70
-                    ? styles.goodScore
-                    : percentage >= 50
-                    ? styles.averageScore
-                    : styles.poorScore
-                }
-              >
-                {quizData.earnedMarks}/{quizData.totalPossibleMarks} (
-                {percentage}%)
-              </span>
-            </div>
-            <div className={styles.summaryItem}>
-              <span>Quiz Variant:</span>
-              <span>{quizData.lastVariantUsed}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

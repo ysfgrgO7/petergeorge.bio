@@ -16,7 +16,7 @@ import Link from "next/link";
 import { IoPeople } from "react-icons/io5";
 import { FaChevronCircleRight, FaChevronCircleDown } from "react-icons/fa";
 import { RiAdminFill } from "react-icons/ri";
-import styles from "./sadmins.module.css";
+import styles from "./page.module.css";
 
 interface Lecture {
   id: string;
