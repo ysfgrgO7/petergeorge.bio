@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  DocumentData,
+} from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import styles from "./progress.module.css";
 
@@ -32,18 +38,23 @@ interface UserProfile {
 
 interface ProgressItem {
   id: string;
+  year: string;
   courseTitle: string;
   lectureTitle: string;
   quiz: QuizData | null;
   isHidden: boolean;
+  order: number;
 }
 
 export default function ProgressPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [progressData, setProgressData] = useState<ProgressItem[]>([]);
+  const [progressGroups, setProgressGroups] = useState<
+    Record<string, ProgressItem[]>
+  >({});
   const [loading, setLoading] = useState(true);
   const [studentInfo, setStudentInfo] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string>("");
+
   const auth = getAuth();
   const router = useRouter();
 
@@ -58,91 +69,127 @@ export default function ProgressPage() {
         return;
       }
 
-      const studentId = String(user.uid).trim();
+      const studentId = user.uid.trim();
 
       try {
-        // Fetch user info first
-        const userDocRef = doc(db, "students", studentId);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data() as UserProfile;
-          setStudentInfo({ ...userData, uid: user.uid });
+        // 🔹 Fetch student info
+        const userSnap = await getDoc(doc(db, "students", studentId));
+        if (userSnap.exists()) {
+          setStudentInfo({
+            ...(userSnap.data() as UserProfile),
+            uid: user.uid,
+          });
         }
 
-        // Then fetch progress data
-        const progressCollectionRef = collection(
-          db,
-          "students",
-          studentId,
-          "progress"
+        // 🔹 Fetch all progress docs
+        const progressSnap = await getDocs(
+          collection(db, "students", studentId, "progress")
         );
 
-        const quizSnapshot = await getDocs(progressCollectionRef);
-
-        if (quizSnapshot.empty) {
-          setProgressData([]);
+        if (progressSnap.empty) {
+          setProgressGroups({});
           setLoading(false);
           return;
         }
 
-        const items: ProgressItem[] = await Promise.all(
-          quizSnapshot.docs.map(async (docSnap) => {
-            const quiz = docSnap.data() as QuizData;
-            const docId = docSnap.id;
-            const [year, courseId, lectureId] = docId.split("_");
+        // Extract all needed IDs
+        const parsed = progressSnap.docs.map((d) => {
+          const [year, courseId, lectureId] = d.id.split("_");
+          return {
+            id: d.id,
+            year,
+            courseId,
+            lectureId,
+            quiz: d.data() as QuizData,
+          };
+        });
 
-            let courseTitle = courseId;
-            try {
-              const courseDocRef = doc(db, "years", year, "courses", courseId);
-              const courseDoc = await getDoc(courseDocRef);
-              if (courseDoc.exists()) {
-                courseTitle = courseDoc.data().title || courseId;
-              }
-            } catch (err) {
-              console.warn("Failed to fetch course title for", courseId, err);
-            }
+        const uniqueYears = [...new Set(parsed.map((p) => p.year))];
 
-            let lectureTitle = lectureId;
-            let isHidden = false;
-            try {
-              const lectureDocRef = doc(
-                db,
-                "years",
-                year,
-                "courses",
-                courseId,
-                "lectures",
-                lectureId
-              );
-              const lectureDoc = await getDoc(lectureDocRef);
-              if (lectureDoc.exists()) {
-                const data = lectureDoc.data();
-                lectureTitle = data.title || lectureId;
-                isHidden = !!data.isHidden;
-              }
-            } catch (err) {
-              console.warn(
-                "Failed to fetch lecture title or properties for",
-                lectureId,
-                err
-              );
-            }
-
-            return {
-              id: docId,
-              quiz,
-              courseTitle,
-              lectureTitle,
-              isHidden,
-            };
-          })
+        // 🔹 Fetch all courses in bulk
+        const courseDocs = await Promise.all(
+          uniqueYears.map((y) => getDocs(collection(db, "years", y, "courses")))
         );
 
-        const visibleItems = items.filter((item) => !item.isHidden);
-        setProgressData(visibleItems);
+        const courseMap: Record<string, { year: string; title: string }> = {};
+        courseDocs.forEach((snap, idx) => {
+          const yearKey = uniqueYears[idx];
+          snap.forEach((c) => {
+            const data = c.data() as DocumentData;
+            courseMap[`${yearKey}_${c.id}`] = {
+              year: yearKey,
+              title: data.title || c.id,
+            };
+          });
+        });
+
+        // 🔹 Fetch all lectures in bulk
+        const lectureDocs = await Promise.all(
+          parsed.map((p) =>
+            getDoc(
+              doc(
+                db,
+                "years",
+                p.year,
+                "courses",
+                p.courseId,
+                "lectures",
+                p.lectureId
+              )
+            )
+          )
+        );
+
+        const lectureMap: Record<
+          string,
+          { title: string; isHidden: boolean; order: number }
+        > = {};
+        lectureDocs.forEach((snap) => {
+          if (snap.exists()) {
+            const data = snap.data() as DocumentData;
+            lectureMap[snap.id] = {
+              title: data.title || snap.id,
+              isHidden: !!data.isHidden,
+              order: typeof data.order === "number" ? data.order : 9999,
+            };
+          }
+        });
+
+        // 🔹 Build items
+        const items: ProgressItem[] = parsed.map((p) => {
+          const courseKey = `${p.year}_${p.courseId}`;
+          const course = courseMap[courseKey];
+          const lectureData = lectureMap[p.lectureId] || {
+            title: p.lectureId,
+            isHidden: false,
+            order: 9999,
+          };
+          return {
+            id: p.id,
+            year: course?.year || p.year,
+            quiz: p.quiz,
+            courseTitle: course?.title || p.courseId,
+            lectureTitle: lectureData.title,
+            isHidden: lectureData.isHidden,
+            order: lectureData.order,
+          };
+        });
+
+        // 🔹 filter hidden, sort by order, and group by year+course
+        const grouped: Record<string, ProgressItem[]> = {};
+        items
+          .filter((i) => !i.isHidden)
+          .sort((a, b) => a.order - b.order)
+          .forEach((item) => {
+            const key = `${item.year} - ${item.courseTitle}`;
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(item);
+          });
+
+        setProgressGroups(grouped);
       } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to load your data. Please try again.");
+        console.error("Error fetching progress:", err);
+        setError("Failed to load your progress.");
       } finally {
         setLoading(false);
       }
@@ -210,12 +257,12 @@ export default function ProgressPage() {
                 {new Date(studentInfo.createdAt).toLocaleDateString()}
               </span>
             </div>
-            {studentInfo.devices && studentInfo.devices.length > 0 && (
+            {studentInfo.devices?.length ? (
               <div className={styles.infoItem}>
                 <strong>Devices:</strong>
                 <span>{studentInfo.devices.length} device(s)</span>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}
@@ -224,29 +271,31 @@ export default function ProgressPage() {
 
       {error ? (
         <p className={styles.error}>{error}</p>
-      ) : progressData.length > 0 ? (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Course</th>
-              <th>Lecture</th>
-              <th>Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {progressData.map((item) => (
-              <tr key={item.id} className={styles.row}>
-                <td>{item.courseTitle}</td>
-                <td>{item.lectureTitle}</td>
-                <td className={styles.score}>
-                  {item.quiz && item.quiz.earnedMarks !== undefined
-                    ? `${item.quiz.earnedMarks} / ${item.quiz.totalPossibleMarks}`
-                    : "No Quiz"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      ) : Object.keys(progressGroups).length ? (
+        Object.entries(progressGroups).map(([groupKey, items]) => (
+          <div key={groupKey} className={styles.section}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Lecture</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id} className={styles.row}>
+                    <td>{item.lectureTitle}</td>
+                    <td className={styles.score}>
+                      {item.quiz
+                        ? `${item.quiz.earnedMarks} / ${item.quiz.totalPossibleMarks}`
+                        : "No Quiz"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))
       ) : (
         <p className={styles.empty}>
           You haven’t completed any quizzes yet. Keep learning! ✨

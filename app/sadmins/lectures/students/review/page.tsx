@@ -3,7 +3,13 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { db, auth } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { BiChevronLeft, BiTrophy } from "react-icons/bi";
 import {
@@ -12,6 +18,7 @@ import {
   IoDocumentText,
 } from "react-icons/io5";
 import { TbVersions } from "react-icons/tb";
+import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 
 import styles from "./page.module.css";
 import { FaRedoAlt } from "react-icons/fa";
@@ -28,11 +35,12 @@ interface MCQAnswer {
 
 interface EssayAnswer {
   question: string;
-  answer: string;
+  answerText: string;
   marks: number;
   maxMarks: number;
   type: "essay";
   feedback?: string;
+  questionId?: string;
 }
 
 interface QuizData {
@@ -63,6 +71,16 @@ export default function QuizReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [essayQuestionMarks, setEssayQuestionMarks] = useState<{
+    [key: string]: number;
+  }>({});
+  const [editingMarks, setEditingMarks] = useState<{ [key: string]: boolean }>(
+    {}
+  );
+  const [tempMarks, setTempMarks] = useState<{ [key: string]: number }>({});
+  const [savingMarks, setSavingMarks] = useState<{ [key: string]: boolean }>(
+    {}
+  );
 
   const studentId = searchParams.get("studentId");
   const courseId = searchParams.get("courseId");
@@ -95,9 +113,41 @@ export default function QuizReviewPage() {
     }
   }, [studentId, courseId, lectureId, year, isAdmin]);
 
+  const fetchEssayQuestionMarks = async () => {
+    try {
+      const essayQuestionsRef = collection(
+        db,
+        "years",
+        year!,
+        "courses",
+        courseId!,
+        "lectures",
+        lectureId!,
+        "essayQuestions"
+      );
+
+      const essayQuestionsSnap = await getDocs(essayQuestionsRef);
+      const marksMap: { [key: string]: number } = {};
+
+      essayQuestionsSnap.forEach((doc) => {
+        const data = doc.data();
+        marksMap[doc.id] = data.marks || 0;
+      });
+
+      setEssayQuestionMarks(marksMap);
+      return marksMap;
+    } catch (error) {
+      console.error("Error fetching essay question marks:", error);
+      return {};
+    }
+  };
+
   const fetchQuizData = async () => {
     try {
       setLoading(true);
+
+      // Fetch essay question marks first
+      await fetchEssayQuestionMarks();
 
       // Fetch quiz data from student progress
       const progressDocId = `${year}_${courseId}_${lectureId}`;
@@ -161,6 +211,83 @@ export default function QuizReviewPage() {
       setError("Error loading quiz data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const startEditingMark = (questionIndex: string, currentMark: number) => {
+    setEditingMarks((prev) => ({ ...prev, [questionIndex]: true }));
+    setTempMarks((prev) => ({ ...prev, [questionIndex]: currentMark }));
+  };
+
+  const cancelEditingMark = (questionIndex: string) => {
+    setEditingMarks((prev) => ({ ...prev, [questionIndex]: false }));
+    setTempMarks((prev) => {
+      const newTemp = { ...prev };
+      delete newTemp[questionIndex];
+      return newTemp;
+    });
+  };
+
+  const saveMarkToFirestore = async (
+    questionIndex: string,
+    newMark: number
+  ) => {
+    if (!quizData || !studentId || !courseId || !lectureId || !year) return;
+
+    setSavingMarks((prev) => ({ ...prev, [questionIndex]: true }));
+
+    try {
+      // Update the local quiz data
+      const updatedQuizData = { ...quizData };
+      const essayAnswers = { ...updatedQuizData.answers.essay };
+
+      if (essayAnswers[questionIndex]) {
+        const oldMark = essayAnswers[questionIndex].marks || 0;
+        essayAnswers[questionIndex] = {
+          ...essayAnswers[questionIndex],
+          marks: newMark,
+        };
+
+        // Recalculate total earned marks
+        const markDifference = newMark - oldMark;
+        updatedQuizData.earnedMarks = Math.max(
+          0,
+          updatedQuizData.earnedMarks + markDifference
+        );
+        updatedQuizData.answers.essay = essayAnswers;
+      }
+
+      // Update Firestore
+      const progressDocId = `${year}_${courseId}_${lectureId}`;
+      const progressRef = doc(
+        db,
+        "students",
+        studentId,
+        "progress",
+        progressDocId
+      );
+
+      await updateDoc(progressRef, {
+        "answers.essay": essayAnswers,
+        earnedMarks: updatedQuizData.earnedMarks,
+        lastUpdated: new Date(),
+      });
+
+      // Update local state
+      setQuizData(updatedQuizData);
+      setEditingMarks((prev) => ({ ...prev, [questionIndex]: false }));
+      setTempMarks((prev) => {
+        const newTemp = { ...prev };
+        delete newTemp[questionIndex];
+        return newTemp;
+      });
+
+      console.log("Mark updated successfully");
+    } catch (error) {
+      console.error("Error updating mark:", error);
+      alert("Failed to update mark. Please try again.");
+    } finally {
+      setSavingMarks((prev) => ({ ...prev, [questionIndex]: false }));
     }
   };
 
@@ -254,6 +381,162 @@ export default function QuizReviewPage() {
         </div>
       </div>
 
+      {/* Essay Questions */}
+      {quizData.answers.essay &&
+        Object.keys(quizData.answers.essay).length > 0 && (
+          <div className={styles.sectionContainer}>
+            <h3 className={styles.sectionTitle}>
+              <IoDocumentText className={styles.sectionIcon} />
+              Essay Questions ({Object.keys(quizData.answers.essay).length})
+            </h3>
+
+            <table className={styles.quizTable}>
+              <thead>
+                <tr>
+                  <th>Question</th>
+                  <th>Student Answer</th>
+                  <th>Max Marks</th>
+                  <th>Earned Marks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(quizData.answers.essay).map(
+                  ([key, answerObj]) => {
+                    const index = Number(key);
+                    const answer = answerObj as EssayAnswer;
+
+                    const questionMarks = answer.questionId
+                      ? essayQuestionMarks[answer.questionId]
+                      : Object.values(essayQuestionMarks)[index] ||
+                        answer.maxMarks ||
+                        0;
+
+                    const currentMarks = answer.marks || 0;
+                    const isEditing = editingMarks[key] || false;
+                    const isSaving = savingMarks[key] || false;
+                    const tempMark = tempMarks[key] ?? currentMarks;
+
+                    return (
+                      <tr key={index}>
+                        <td>
+                          Q{index + 1}. {answer.question}
+                        </td>
+                        <td>{answer.answerText || "No answer provided"}</td>
+                        <td>{questionMarks}</td>
+                        <td>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "start",
+                              gap: "0.5rem",
+                              flexDirection: "column",
+                            }}
+                          >
+                            {isEditing ? (
+                              <>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={questionMarks}
+                                  step={0.5}
+                                  value={tempMark}
+                                  onChange={(e) =>
+                                    setTempMarks((prev) => ({
+                                      ...prev,
+                                      [key]: Math.max(
+                                        0,
+                                        Math.min(
+                                          questionMarks,
+                                          Number(e.target.value)
+                                        )
+                                      ),
+                                    }))
+                                  }
+                                  style={{
+                                    width: "60px",
+                                    padding: "0.25rem",
+                                    border: "1px solid var(--border-color)",
+                                    borderRadius: "4px",
+                                    fontSize: "1rem",
+                                  }}
+                                  disabled={isSaving}
+                                />
+                                <div style={{ display: "flex", gap: "0.5rem" }}>
+                                  <button
+                                    onClick={() =>
+                                      saveMarkToFirestore(key, tempMark)
+                                    }
+                                    disabled={isSaving}
+                                    style={{
+                                      background: "var(--green)",
+                                      color: "white",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      padding: "0.25rem 0.5rem",
+                                      cursor: isSaving
+                                        ? "not-allowed"
+                                        : "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "0.25rem",
+                                    }}
+                                    title="Save mark"
+                                  >
+                                    <FaCheck size={12} />
+                                    {isSaving ? "Saving..." : ""}
+                                  </button>
+                                  <button
+                                    onClick={() => cancelEditingMark(key)}
+                                    disabled={isSaving}
+                                    style={{
+                                      background: "var(--red)",
+                                      color: "white",
+                                      border: "none",
+                                      borderRadius: "4px",
+                                      padding: "0.25rem 0.5rem",
+                                      cursor: isSaving
+                                        ? "not-allowed"
+                                        : "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                    }}
+                                    title="Cancel"
+                                  >
+                                    <FaTimes size={12} />
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <span
+                                  style={{
+                                    fontSize: "1.1rem",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  {currentMarks}
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    startEditingMark(key, currentMarks)
+                                  }
+                                  title="Edit mark"
+                                >
+                                  <FaEdit size={15} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
       {/* Quiz Answers */}
       <div>
         {quizData.answers.mcq?.length > 0 && (
@@ -299,33 +582,6 @@ export default function QuizReviewPage() {
                         </span>
                       )}
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Essay Questions */}
-        {quizData.answers.essay?.length > 0 && (
-          <div className={styles.sectionContainer}>
-            <h3 className={styles.sectionTitle}>
-              <IoDocumentText className={styles.sectionIcon} />
-              Essay Questions ({quizData.answers.essay.length})
-            </h3>
-
-            <table className={styles.quizTable}>
-              <thead>
-                <tr>
-                  <th>Question</th>
-                  <th>Student Answer</th>
-                </tr>
-              </thead>
-              <tbody>
-                {quizData.answers.essay.map((answer, index) => (
-                  <tr key={index}>
-                    <td>{answer.question}</td>
-                    <td>{answer.answer || "No answer provided"}</td>
                   </tr>
                 ))}
               </tbody>

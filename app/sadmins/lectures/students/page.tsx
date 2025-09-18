@@ -395,8 +395,7 @@ export default function StudentsPage() {
 
                 {/* Score */}
                 <td>
-                  {student.quizCompleted &&
-                    student.earnedMarks !== undefined &&
+                  {student.earnedMarks !== undefined &&
                     student.totalPossibleMark && (
                       <div className={styles.scoreSection}>
                         <div>
