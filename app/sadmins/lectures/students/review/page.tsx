@@ -46,7 +46,7 @@ interface EssayAnswer {
 interface QuizData {
   answers: {
     mcq: MCQAnswer[];
-    essay: EssayAnswer[];
+    essay: { [key: string]: EssayAnswer };
   };
   earnedMarks: number;
   totalPossibleMarks: number;
