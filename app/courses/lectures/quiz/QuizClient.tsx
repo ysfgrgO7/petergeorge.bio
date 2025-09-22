@@ -511,23 +511,35 @@ export default function QuizClient() {
         .map((q, i) => (
           <div key={q.id} className={styles.question}>
             <p>
-              <strong>
-                Q{i + 1}: {q.question}
-                {/* Display marks for each question */}
-                <span
-                  style={{
-                    backgroundColor: "var(--blue)",
-                    color: "var(--white)",
-                    padding: "2px 8px",
-                    borderRadius: "12px",
-                    fontSize: "0.8em",
-                    marginLeft: "10px",
-                    fontWeight: "bold",
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "flex-start",
+                }}
+              >
+                Q{i + 1}:
+                <div
+                  className={styles.questionText}
+                  dangerouslySetInnerHTML={{
+                    __html: q.question.replace(/<u>(.*?)<\/u>/g, "<u>$1</u>"),
                   }}
-                >
-                  ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
-                </span>
-              </strong>
+                />
+              </div>
+              {/* Display marks for each question */}
+              <span
+                style={{
+                  backgroundColor: "var(--blue)",
+                  color: "var(--white)",
+                  padding: "2px 8px",
+                  borderRadius: "12px",
+                  fontSize: "0.8em",
+                  marginLeft: "10px",
+                  fontWeight: "bold",
+                }}
+              >
+                ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
+              </span>
             </p>
             {q.imageUrl && (
               <div className={styles.quizImageContainer}>
@@ -578,23 +590,38 @@ export default function QuizClient() {
             .map((q, i) => (
               <div key={q.id} className={styles.question}>
                 <p>
-                  <strong>
-                    Q{totalMCQQuestions + i + 1}: {q.question}
-                    {/* Display marks for essay questions */}
-                    <span
-                      style={{
-                        backgroundColor: "var(--blue)",
-                        color: "var(--white)",
-                        padding: "2px 8px",
-                        borderRadius: "12px",
-                        fontSize: "0.8em",
-                        marginLeft: "10px",
-                        fontWeight: "bold",
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "10px",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    Q{totalMCQQuestions + i + 1}:
+                    <div
+                      className={styles.questionText}
+                      dangerouslySetInnerHTML={{
+                        __html: q.question.replace(
+                          /<u>(.*?)<\/u>/g,
+                          "<u>$1</u>"
+                        ),
                       }}
-                    >
-                      ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
-                    </span>
-                  </strong>
+                    />
+                  </div>
+                  {/* Display marks for essay questions */}
+                  <span
+                    style={{
+                      backgroundColor: "var(--blue)",
+                      color: "var(--white)",
+                      padding: "2px 8px",
+                      borderRadius: "12px",
+                      fontSize: "0.8em",
+                      marginLeft: "10px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
+                  </span>
                 </p>
                 {q.imageUrl && (
                   <div className={styles.quizImageContainer}>

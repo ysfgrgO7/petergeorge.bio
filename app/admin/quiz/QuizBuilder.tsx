@@ -18,9 +18,195 @@ import { db, auth } from "@/lib/firebase";
 import styles from "../admin.module.css";
 import MessageModal from "@/app/MessageModal";
 import { onAuthStateChanged } from "firebase/auth";
-import { IoCloseCircleSharp, IoAdd } from "react-icons/io5";
+import {
+  IoCloseCircleSharp,
+  IoAdd,
+  IoTrashSharp,
+  IoPencilSharp,
+  IoSaveSharp,
+  IoCloseSharp,
+} from "react-icons/io5";
+import {
+  MdFormatUnderlined,
+  MdFormatBold,
+  MdFormatItalic,
+} from "react-icons/md";
 
-// Interfaces
+// Rich Text Editor Component
+const RichTextEditor = ({
+  value,
+  onChange,
+  placeholder = "Enter your question here...",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) => {
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
+
+  // Generic toggle wrapper for tags like "b", "i", "u"
+  const toggleWrap = (tag: "b" | "i" | "u") => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    if (start === null || end === null) return;
+
+    const selectedText = value.substring(start, end);
+    const startTag = `<${tag}>`;
+    const endTag = `</${tag}>`;
+
+    // safe checks for indices
+    const beforeSelection = value.substring(0, start);
+    const afterSelection = value.substring(end);
+
+    const isWrappedBefore =
+      start >= startTag.length &&
+      beforeSelection.substring(start - startTag.length, start) === startTag;
+    const isWrappedAfter =
+      afterSelection.substring(0, endTag.length) === endTag;
+
+    // If both sides match tags -> unwrap
+    if (selectedText && isWrappedBefore && isWrappedAfter) {
+      // remove the tags
+      const newBefore = beforeSelection.slice(0, -startTag.length);
+      const newAfter = afterSelection.slice(endTag.length);
+      const newValue = newBefore + selectedText + newAfter;
+      onChange(newValue);
+
+      // restore selection (shifted left by startTag.length)
+      setTimeout(() => {
+        textarea.focus();
+        const newStart = start - startTag.length;
+        const newEnd = end - startTag.length;
+        textarea.setSelectionRange(newStart, newEnd);
+      }, 0);
+      return;
+    }
+
+    // Otherwise wrap the selection if there's any selected text
+    if (selectedText) {
+      const newValue =
+        beforeSelection + startTag + selectedText + endTag + afterSelection;
+      onChange(newValue);
+
+      // restore selection (selection now sits inside the tags)
+      setTimeout(() => {
+        textarea.focus();
+        const newStart = start + startTag.length;
+        const newEnd = end + startTag.length;
+        textarea.setSelectionRange(newStart, newEnd);
+      }, 0);
+    }
+  };
+
+  const renderPreview = (text: string) => {
+    // Very small passthrough — we'll rely on sanitization upstream before rendering in production.
+    // Convert our tags to HTML for preview. We simply allow <b>, <i>, <u>.
+    return (
+      text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "<")
+        .replace(/>/g, ">")
+        // NOTE: we assume the value contains the intended tags (<b>,<i>,<u>).
+        // If you accept user input from untrusted sources, sanitize with DOMPurify before putting into the DOM.
+        .replace(/<b>(.*?)<\/b>/g, "<b>$1</b>")
+        .replace(/<i>(.*?)<\/i>/g, "<i>$1</i>")
+        .replace(/<u>(.*?)<\/u>/g, "<u>$1</u>")
+    );
+  };
+
+  return (
+    <div style={{ marginBottom: "16px" }}>
+      {/* Preview */}
+      {value && (
+        <>
+          <strong>Preview:</strong>
+          <div
+            style={{
+              marginTop: "8px",
+              padding: "8px",
+              border: "1px dashed var(--fg)",
+              borderRadius: "var(--border-radius)",
+              backgroundColor: "transparent",
+              fontSize: "14px",
+            }}
+          >
+            <div
+              // IMPORTANT: sanitize before using dangerouslySetInnerHTML in production!
+              dangerouslySetInnerHTML={{ __html: renderPreview(value) }}
+            />
+          </div>
+        </>
+      )}
+      <br />
+
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          alignItems: "center",
+          flexDirection: "column",
+        }}
+      >
+        <textarea
+          ref={textareaRef}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          style={{
+            width: "100%",
+            resize: "vertical",
+            fontFamily: "monospace",
+            fontSize: "14px",
+            borderBottomLeftRadius: "0",
+            borderBottomRightRadius: "0",
+          }}
+        />
+
+        <div
+          style={{
+            display: "flex",
+            backgroundColor: "var(--white)",
+            width: "100%",
+            borderBottomLeftRadius: "var(--border-radius)",
+            borderBottomRightRadius: "var(--border-radius)",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => toggleWrap("u")}
+            title="Underline selected text"
+            style={{ backgroundColor: "transparent", color: "var(--black)" }}
+          >
+            <MdFormatUnderlined style={{ fontSize: "1.5rem" }} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => toggleWrap("b")}
+            title="Bold selected text"
+            style={{ backgroundColor: "transparent", color: "var(--black)" }}
+          >
+            <MdFormatBold style={{ fontSize: "1.5rem" }} />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => toggleWrap("i")}
+            title="Italic selected text"
+            style={{ backgroundColor: "transparent", color: "var(--black)" }}
+          >
+            <MdFormatItalic style={{ fontSize: "1.5rem" }} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface ExistingQuiz extends DocumentData {
   id: string;
   question: string;
@@ -40,88 +226,320 @@ interface QuizData {
   marks: 1 | 2;
 }
 
-// Question Card Component
+// Question Card Component with Inline Editing
 const QuestionCard = ({
   question,
   index,
-  onEdit,
+  onSave,
   onDelete,
   type = "mcq",
 }: {
   question: ExistingQuiz;
   index: number;
-  onEdit: (question: ExistingQuiz) => void;
+  onSave: (id: string, data: QuizData) => void;
   onDelete: (id: string) => void;
   type?: string;
 }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editQuestion, setEditQuestion] = useState(question.question);
+  const [editImageUrl, setEditImageUrl] = useState(question.imageUrl || "");
+  const [editMarks, setEditMarks] = useState<1 | 2>(
+    question.marks === 1 || question.marks === 2 ? question.marks : 1
+  );
+  const [editOptions, setEditOptions] = useState(question.options || ["", ""]);
+  const [editCorrectAnswerIndex, setEditCorrectAnswerIndex] = useState<
+    number | null
+  >(question.correctAnswerIndex ?? null);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    // Reset form values to current question data
+    setEditQuestion(question.question);
+    setEditImageUrl(question.imageUrl || "");
+    setEditMarks(
+      question.marks === 1 || question.marks === 2 ? question.marks : 1
+    );
+    setEditOptions(question.options || ["", ""]);
+    setEditCorrectAnswerIndex(question.correctAnswerIndex ?? null);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    // Reset values
+    setEditQuestion(question.question);
+    setEditImageUrl(question.imageUrl || "");
+    setEditMarks(
+      question.marks === 1 || question.marks === 2 ? question.marks : 1
+    );
+    setEditOptions(question.options || ["", ""]);
+    setEditCorrectAnswerIndex(question.correctAnswerIndex ?? null);
+  };
+
+  const handleSave = () => {
+    if (type === "mcq") {
+      if (
+        !editQuestion.trim() ||
+        editOptions.some((opt: string) => !opt.trim()) ||
+        editCorrectAnswerIndex === null
+      ) {
+        alert("Please complete all MCQ fields and select a correct answer.");
+        return;
+      }
+      onSave(question.id, {
+        type: "mcq",
+        question: editQuestion,
+        options: editOptions,
+        correctAnswerIndex: editCorrectAnswerIndex,
+        imageUrl: editImageUrl.trim() || null,
+        marks: editMarks,
+      });
+    } else {
+      if (!editQuestion.trim()) {
+        alert("Please enter an essay question.");
+        return;
+      }
+      onSave(question.id, {
+        type: "essay",
+        question: editQuestion,
+        imageUrl: editImageUrl.trim() || null,
+        marks: editMarks,
+      });
+    }
+    setIsEditing(false);
+  };
+
+  const addOption = () => {
+    if (editOptions.length < 4) setEditOptions([...editOptions, ""]);
+  };
+
+  const removeOption = (optIndex: number) => {
+    if (editOptions.length > 2) {
+      setEditOptions(
+        editOptions.filter((_: string, i: number) => i !== optIndex)
+      );
+      if (editCorrectAnswerIndex === optIndex) {
+        setEditCorrectAnswerIndex(null);
+      } else if (
+        editCorrectAnswerIndex !== null &&
+        editCorrectAnswerIndex > optIndex
+      ) {
+        setEditCorrectAnswerIndex(editCorrectAnswerIndex - 1);
+      }
+    }
+  };
+
+  const handleOptionChange = (optIndex: number, value: string) => {
+    const updated = [...editOptions];
+    updated[optIndex] = value;
+    setEditOptions(updated);
+  };
+
   return (
     <div className={styles.questionCard}>
       <div className={styles.questionHeader}>
         <div className={styles.questionNumber}>Question {index + 1}</div>
         <div className={styles.questionActions}>
-          <button
-            className={styles.editBtn}
-            onClick={() => onEdit(question)}
-            title="Edit question"
-          >
-            ✏️
-          </button>
-          <button
-            className={styles.deleteBtn}
-            onClick={() => onDelete(question.id)}
-            title="Delete question"
-          >
-            🗑️
-          </button>
+          {isEditing ? (
+            <>
+              <button
+                className={styles.saveBtn}
+                onClick={handleSave}
+                title="Save changes"
+              >
+                <IoSaveSharp />
+              </button>
+              <button
+                className={styles.cancelBtn}
+                onClick={handleCancel}
+                title="Cancel editing"
+              >
+                <IoCloseSharp />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                className={styles.editBtn}
+                onClick={handleEdit}
+                title="Edit question"
+              >
+                <IoPencilSharp />
+              </button>
+              <button
+                className={styles.deleteBtn}
+                onClick={() => onDelete(question.id)}
+                title="Delete question"
+              >
+                <IoTrashSharp />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       <div className={styles.questionContent}>
-        <div className={styles.questionText}>{question.question}</div>
-
-        {question.imageUrl && (
-          <div style={{ margin: "16px 0" }}>
-            <img
-              src={question.imageUrl}
-              alt={`Question ${index + 1}`}
-              width={400}
-              height={300}
-              style={{ maxWidth: "100%", height: "auto", borderRadius: "8px" }}
+        {isEditing ? (
+          // Edit Mode
+          <div>
+            <RichTextEditor
+              value={editQuestion}
+              onChange={setEditQuestion}
+              placeholder="Enter your question here..."
             />
-          </div>
-        )}
 
-        {type === "mcq" && question.options && question.options.length > 0 && (
-          <div style={{ margin: "16px 0" }}>
-            {question.options.map((option: string, optIndex: number) => (
-              <div
-                key={optIndex}
-                className={`${styles.optionItem} ${
-                  optIndex === question.correctAnswerIndex
-                    ? styles.correctOption
-                    : ""
-                }`}
+            <div style={{ marginBottom: "16px" }}>
+              <label>Image URL (optional)</label>
+              <input
+                type="url"
+                placeholder="https://example.com/image.jpg"
+                value={editImageUrl}
+                onChange={(e) => setEditImageUrl(e.target.value)}
+                style={{
+                  width: "100%",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label>Points</label>
+              <select
+                value={editMarks}
+                onChange={(e) => setEditMarks(Number(e.target.value) as 1 | 2)}
               >
-                <span className={styles.optionLetter}>
-                  {String.fromCharCode(65 + optIndex)}.
-                </span>
-                <span style={{ flex: "1" }}>{option}</span>
-                {optIndex === question.correctAnswerIndex && (
-                  <span className={styles.correctMark}>✓</span>
+                <option value={1}>1 Point</option>
+                <option value={2}>2 Points</option>
+              </select>
+            </div>
+
+            {type === "mcq" && (
+              <div style={{ marginBottom: "16px" }}>
+                <label>Answer Options</label>
+                {editOptions.map((opt: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className={styles.optionRow}
+                    style={{ marginBottom: "8px" }}
+                  >
+                    <span className={styles.optionLabel}>
+                      {String.fromCharCode(65 + idx)}.
+                    </span>
+                    <input
+                      type="text"
+                      placeholder={`Option ${idx + 1}`}
+                      value={opt}
+                      onChange={(e) => handleOptionChange(idx, e.target.value)}
+                      style={{
+                        flex: 1,
+                      }}
+                    />
+                    <label className={styles.radioLabel}>
+                      <input
+                        type="radio"
+                        name={`correct-${question.id}`}
+                        checked={editCorrectAnswerIndex === idx}
+                        onChange={() => setEditCorrectAnswerIndex(idx)}
+                      />
+                      <span>Correct</span>
+                    </label>
+                    {editOptions.length > 2 && (
+                      <button
+                        style={{
+                          backgroundColor: "transparent",
+                          border: "none",
+                          marginLeft: "8px",
+                        }}
+                        onClick={() => removeOption(idx)}
+                        type="button"
+                      >
+                        <IoCloseCircleSharp
+                          style={{
+                            color: "var(--red)",
+                            fontSize: "1.5rem",
+                          }}
+                        />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {editOptions.length < 4 && (
+                  <button
+                    onClick={addOption}
+                    type="button"
+                    className={styles.addOptionBtn}
+                    style={{ marginTop: "8px" }}
+                  >
+                    <IoAdd style={{ fontSize: "1.2rem" }} />
+                    Add Option
+                  </button>
                 )}
               </div>
-            ))}
+            )}
+          </div>
+        ) : (
+          // Display Mode
+          <div>
+            <div
+              className={styles.questionText}
+              dangerouslySetInnerHTML={{
+                __html: question.question.replace(
+                  /<u>(.*?)<\/u>/g,
+                  "<u>$1</u>"
+                ),
+              }}
+            />
+
+            {question.imageUrl && (
+              <div style={{ margin: "16px 0" }}>
+                <img
+                  src={question.imageUrl}
+                  alt={`Question ${index + 1}`}
+                  width={400}
+                  height={300}
+                  style={{
+                    maxWidth: "100%",
+                    height: "auto",
+                    borderRadius: "8px",
+                  }}
+                />
+              </div>
+            )}
+
+            {type === "mcq" &&
+              question.options &&
+              question.options.length > 0 && (
+                <div style={{ margin: "16px 0" }}>
+                  {question.options.map((option: string, optIndex: number) => (
+                    <div
+                      key={optIndex}
+                      className={`${styles.optionItem} ${
+                        optIndex === question.correctAnswerIndex
+                          ? styles.correctOption
+                          : ""
+                      }`}
+                    >
+                      <span className={styles.optionLetter}>
+                        {String.fromCharCode(65 + optIndex)}.
+                      </span>
+                      <span style={{ flex: "1" }}>{option}</span>
+                      {optIndex === question.correctAnswerIndex && (
+                        <span className={styles.correctMark}>✓</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            <div className={styles.questionFooter}>
+              <span className={styles.questionType}>
+                {type === "mcq" ? "Multiple Choice" : "Essay"}
+              </span>
+              <span className={styles.questionMarks}>
+                {question.marks || 1} {question.marks === 1 ? "Mark" : "Marks"}
+              </span>
+            </div>
           </div>
         )}
-
-        <div className={styles.questionFooter}>
-          <span className={styles.questionType}>
-            {type === "mcq" ? "Multiple Choice" : "Essay"}
-          </span>
-          <span className={styles.questionMarks}>
-            {question.marks || 1} {question.marks === 1 ? "Mark" : "Marks"}
-          </span>
-        </div>
       </div>
     </div>
   );
@@ -131,24 +549,19 @@ const QuestionCard = ({
 const AddQuestionCard = ({
   type,
   onSubmit,
-  isEditing = false,
-  editData = null,
   onCancel,
 }: {
   type: "mcq" | "essay";
   onSubmit: (data: QuizData) => void;
-  isEditing?: boolean;
-  editData?: ExistingQuiz | null;
   onCancel?: () => void;
 }) => {
-  const [question, setQuestion] = useState(editData?.question || "");
-  const [imageUrl, setImageUrl] = useState(editData?.imageUrl || "");
-  const [marks, setMarks] = useState<1 | 2>(
-    editData?.marks === 1 || editData?.marks === 2 ? editData.marks : 1
-  );
-  const [options, setOptions] = useState(editData?.options || ["", ""]);
+  const [question, setQuestion] = useState("");
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [marks, setMarks] = useState<1 | 2>(1);
+  const [options, setOptions] = useState(["", ""]);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
-    editData?.correctAnswerIndex ?? null
+    null
   );
 
   const addOption = () => {
@@ -213,22 +626,13 @@ const AddQuestionCard = ({
 
   return (
     <div className={styles.questionCard}>
-      <h3>
-        {isEditing
-          ? `Edit ${type.toUpperCase()}`
-          : `Add New ${type.toUpperCase()}`}
-      </h3>
+      <h3>Add New {type.toUpperCase()}</h3>
 
-      <div style={{ marginBottom: "20px" }}>
-        <label>Question</label>
-        <textarea
-          placeholder="Enter your question here..."
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          rows={3}
-          style={{ flex: 1 }}
-        />
-      </div>
+      <RichTextEditor
+        value={question}
+        onChange={setQuestion}
+        placeholder="Enter your question here..."
+      />
 
       <div style={{ marginBottom: "20px" }}>
         <label>Image URL (optional)</label>
@@ -306,10 +710,8 @@ const AddQuestionCard = ({
       )}
 
       <div className={styles.cardActions}>
-        <button onClick={handleSubmit}>
-          {isEditing ? "Update Question" : "Save Question"}
-        </button>
-        {isEditing && onCancel && <button onClick={onCancel}>Cancel</button>}
+        <button onClick={handleSubmit}>Save Question</button>
+        {onCancel && <button onClick={onCancel}>Cancel</button>}
       </div>
     </div>
   );
@@ -326,8 +728,6 @@ export default function QuizBuilder() {
   // State
   const [existingQuizzes, setExistingQuizzes] = useState<ExistingQuiz[]>([]);
   const [existingEssays, setExistingEssays] = useState<ExistingQuiz[]>([]);
-  const [editingMcq, setEditingMcq] = useState<ExistingQuiz | null>(null);
-  const [editingEssay, setEditingEssay] = useState<ExistingQuiz | null>(null);
   const [showAddMcq, setShowAddMcq] = useState(false);
   const [showAddEssay, setShowAddEssay] = useState(false);
 
@@ -544,16 +944,6 @@ export default function QuizBuilder() {
   };
 
   // Handlers
-  const handleEditMcq = (quiz: ExistingQuiz) => {
-    setEditingMcq(quiz);
-    setShowAddMcq(false);
-  };
-
-  const handleEditEssay = (essay: ExistingQuiz) => {
-    setEditingEssay(essay);
-    setShowAddEssay(false);
-  };
-
   const handleDelete = async (quizType: "mcq" | "essay", id: string) => {
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
@@ -583,6 +973,38 @@ export default function QuizBuilder() {
     }
   };
 
+  const handleSave = async (id: string, data: QuizData) => {
+    if (currentQuizDuration === null) {
+      setModalMessage("Please set the overall quiz duration first.");
+      setShowModal(true);
+      return;
+    }
+
+    if (!year || !courseId || !lectureId) {
+      setModalMessage("Missing course, lecture, or year information.");
+      setShowModal(true);
+      return;
+    }
+
+    try {
+      const collectionPath =
+        data.type === "mcq"
+          ? `years/${year}/courses/${courseId}/lectures/${lectureId}/${activeTab}Quizzes`
+          : `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
+
+      await updateDoc(doc(db, collectionPath, id), { ...data });
+      setModalMessage(`${data.type.toUpperCase()} updated successfully! ✅`);
+      setShowModal(true);
+      fetchQuizzes(activeTab);
+    } catch (error: unknown) {
+      console.error(`Error updating ${data.type}:`, error);
+      setModalMessage(
+        `Failed to save ${data.type}: ` + (error as Error).message
+      );
+      setShowModal(true);
+    }
+  };
+
   const handleSubmit = async (quizType: "mcq" | "essay", data: QuizData) => {
     if (currentQuizDuration === null) {
       setModalMessage("Please set the overall quiz duration first.");
@@ -602,30 +1024,17 @@ export default function QuizBuilder() {
           ? `years/${year}/courses/${courseId}/lectures/${lectureId}/${activeTab}Quizzes`
           : `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
 
-      const isEditing = quizType === "mcq" ? editingMcq : editingEssay;
-
-      if (isEditing) {
-        await updateDoc(doc(db, collectionPath, isEditing.id), { ...data });
-        setModalMessage(`${quizType.toUpperCase()} updated successfully! ✅`);
-        if (quizType === "mcq") {
-          setEditingMcq(null);
-        } else {
-          setEditingEssay(null);
-        }
+      await addDoc(collection(db, collectionPath), data);
+      setModalMessage(`${quizType.toUpperCase()} saved successfully! ✅`);
+      if (quizType === "mcq") {
+        setShowAddMcq(false);
       } else {
-        await addDoc(collection(db, collectionPath), data);
-        setModalMessage(`${quizType.toUpperCase()} saved successfully! ✅`);
-        if (quizType === "mcq") {
-          setShowAddMcq(false);
-        } else {
-          setShowAddEssay(false);
-        }
+        setShowAddEssay(false);
       }
-
       setShowModal(true);
       fetchQuizzes(activeTab);
     } catch (error: unknown) {
-      console.error(`Error adding/updating ${quizType}:`, error);
+      console.error(`Error adding ${quizType}:`, error);
       setModalMessage(
         `Failed to save ${quizType}: ` + (error as Error).message
       );
@@ -664,8 +1073,6 @@ export default function QuizBuilder() {
   }, [year, courseId, lectureId, activeTab, fetchQuizDuration, fetchQuizzes]);
 
   useEffect(() => {
-    setEditingMcq(null);
-    setEditingEssay(null);
     setShowAddMcq(false);
     setShowAddEssay(false);
   }, [activeTab]);
@@ -787,8 +1194,6 @@ export default function QuizBuilder() {
             onClick={() => {
               setShowAddMcq(!showAddMcq);
               setShowAddEssay(false);
-              setEditingMcq(null);
-              setEditingEssay(null);
             }}
             className={`${styles.addBtn} ${showAddMcq ? styles.active : ""}`}
             style={{
@@ -804,8 +1209,6 @@ export default function QuizBuilder() {
             onClick={() => {
               setShowAddEssay(!showAddEssay);
               setShowAddMcq(false);
-              setEditingMcq(null);
-              setEditingEssay(null);
             }}
             className={`${styles.addBtn} ${showAddEssay ? styles.active : ""}`}
           >
@@ -814,30 +1217,20 @@ export default function QuizBuilder() {
           </button>
         </div>
 
-        {/* Add/Edit Cards */}
-        {(showAddMcq || editingMcq) && (
+        {/* Add Cards */}
+        {showAddMcq && (
           <AddQuestionCard
             type="mcq"
             onSubmit={(data) => handleSubmit("mcq", data)}
-            isEditing={!!editingMcq}
-            editData={editingMcq}
-            onCancel={() => {
-              setEditingMcq(null);
-              setShowAddMcq(false);
-            }}
+            onCancel={() => setShowAddMcq(false)}
           />
         )}
 
-        {(showAddEssay || editingEssay) && (
+        {showAddEssay && (
           <AddQuestionCard
             type="essay"
             onSubmit={(data) => handleSubmit("essay", data)}
-            isEditing={!!editingEssay}
-            editData={editingEssay}
-            onCancel={() => {
-              setEditingEssay(null);
-              setShowAddEssay(false);
-            }}
+            onCancel={() => setShowAddEssay(false)}
           />
         )}
 
@@ -853,7 +1246,7 @@ export default function QuizBuilder() {
                     key={quiz.id}
                     question={quiz}
                     index={index}
-                    onEdit={handleEditMcq}
+                    onSave={handleSave}
                     onDelete={(id) => handleDelete("mcq", id)}
                     type="mcq"
                   />
@@ -875,7 +1268,7 @@ export default function QuizBuilder() {
                     key={essay.id}
                     question={essay}
                     index={index}
-                    onEdit={handleEditEssay}
+                    onSave={handleSave}
                     onDelete={(id) => handleDelete("essay", id)}
                     type="essay"
                   />
