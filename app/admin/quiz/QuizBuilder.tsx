@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   collection,
@@ -18,6 +18,7 @@ import { db, auth } from "@/lib/firebase";
 import styles from "../admin.module.css";
 import MessageModal from "@/app/MessageModal";
 import { onAuthStateChanged } from "firebase/auth";
+import { IoCloseCircleSharp, IoAdd } from "react-icons/io5";
 
 // Interfaces
 interface ExistingQuiz extends DocumentData {
@@ -27,50 +28,326 @@ interface ExistingQuiz extends DocumentData {
   correctAnswerIndex?: number;
   imageUrl?: string;
   marks?: number;
+  type?: string;
 }
+
+interface QuizData {
+  type: "mcq" | "essay";
+  question: string;
+  options?: string[];
+  correctAnswerIndex?: number;
+  imageUrl?: string | null;
+  marks: 1 | 2;
+}
+
+// Question Card Component
+const QuestionCard = ({
+  question,
+  index,
+  onEdit,
+  onDelete,
+  type = "mcq",
+}: {
+  question: ExistingQuiz;
+  index: number;
+  onEdit: (question: ExistingQuiz) => void;
+  onDelete: (id: string) => void;
+  type?: string;
+}) => {
+  return (
+    <div className={styles.questionCard}>
+      <div className={styles.questionHeader}>
+        <div className={styles.questionNumber}>Question {index + 1}</div>
+        <div className={styles.questionActions}>
+          <button
+            className={styles.editBtn}
+            onClick={() => onEdit(question)}
+            title="Edit question"
+          >
+            ✏️
+          </button>
+          <button
+            className={styles.deleteBtn}
+            onClick={() => onDelete(question.id)}
+            title="Delete question"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.questionContent}>
+        <div className={styles.questionText}>{question.question}</div>
+
+        {question.imageUrl && (
+          <div style={{ margin: "16px 0" }}>
+            <img
+              src={question.imageUrl}
+              alt={`Question ${index + 1}`}
+              width={400}
+              height={300}
+              style={{ maxWidth: "100%", height: "auto", borderRadius: "8px" }}
+            />
+          </div>
+        )}
+
+        {type === "mcq" && question.options && question.options.length > 0 && (
+          <div style={{ margin: "16px 0" }}>
+            {question.options.map((option: string, optIndex: number) => (
+              <div
+                key={optIndex}
+                className={`${styles.optionItem} ${
+                  optIndex === question.correctAnswerIndex
+                    ? styles.correctOption
+                    : ""
+                }`}
+              >
+                <span className={styles.optionLetter}>
+                  {String.fromCharCode(65 + optIndex)}.
+                </span>
+                <span style={{ flex: "1" }}>{option}</span>
+                {optIndex === question.correctAnswerIndex && (
+                  <span className={styles.correctMark}>✓</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className={styles.questionFooter}>
+          <span className={styles.questionType}>
+            {type === "mcq" ? "Multiple Choice" : "Essay"}
+          </span>
+          <span className={styles.questionMarks}>
+            {question.marks || 1} {question.marks === 1 ? "Mark" : "Marks"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Add Question Card Component
+const AddQuestionCard = ({
+  type,
+  onSubmit,
+  isEditing = false,
+  editData = null,
+  onCancel,
+}: {
+  type: "mcq" | "essay";
+  onSubmit: (data: QuizData) => void;
+  isEditing?: boolean;
+  editData?: ExistingQuiz | null;
+  onCancel?: () => void;
+}) => {
+  const [question, setQuestion] = useState(editData?.question || "");
+  const [imageUrl, setImageUrl] = useState(editData?.imageUrl || "");
+  const [marks, setMarks] = useState<1 | 2>(
+    editData?.marks === 1 || editData?.marks === 2 ? editData.marks : 1
+  );
+  const [options, setOptions] = useState(editData?.options || ["", ""]);
+  const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
+    editData?.correctAnswerIndex ?? null
+  );
+
+  const addOption = () => {
+    if (options.length < 4) setOptions([...options, ""]);
+  };
+
+  const removeOption = (index: number) => {
+    if (options.length > 2) {
+      setOptions(options.filter((_: string, i: number) => i !== index));
+      if (correctAnswerIndex === index) {
+        setCorrectAnswerIndex(null);
+      } else if (correctAnswerIndex !== null && correctAnswerIndex > index) {
+        setCorrectAnswerIndex(correctAnswerIndex - 1);
+      }
+    }
+  };
+
+  const handleOptionChange = (index: number, value: string) => {
+    const updated = [...options];
+    updated[index] = value;
+    setOptions(updated);
+  };
+
+  const handleSubmit = () => {
+    if (type === "mcq") {
+      if (
+        !question.trim() ||
+        options.some((opt: string) => !opt.trim()) ||
+        correctAnswerIndex === null
+      ) {
+        alert("Please complete all MCQ fields and select a correct answer.");
+        return;
+      }
+      onSubmit({
+        type: "mcq",
+        question,
+        options,
+        correctAnswerIndex,
+        imageUrl: imageUrl.trim() || null,
+        marks,
+      });
+    } else {
+      if (!question.trim()) {
+        alert("Please enter an essay question.");
+        return;
+      }
+      onSubmit({
+        type: "essay",
+        question,
+        imageUrl: imageUrl.trim() || null,
+        marks,
+      });
+    }
+
+    // Reset form
+    setQuestion("");
+    setImageUrl("");
+    setMarks(1);
+    setOptions(["", ""]);
+    setCorrectAnswerIndex(null);
+  };
+
+  return (
+    <div className={styles.questionCard}>
+      <h3>
+        {isEditing
+          ? `Edit ${type.toUpperCase()}`
+          : `Add New ${type.toUpperCase()}`}
+      </h3>
+
+      <div style={{ marginBottom: "20px" }}>
+        <label>Question</label>
+        <textarea
+          placeholder="Enter your question here..."
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          rows={3}
+          style={{ flex: 1 }}
+        />
+      </div>
+
+      <div style={{ marginBottom: "20px" }}>
+        <label>Image URL (optional)</label>
+        <input
+          type="url"
+          placeholder="https://example.com/image.jpg"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+        />
+      </div>
+
+      <div className={styles.formGroup}>
+        <label>Points</label>
+        <select
+          value={marks}
+          onChange={(e) => setMarks(Number(e.target.value) as 1 | 2)}
+        >
+          <option value={1}>1 Point</option>
+          <option value={2}>2 Points</option>
+        </select>
+      </div>
+
+      {type === "mcq" && (
+        <div className={styles.formGroup}>
+          <label>Answer Options</label>
+          {options.map((opt: string, idx: number) => (
+            <div key={idx} className={styles.optionRow}>
+              <span className={styles.optionLabel}>
+                {String.fromCharCode(65 + idx)}.
+              </span>
+              <input
+                type="text"
+                placeholder={`Option ${idx + 1}`}
+                value={opt}
+                onChange={(e) => handleOptionChange(idx, e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <label className={styles.radioLabel}>
+                <input
+                  type="radio"
+                  name="correct"
+                  checked={correctAnswerIndex === idx}
+                  onChange={() => setCorrectAnswerIndex(idx)}
+                />
+                <span>Correct</span>
+              </label>
+              {options.length > 2 && (
+                <button
+                  style={{ backgroundColor: "transparent" }}
+                  onClick={() => removeOption(idx)}
+                  type="button"
+                >
+                  <IoCloseCircleSharp
+                    style={{
+                      color: "var(--red)",
+                      fontSize: "1.5rem",
+                    }}
+                  />
+                </button>
+              )}
+            </div>
+          ))}
+
+          {options.length < 4 && (
+            <button
+              onClick={addOption}
+              type="button"
+              className={styles.addOptionBtn}
+            >
+              <IoAdd style={{ fontSize: "1.2rem" }} />
+              Add Option
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className={styles.cardActions}>
+        <button onClick={handleSubmit}>
+          {isEditing ? "Update Question" : "Save Question"}
+        </button>
+        {isEditing && onCancel && <button onClick={onCancel}>Cancel</button>}
+      </div>
+    </div>
+  );
+};
 
 export default function QuizBuilder() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const year = searchParams.get("year");
   const courseId = searchParams.get("courseId");
   const lectureId = searchParams.get("lectureId");
 
-  // --- Quiz content state ---
-  const [mcqQuestion, setMcqQuestion] = useState("");
-  const [mcqImageUrl, setMcqImageUrl] = useState("");
-  const [mcqMarks, setMcqMarks] = useState<1 | 2>(1);
-  const [options, setOptions] = useState(["", ""]);
-  const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
-    null
-  );
+  // State
   const [existingQuizzes, setExistingQuizzes] = useState<ExistingQuiz[]>([]);
-  const [essayQuestion, setEssayQuestion] = useState("");
-  const [essayImageUrl, setEssayImageUrl] = useState("");
-  const [essayMarks, setEssayMarks] = useState<1 | 2>(1);
   const [existingEssays, setExistingEssays] = useState<ExistingQuiz[]>([]);
-  const [editingMcq, setEditingMcq] = useState<string | null>(null);
-  const [editingEssay, setEditingEssay] = useState<string | null>(null);
+  const [editingMcq, setEditingMcq] = useState<ExistingQuiz | null>(null);
+  const [editingEssay, setEditingEssay] = useState<ExistingQuiz | null>(null);
+  const [showAddMcq, setShowAddMcq] = useState(false);
+  const [showAddEssay, setShowAddEssay] = useState(false);
 
-  // --- Duration state ---
+  // Duration state
   const [quizDurationInput, setQuizDurationInput] = useState<number | "">("");
   const [currentQuizDuration, setCurrentQuizDuration] = useState<number | null>(
     null
   );
   const [isDurationLoading, setIsDurationLoading] = useState(true);
 
-  // --- UI state ---
+  // UI state
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
   const [activeTab, setActiveTab] = useState<
     "variant1" | "variant2" | "variant3"
   >("variant1");
-  const [isCopying, setIsCopying] = useState(false); // New state for copy operation
+  const [isCopying, setIsCopying] = useState(false);
 
-  // --- Duration logic ---
-  const fetchQuizDuration = async () => {
+  // Duration logic
+  const fetchQuizDuration = useCallback(async () => {
     if (!year || !courseId || !lectureId) {
       setIsDurationLoading(false);
       return;
@@ -95,7 +372,7 @@ export default function QuizBuilder() {
     } finally {
       setIsDurationLoading(false);
     }
-  };
+  }, [year, courseId, lectureId]);
 
   const saveQuizDuration = async () => {
     const durationValue = Number(quizDurationInput);
@@ -136,51 +413,53 @@ export default function QuizBuilder() {
     }
   };
 
-  // --- Fetch quizzes ---
-  const fetchQuizzes = async (tab: "variant1" | "variant2" | "variant3") => {
-    if (!year || !courseId || !lectureId) return;
-    let mcqCollectionPath: string;
+  // Fetch quizzes
+  const fetchQuizzes = useCallback(
+    async (tab: "variant1" | "variant2" | "variant3") => {
+      if (!year || !courseId || !lectureId) return;
+      let mcqCollectionPath: string;
 
-    switch (tab) {
-      case "variant1":
-        mcqCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/variant1Quizzes`;
-        break;
-      case "variant2":
-        mcqCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/variant2Quizzes`;
-        break;
-      case "variant3":
-        mcqCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/variant3Quizzes`;
-        break;
-      default:
-        return;
-    }
+      switch (tab) {
+        case "variant1":
+          mcqCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/variant1Quizzes`;
+          break;
+        case "variant2":
+          mcqCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/variant2Quizzes`;
+          break;
+        case "variant3":
+          mcqCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/variant3Quizzes`;
+          break;
+        default:
+          return;
+      }
 
-    const essayCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
+      const essayCollectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
 
-    try {
-      const mcqQuestionsRef = collection(db, mcqCollectionPath);
-      const mcqSnapshot = await getDocs(mcqQuestionsRef);
-      const quizzes = mcqSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as ExistingQuiz[];
-      setExistingQuizzes(quizzes);
+      try {
+        const mcqQuestionsRef = collection(db, mcqCollectionPath);
+        const mcqSnapshot = await getDocs(mcqQuestionsRef);
+        const quizzes = mcqSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as ExistingQuiz[];
+        setExistingQuizzes(quizzes);
 
-      const essayRef = collection(db, essayCollectionPath);
-      const essaySnap = await getDocs(essayRef);
-      const essays = essaySnap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as ExistingQuiz[];
-      setExistingEssays(essays);
-    } catch (error) {
-      console.error("Error fetching quizzes:", error);
-      setModalMessage("Failed to fetch existing quizzes.");
-      setShowModal(true);
-    }
-  };
+        const essayRef = collection(db, essayCollectionPath);
+        const essaySnap = await getDocs(essayRef);
+        const essays = essaySnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as ExistingQuiz[];
+        setExistingEssays(essays);
+      } catch (error) {
+        console.error("Error fetching quizzes:", error);
+        setModalMessage("Failed to fetch existing quizzes.");
+        setShowModal(true);
+      }
+    },
+    [year, courseId, lectureId]
+  );
 
-  // --- New function to copy current variant to all other variants ---
   const copyToAllVariants = async () => {
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
@@ -209,7 +488,6 @@ export default function QuizBuilder() {
     );
 
     if (!confirmCopy) return;
-
     setIsCopying(true);
 
     try {
@@ -217,7 +495,6 @@ export default function QuizBuilder() {
       const variants = ["variant1", "variant2", "variant3"];
       const targetVariants = variants.filter((v) => v !== activeTab);
 
-      // First, delete existing questions in target variants
       for (const variant of targetVariants) {
         const collectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/${variant}Quizzes`;
         const existingDocs = await getDocs(collection(db, collectionPath));
@@ -227,12 +504,10 @@ export default function QuizBuilder() {
         });
       }
 
-      // Then, copy questions from current variant to target variants
       for (const variant of targetVariants) {
         const collectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/${variant}Quizzes`;
 
         existingQuizzes.forEach((quiz) => {
-          // Create a new document reference for each question in each target variant
           const newDocRef = doc(collection(db, collectionPath));
           const quizData = {
             type: quiz.type || "mcq",
@@ -268,6 +543,97 @@ export default function QuizBuilder() {
     }
   };
 
+  // Handlers
+  const handleEditMcq = (quiz: ExistingQuiz) => {
+    setEditingMcq(quiz);
+    setShowAddMcq(false);
+  };
+
+  const handleEditEssay = (essay: ExistingQuiz) => {
+    setEditingEssay(essay);
+    setShowAddEssay(false);
+  };
+
+  const handleDelete = async (quizType: "mcq" | "essay", id: string) => {
+    if (!year || !courseId || !lectureId) {
+      setModalMessage("Missing course, lecture, or year information.");
+      setShowModal(true);
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete this ${quizType}?`)) {
+      return;
+    }
+
+    const collectionPath =
+      quizType === "mcq"
+        ? `years/${year}/courses/${courseId}/lectures/${lectureId}/${activeTab}Quizzes`
+        : `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
+
+    const docRef = doc(db, collectionPath, id);
+    try {
+      await deleteDoc(docRef);
+      setModalMessage(`${quizType.toUpperCase()} deleted successfully! 🗑️`);
+      setShowModal(true);
+      fetchQuizzes(activeTab);
+    } catch (error) {
+      console.error(`Error deleting ${quizType}:`, error);
+      setModalMessage(`Failed to delete ${quizType}.`);
+      setShowModal(true);
+    }
+  };
+
+  const handleSubmit = async (quizType: "mcq" | "essay", data: QuizData) => {
+    if (currentQuizDuration === null) {
+      setModalMessage("Please set the overall quiz duration first.");
+      setShowModal(true);
+      return;
+    }
+
+    if (!year || !courseId || !lectureId) {
+      setModalMessage("Missing course, lecture, or year information.");
+      setShowModal(true);
+      return;
+    }
+
+    try {
+      const collectionPath =
+        quizType === "mcq"
+          ? `years/${year}/courses/${courseId}/lectures/${lectureId}/${activeTab}Quizzes`
+          : `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
+
+      const isEditing = quizType === "mcq" ? editingMcq : editingEssay;
+
+      if (isEditing) {
+        await updateDoc(doc(db, collectionPath, isEditing.id), { ...data });
+        setModalMessage(`${quizType.toUpperCase()} updated successfully! ✅`);
+        if (quizType === "mcq") {
+          setEditingMcq(null);
+        } else {
+          setEditingEssay(null);
+        }
+      } else {
+        await addDoc(collection(db, collectionPath), data);
+        setModalMessage(`${quizType.toUpperCase()} saved successfully! ✅`);
+        if (quizType === "mcq") {
+          setShowAddMcq(false);
+        } else {
+          setShowAddEssay(false);
+        }
+      }
+
+      setShowModal(true);
+      fetchQuizzes(activeTab);
+    } catch (error: unknown) {
+      console.error(`Error adding/updating ${quizType}:`, error);
+      setModalMessage(
+        `Failed to save ${quizType}: ` + (error as Error).message
+      );
+      setShowModal(true);
+    }
+  };
+
+  // Effects
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -276,7 +642,7 @@ export default function QuizBuilder() {
           const adminDocSnap = await getDoc(adminDocRef);
 
           if (adminDocSnap.exists()) {
-            setIsAdmin(true);
+            // Admin check passed, user can access
           } else {
             router.push("/");
           }
@@ -295,184 +661,27 @@ export default function QuizBuilder() {
   useEffect(() => {
     fetchQuizDuration();
     fetchQuizzes(activeTab);
-  }, [year, courseId, lectureId, activeTab]);
+  }, [year, courseId, lectureId, activeTab, fetchQuizDuration, fetchQuizzes]);
 
   useEffect(() => {
-    setMcqQuestion("");
-    setMcqImageUrl("");
-    setMcqMarks(1);
-    setOptions(["", ""]);
-    setCorrectAnswerIndex(null);
-    setEssayQuestion("");
-    setEssayImageUrl("");
-    setEssayMarks(1);
     setEditingMcq(null);
     setEditingEssay(null);
+    setShowAddMcq(false);
+    setShowAddEssay(false);
   }, [activeTab]);
-
-  // --- Options handlers ---
-  const addOption = () => {
-    if (options.length < 4) setOptions([...options, ""]);
-  };
-  const removeOption = (index: number) => {
-    if (options.length > 2) setOptions(options.filter((_, i) => i !== index));
-    if (correctAnswerIndex === index) {
-      setCorrectAnswerIndex(null);
-    } else if (correctAnswerIndex !== null && correctAnswerIndex > index) {
-      setCorrectAnswerIndex(correctAnswerIndex - 1);
-    }
-  };
-  const handleOptionChange = (index: number, value: string) => {
-    const updated = [...options];
-    updated[index] = value;
-    setOptions(updated);
-  };
-
-  const handleEditMcq = (quiz: ExistingQuiz) => {
-    setEditingMcq(quiz.id);
-    setMcqQuestion(quiz.question);
-    setMcqImageUrl(quiz.imageUrl || "");
-    setMcqMarks((quiz.marks as 1 | 2) || 1);
-    setOptions(quiz.options || ["", ""]);
-    setCorrectAnswerIndex(quiz.correctAnswerIndex || null);
-    // Scroll to the form
-    window.scrollTo({
-      top: document.getElementById("mcq-form")?.offsetTop,
-      behavior: "smooth",
-    });
-  };
-
-  const handleEditEssay = (essay: ExistingQuiz) => {
-    setEditingEssay(essay.id);
-    setEssayQuestion(essay.question);
-    setEssayImageUrl(essay.imageUrl || "");
-    setEssayMarks((essay.marks as 1 | 2) || 1);
-    // Scroll to the form
-    window.scrollTo({
-      top: document.getElementById("essay-form")?.offsetTop,
-      behavior: "smooth",
-    });
-  };
-
-  const handleDelete = async (quizType: "mcq" | "essay", id: string) => {
-    if (!year || !courseId || !lectureId) {
-      setModalMessage("Missing course, lecture, or year information.");
-      setShowModal(true);
-      return;
-    }
-    const collectionPath =
-      quizType === "mcq"
-        ? `years/${year}/courses/${courseId}/lectures/${lectureId}/${activeTab}Quizzes`
-        : `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
-    const docRef = doc(db, collectionPath, id);
-    try {
-      await deleteDoc(docRef);
-      setModalMessage(`${quizType.toUpperCase()} deleted successfully! 🗑️`);
-      setShowModal(true);
-      fetchQuizzes(activeTab);
-    } catch (error) {
-      console.error(`Error deleting ${quizType}:`, error);
-      setModalMessage(`Failed to delete ${quizType}.`);
-      setShowModal(true);
-    }
-  };
-
-  // --- Submission handlers ---
-  const handleSubmit = async (quizType: "mcq" | "essay") => {
-    if (currentQuizDuration === null) {
-      setModalMessage("Please set the overall quiz duration first.");
-      setShowModal(true);
-      return;
-    }
-
-    if (!year || !courseId || !lectureId) {
-      setModalMessage("Missing course, lecture, or year information.");
-      setShowModal(true);
-      return;
-    }
-
-    try {
-      if (quizType === "mcq") {
-        if (
-          !mcqQuestion.trim() ||
-          options.some((opt) => !opt.trim()) ||
-          correctAnswerIndex === null
-        ) {
-          setModalMessage(
-            "Please complete all MCQ fields and select a correct answer."
-          );
-          setShowModal(true);
-          return;
-        }
-
-        const collectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/${activeTab}Quizzes`;
-        const data = {
-          type: "mcq",
-          question: mcqQuestion,
-          options,
-          correctAnswerIndex,
-          imageUrl: mcqImageUrl.trim() || null,
-          marks: mcqMarks,
-        };
-
-        if (editingMcq) {
-          await updateDoc(doc(db, collectionPath, editingMcq), data);
-          setModalMessage("MCQ updated successfully! ✅");
-        } else {
-          await addDoc(collection(db, collectionPath), data);
-          setModalMessage("MCQ saved successfully! ✅");
-        }
-      } else if (quizType === "essay") {
-        if (!essayQuestion.trim()) {
-          setModalMessage("Please enter an essay question.");
-          setShowModal(true);
-          return;
-        }
-
-        const collectionPath = `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`;
-        const data = {
-          type: "essay",
-          question: essayQuestion,
-          imageUrl: essayImageUrl.trim() || null,
-          marks: essayMarks,
-        };
-
-        if (editingEssay) {
-          await updateDoc(doc(db, collectionPath, editingEssay), data);
-          setModalMessage("Essay updated successfully! ✅");
-        } else {
-          await addDoc(collection(db, collectionPath), data);
-          setModalMessage("Essay saved successfully! ✅");
-        }
-      }
-
-      // Reset form fields
-      setMcqQuestion("");
-      setMcqImageUrl("");
-      setMcqMarks(1);
-      setOptions(["", ""]);
-      setCorrectAnswerIndex(null);
-      setEssayQuestion("");
-      setEssayImageUrl("");
-      setEssayMarks(1);
-      setEditingMcq(null);
-      setEditingEssay(null);
-
-      setShowModal(true);
-      fetchQuizzes(activeTab);
-    } catch (error: unknown) {
-      console.error(`Error adding/updating ${quizType}:`, error);
-      setModalMessage(
-        `Failed to save ${quizType}: ` + (error as Error).message
-      );
-      setShowModal(true);
-    }
-  };
 
   if (!year || !courseId || !lectureId) {
     return (
-      <div className={styles.wrapper}>
+      <div className="wrapper">
         <p>Missing year, course, or lecture info in URL.</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="wrapper">
+        <p>Loading...</p>
       </div>
     );
   }
@@ -480,14 +689,61 @@ export default function QuizBuilder() {
   return (
     <div className="wrapper">
       <h1>Quiz Builder</h1>
-      <p>
+      <p style={{ marginBottom: "20px", fontSize: "14px" }}>
         <strong>Year:</strong> {year.toUpperCase()} |{" "}
         <strong>Course ID:</strong> {courseId} | <strong>Lecture ID:</strong>{" "}
         {lectureId}
       </p>
 
-      {/* Tabs for different quiz variants */}
-      <div className={styles.tabs} style={{ display: "flex", gap: "10px" }}>
+      {/* Duration Section */}
+      <div className={styles.durationCard}>
+        <h2 style={{ fontWeight: "400" }}>Quiz Duration</h2>
+        {isDurationLoading ? (
+          <p>Loading...</p>
+        ) : currentQuizDuration === null ? (
+          <div className={styles.durationControls}>
+            <input
+              type="number"
+              placeholder="Set Quiz Duration (minutes)"
+              value={quizDurationInput}
+              onChange={(e) =>
+                setQuizDurationInput(
+                  e.target.value === "" ? "" : Number(e.target.value)
+                )
+              }
+              min="1"
+              className={styles.durationInput}
+            />
+            <button
+              onClick={saveQuizDuration}
+              className={styles.setDurationBtn}
+            >
+              Set Duration
+            </button>
+          </div>
+        ) : (
+          <div className={styles.durationControls}>
+            <p>
+              Current Duration: <strong>{currentQuizDuration} minutes</strong>
+            </p>
+            <input
+              type="number"
+              placeholder="New Duration (minutes)"
+              value={quizDurationInput}
+              onChange={(e) =>
+                setQuizDurationInput(
+                  e.target.value === "" ? "" : Number(e.target.value)
+                )
+              }
+              min="1"
+            />
+            <button onClick={saveQuizDuration}>Update Duration</button>
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className={styles.tabs}>
         <button
           className={activeTab === "variant1" ? styles.activeTab : ""}
           onClick={() => setActiveTab("variant1")}
@@ -508,341 +764,135 @@ export default function QuizBuilder() {
         </button>
       </div>
 
-      <hr />
-
-      {/* Duration Section */}
-      <div className={styles.quizDurationSection}>
-        <h2>Quiz Duration</h2>
-        {isDurationLoading ? (
-          <p>Loading...</p>
-        ) : currentQuizDuration === null ? (
-          <>
-            <input
-              type="number"
-              style={{ marginBottom: "10px" }}
-              placeholder="Set Quiz Duration (minutes)"
-              value={quizDurationInput}
-              onChange={(e) =>
-                setQuizDurationInput(
-                  e.target.value === "" ? "" : Number(e.target.value)
-                )
-              }
-              min="1"
-            />
-            <button onClick={saveQuizDuration}>Set Duration</button>
-          </>
-        ) : (
-          <>
-            <p>
-              Current Duration: <strong>{currentQuizDuration} minutes</strong>
-            </p>
-            <input
-              type="number"
-              style={{ marginBottom: "10px" }}
-              placeholder="New Duration (minutes)"
-              value={quizDurationInput}
-              onChange={(e) =>
-                setQuizDurationInput(
-                  e.target.value === "" ? "" : Number(e.target.value)
-                )
-              }
-              min="1"
-            />
-            <button onClick={saveQuizDuration}>Update Duration</button>
-          </>
-        )}
-      </div>
-
-      <hr />
-
-      {/* MCQ Form */}
-      <div className={styles.variantSection}>
-        <h2>Add Questions to {activeTab.replace("variant", "Variant ")}</h2>
-        <div className={styles.formSection} id="mcq-form">
-          <h3>{editingMcq ? "Edit MCQ" : "Add MCQ"}</h3>
-          <textarea
-            placeholder="Question"
-            value={mcqQuestion}
-            onChange={(e) => setMcqQuestion(e.target.value)}
-            style={{ marginBottom: "10px" }}
-          />
-          <input
-            type="url"
-            style={{ marginBottom: "10px" }}
-            placeholder="Image URL (optional)"
-            value={mcqImageUrl}
-            onChange={(e) => setMcqImageUrl(e.target.value)}
-          />
-
-          {/* Marks selector for MCQ */}
-          <div style={{ marginBottom: "10px" }}>
-            <label style={{ fontWeight: "bold", marginRight: "10px" }}>
-              Marks:
-            </label>
-            <select
-              value={mcqMarks}
-              onChange={(e) => setMcqMarks(Number(e.target.value) as 1 | 2)}
-              style={{
-                padding: "5px 10px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "14px",
-              }}
-            >
-              <option value={1}>1 Mark</option>
-              <option value={2}>2 Marks</option>
-            </select>
-          </div>
-
-          {options.map((opt: string, idx: number) => (
-            <div
-              key={idx}
-              style={{
-                display: "flex",
-                gap: "0.5rem",
-                alignItems: "center",
-                marginBottom: "5px",
-              }}
-            >
-              <input
-                type="text"
-                placeholder={`Option ${idx + 1}`}
-                value={opt}
-                onChange={(e) => handleOptionChange(idx, e.target.value)}
-              />
-              <input
-                type="radio"
-                name="correct"
-                checked={correctAnswerIndex === idx}
-                onChange={() => setCorrectAnswerIndex(idx)}
-              />
-              <label>Correct</label>
-              {options.length > 2 && (
-                <button onClick={() => removeOption(idx)} type="button">
-                  🗑️
-                </button>
-              )}
-            </div>
-          ))}
-          {options.length < 5 && (
-            <button onClick={addOption}>➕ Add Option</button>
-          )}
-          <button
-            style={{ marginLeft: "10px" }}
-            onClick={() => handleSubmit("mcq")}
-          >
-            {editingMcq ? "✅ Update MCQ" : "✅ Save MCQ"}
-          </button>
-          {editingMcq && (
-            <button
-              style={{ marginLeft: "10px" }}
-              onClick={() => {
-                setEditingMcq(null);
-                setMcqQuestion("");
-                setMcqImageUrl("");
-                setMcqMarks(1);
-                setOptions(["", ""]);
-                setCorrectAnswerIndex(null);
-              }}
-            >
-              Cancel Edit
-            </button>
-          )}
-        </div>
-
-        <hr />
-
-        {/* Essay Form */}
-        <div className={styles.formSection} id="essay-form">
-          <h3>
-            {editingEssay
-              ? "Edit Essay Question"
-              : "Add Essay Question (Shared)"}
-          </h3>
-          <textarea
-            placeholder="Essay Question"
-            value={essayQuestion}
-            onChange={(e) => setEssayQuestion(e.target.value)}
-            style={{ marginBottom: "10px" }}
-          />
-          <input
-            type="url"
-            placeholder="Image URL (optional)"
-            value={essayImageUrl}
-            onChange={(e) => setEssayImageUrl(e.target.value)}
-            style={{ marginBottom: "10px" }}
-          />
-
-          {/* Marks selector for Essay */}
-          <div style={{ marginBottom: "10px" }}>
-            <label style={{ fontWeight: "bold", marginRight: "10px" }}>
-              Marks:
-            </label>
-            <select
-              value={essayMarks}
-              onChange={(e) => setEssayMarks(Number(e.target.value) as 1 | 2)}
-              style={{
-                padding: "5px 10px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "14px",
-              }}
-            >
-              <option value={1}>1 Mark</option>
-              <option value={2}>2 Marks</option>
-            </select>
-          </div>
-
-          <button onClick={() => handleSubmit("essay")}>
-            {editingEssay ? "✅ Update Essay" : "✅ Save Essay"}
-          </button>
-          {editingEssay && (
-            <button
-              style={{ marginLeft: "10px" }}
-              onClick={() => {
-                setEditingEssay(null);
-                setEssayQuestion("");
-                setEssayImageUrl("");
-                setEssayMarks(1);
-              }}
-            >
-              Cancel Edit
-            </button>
-          )}
-        </div>
-
-        <hr />
-
-        {/* Existing MCQs */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-          }}
-        >
-          <h2>Existing MCQs in {activeTab.replace("variant", "Variant ")}</h2>
+      {/* Main Content */}
+      <div>
+        <div className={styles.sectionHeader}>
+          <h2 style={{ fontSize: "1.75rem", fontWeight: "400" }}>
+            {activeTab.replace("variant", "Variant ")} Questions
+          </h2>
           {existingQuizzes.length > 0 && (
             <button
               onClick={copyToAllVariants}
               disabled={isCopying}
-              style={{
-                backgroundColor: "#4CAF50",
-                color: "white",
-                padding: "10px 20px",
-                border: "none",
-                borderRadius: "6px",
-                cursor: isCopying ? "not-allowed" : "pointer",
-                fontWeight: "bold",
-                fontSize: "14px",
-                opacity: isCopying ? 0.6 : 1,
-              }}
+              className={styles.copyAllBtn}
             >
-              {isCopying ? "🔄 Copying..." : "📋 Set for All Variants"}
+              {isCopying ? "🔄 Copying..." : "📋 Copy to All Variants"}
             </button>
           )}
         </div>
 
-        {existingQuizzes.length ? (
-          <ul>
-            {existingQuizzes.map((q, i) => (
-              <li key={q.id}>
-                {i + 1}. {q.question}
-                <span
-                  style={{
-                    backgroundColor: "var(--dark)",
-                    color: "var(--white)",
-                    padding: "2px 8px",
-                    borderRadius: "12px",
-                    fontSize: "0.8em",
-                    marginLeft: "10px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {q.marks || 1} {q.marks === 1 ? "Mark" : "Marks"}
-                </span>
-                {q.imageUrl && (
-                  <div className={styles.questionImage}>
-                    <img
-                      src={q.imageUrl}
-                      alt={`Question ${i + 1}`}
-                      style={{ maxWidth: "300px", height: "auto" }}
-                    />
-                  </div>
-                )}
-                {q.options && q.options.length > 0 && (
-                  <ul className={styles.optionsList}>
-                    {q.options.map((option, j) => (
-                      <li
-                        key={j}
-                        className={`${styles.optionItem} ${
-                          j === q.correctAnswerIndex ? styles.correctOption : ""
-                        }`}
-                      >
-                        {option}
-                        {j === q.correctAnswerIndex && (
-                          <span className={styles.checkmark}>✅ </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button onClick={() => handleEditMcq(q)} type="button">
-                    ✏️ Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete("mcq", q.id)}
-                    type="button"
-                  >
-                    🗑️ Delete
-                  </button>
-                </div>
-                <br />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No MCQs yet.</p>
+        {/* Add Question Buttons */}
+        <div className={styles.addQuestionButtons}>
+          <button
+            onClick={() => {
+              setShowAddMcq(!showAddMcq);
+              setShowAddEssay(false);
+              setEditingMcq(null);
+              setEditingEssay(null);
+            }}
+            className={`${styles.addBtn} ${showAddMcq ? styles.active : ""}`}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <IoAdd style={{ fontSize: "1rem" }} />
+            Add Multiple Choice Question
+          </button>
+          <button
+            onClick={() => {
+              setShowAddEssay(!showAddEssay);
+              setShowAddMcq(false);
+              setEditingMcq(null);
+              setEditingEssay(null);
+            }}
+            className={`${styles.addBtn} ${showAddEssay ? styles.active : ""}`}
+          >
+            <IoAdd style={{ fontSize: "1rem" }} />
+            Add Essay Question
+          </button>
+        </div>
+
+        {/* Add/Edit Cards */}
+        {(showAddMcq || editingMcq) && (
+          <AddQuestionCard
+            type="mcq"
+            onSubmit={(data) => handleSubmit("mcq", data)}
+            isEditing={!!editingMcq}
+            editData={editingMcq}
+            onCancel={() => {
+              setEditingMcq(null);
+              setShowAddMcq(false);
+            }}
+          />
         )}
 
-        {/* Existing Essays */}
-        <h2>Existing Essays (Shared)</h2>
-        {existingEssays.length ? (
-          <ul>
-            {existingEssays.map((q, i) => (
-              <li key={q.id}>
-                {i + 1}. {q.question}
-                <span
-                  style={{
-                    backgroundColor: "#f3e5f5",
-                    padding: "2px 8px",
-                    borderRadius: "12px",
-                    fontSize: "0.8em",
-                    marginLeft: "10px",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {q.marks || 1} {q.marks === 1 ? "Mark" : "Marks"}
-                </span>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button onClick={() => handleEditEssay(q)} type="button">
-                    ✏️ Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete("essay", q.id)}
-                    type="button"
-                  >
-                    🗑️ Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No essays yet.</p>
+        {(showAddEssay || editingEssay) && (
+          <AddQuestionCard
+            type="essay"
+            onSubmit={(data) => handleSubmit("essay", data)}
+            isEditing={!!editingEssay}
+            editData={editingEssay}
+            onCancel={() => {
+              setEditingEssay(null);
+              setShowAddEssay(false);
+            }}
+          />
         )}
+
+        {/* Existing Questions */}
+        <div>
+          {/* MCQ Questions */}
+          {existingQuizzes.length > 0 && (
+            <>
+              <h2>Multiple Choice Questions ({existingQuizzes.length})</h2>
+              <div className={styles.questionsList}>
+                {existingQuizzes.map((quiz, index) => (
+                  <QuestionCard
+                    key={quiz.id}
+                    question={quiz}
+                    index={index}
+                    onEdit={handleEditMcq}
+                    onDelete={(id) => handleDelete("mcq", id)}
+                    type="mcq"
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Essay Questions */}
+          {existingEssays.length > 0 && (
+            <div style={{ marginBottom: "32px" }}>
+              <h3>
+                Essay Questions ({existingEssays.length}) - Shared across all
+                variants
+              </h3>
+              <div className={styles.questionsList}>
+                {existingEssays.map((essay, index) => (
+                  <QuestionCard
+                    key={essay.id}
+                    question={essay}
+                    index={index}
+                    onEdit={handleEditEssay}
+                    onDelete={(id) => handleDelete("essay", id)}
+                    type="essay"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {existingQuizzes.length === 0 && existingEssays.length === 0 && (
+            <div className={styles.emptyState}>
+              <p>
+                No questions yet. Add your first question using the buttons
+                above!
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {showModal && (
