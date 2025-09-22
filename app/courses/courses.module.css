@@ -17,6 +17,7 @@
   color: var(--fg);
   padding: 1rem;
   border-radius: var(--border-radius);
+  margin-bottom: 1rem;
 }
 
 .courseDetail {

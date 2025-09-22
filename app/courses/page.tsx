@@ -12,7 +12,6 @@ import { db } from "@/lib/firebase";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import styles from "./courses.module.css";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 
 interface Course extends DocumentData {
   id: string;
