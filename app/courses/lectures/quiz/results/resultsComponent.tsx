@@ -8,6 +8,35 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import styles from "../../../courses.module.css";
 
+interface StudentData {
+  studentCode?: string;
+  firstName?: string;
+  secondName?: string;
+  system?: "center" | "online";
+}
+
+interface MCQAnswer {
+  question: string;
+  correctAnswer: string;
+  selectedText: string | null;
+  selectedIndex: number;
+  isCorrect: boolean;
+  marks: number;
+  type: "mcq";
+}
+
+interface EssayAnswer {
+  question: string;
+  answerText: string;
+  marks: number;
+  type: "essay";
+}
+
+interface QuizAnswers {
+  mcq: MCQAnswer[];
+  essay: { [key: string]: EssayAnswer };
+}
+
 export default function QuizResults() {
   const router = useRouter();
   const params = useSearchParams();
@@ -15,10 +44,15 @@ export default function QuizResults() {
   const courseId = params.get("courseId");
   const lectureId = params.get("lectureId");
 
+  const [studentData, setStudentData] = useState<StudentData | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [earnedMarks, setEarnedMarks] = useState<number | null>(null);
-  const [totalPossibleMarks, setTotalPossibleMarks] = useState<number | null>(null);
+  const [totalPossibleMarks, setTotalPossibleMarks] = useState<number | null>(
+    null
+  );
+  const [quizAnswers, setQuizAnswers] = useState<QuizAnswers | null>(null);
 
   useEffect(() => {
     const auth = getAuth();
@@ -29,34 +63,224 @@ export default function QuizResults() {
       }
       setUser(currentUser);
 
-      if (!year || !courseId || !lectureId) {
-        setLoading(false);
-        return;
+      // Fetch student data to get student code and system
+      let currentStudentData: StudentData | null = null;
+      try {
+        const studentDocRef = doc(db, "students", currentUser.uid);
+        const studentDocSnap = await getDoc(studentDocRef);
+        if (studentDocSnap.exists()) {
+          currentStudentData = studentDocSnap.data() as StudentData;
+          setStudentData(currentStudentData);
+        }
+      } catch (error) {
+        console.error("Error fetching student data:", error);
       }
 
-      try {
-        const resultRef = doc(
-          db,
-          "students",
-          currentUser.uid,
-          "progress",
-          `${year}_${courseId}_${lectureId}`
-        );
-        const resultSnap = await getDoc(resultRef);
-        if (resultSnap.exists()) {
-          const data = resultSnap.data();
-          setEarnedMarks(data.earnedMarks ?? null);
-          setTotalPossibleMarks(data.totalPossibleMarks ?? null);
+      if (year && courseId && lectureId) {
+        try {
+          // Fetch the lecture document
+          const lectureDocRef = doc(
+            db,
+            `years/${year}/courses/${courseId}/lectures/${lectureId}`
+          );
+          const lectureDocSnap = await getDoc(lectureDocRef);
+
+          if (lectureDocSnap.exists()) {
+            const lectureData = lectureDocSnap.data();
+
+            // Check system-specific enabled status
+            let isLectureEnabled = true;
+
+            if (currentStudentData?.system) {
+              if (currentStudentData.system === "center") {
+                isLectureEnabled = lectureData?.isEnabledCenter !== false;
+              } else if (currentStudentData.system === "online") {
+                isLectureEnabled = lectureData?.isEnabledOnline !== false;
+              }
+            } else {
+              isLectureEnabled = lectureData?.isEnabled ?? true;
+            }
+
+            if (!isLectureEnabled) {
+              setIsExpired(true);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching lecture data:", error);
         }
-      } catch (err) {
-        console.error("Error fetching results:", err);
-      } finally {
-        setLoading(false);
       }
+
+      // Fetch quiz results and answers
+      if (year && courseId && lectureId) {
+        try {
+          const resultRef = doc(
+            db,
+            "students",
+            currentUser.uid,
+            "progress",
+            `${year}_${courseId}_${lectureId}`
+          );
+          const resultSnap = await getDoc(resultRef);
+          if (resultSnap.exists()) {
+            const data = resultSnap.data();
+            setEarnedMarks(data.earnedMarks ?? null);
+            setTotalPossibleMarks(data.totalPossibleMarks ?? null);
+
+            // Set quiz answers if they exist
+            if (data.answers) {
+              setQuizAnswers(data.answers as QuizAnswers);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching quiz results:", error);
+        }
+      }
+
+      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [year, courseId, lectureId, router]);
+  }, [router, year, courseId, lectureId]);
+
+  const renderMCQAnswers = () => {
+    if (!quizAnswers?.mcq || quizAnswers.mcq.length === 0) return null;
+
+    return (
+      <div style={{ marginBottom: "30px" }}>
+        <h3 className={styles.Title}>Multiple Choice Questions</h3>
+        {quizAnswers.mcq.map((answer, index) => (
+          <div key={index} className={styles.questionCard}>
+            <h4
+              style={{
+                marginBottom: "15px",
+                fontWeight: "600",
+                backgroundColor: "var(--light)",
+                color: "var(--black)",
+                padding: "0.5rem",
+                borderRadius: "5px",
+              }}
+            >
+              Question {index + 1}
+            </h4>
+            <h2 style={{ marginBottom: "15px", lineHeight: "1.6" }}>
+              {answer.question}
+            </h2>
+            <div style={{ marginBottom: "10px" }}>
+              <strong>Your Answer: </strong>
+              <span
+                style={{
+                  color: answer.isCorrect ? "var(--green)" : "var(--red)",
+                  fontWeight: "600",
+                }}
+              >
+                {answer.selectedText || "No answer selected"}
+              </span>
+            </div>
+            <div style={{ marginBottom: "10px" }}>
+              <strong>Correct Answer: </strong>
+              <span style={{ color: "var(--green)", fontWeight: "600" }}>
+                {answer.correctAnswer}
+              </span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  padding: "5px 12px",
+                  borderRadius: "20px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  backgroundColor: answer.isCorrect
+                    ? "var(--green)"
+                    : "var(--red)",
+                  color: "white",
+                }}
+              >
+                {answer.isCorrect ? "Correct" : "Incorrect"}
+              </div>
+
+              <div
+                style={{
+                  display: "inline-block",
+                  padding: "5px 12px",
+                  borderRadius: "20px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  backgroundColor: "var(--dark)",
+                  color: "white",
+                }}
+              >
+                {answer.marks} mark {answer.marks !== 1 ? "s" : ""}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderEssayAnswers = () => {
+    if (!quizAnswers?.essay || Object.keys(quizAnswers.essay).length === 0)
+      return null;
+
+    return (
+      <div style={{ marginBottom: "30px" }}>
+        <h3 className={styles.Title}>Essay Questions</h3>
+        {Object.entries(quizAnswers.essay).map(([key, answer], index) => (
+          <div key={key} className={styles.questionCard}>
+            <h4
+              style={{
+                marginBottom: "15px",
+                fontWeight: "600",
+                backgroundColor: "var(--light)",
+                color: "var(--black)",
+                padding: "0.5rem",
+                borderRadius: "5px",
+              }}
+            >
+              Essay Question {index + 1}
+            </h4>
+            <h2 style={{ marginBottom: "15px", lineHeight: "1.6" }}>
+              {answer.question}
+            </h2>
+
+            <div style={{ marginBottom: "10px" }}>
+              <strong>Your Answer:</strong>
+            </div>
+            <div
+              style={{
+                padding: "15px",
+                backgroundColor: "var(--input-bg)",
+                border: "1px solid var(--border)",
+                borderRadius: "6px",
+                lineHeight: "1.6",
+                whiteSpace: "pre-wrap",
+                marginBottom: "15px",
+              }}
+            >
+              {answer.answerText}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <div
+                style={{
+                  display: "inline-block",
+                  padding: "5px 12px",
+                  borderRadius: "20px",
+                  fontSize: "14px",
+                  fontWeight: "600",
+                  backgroundColor: "var(--dark)",
+                  color: "white",
+                }}
+              >
+                {answer.marks} mark{answer.marks !== 1 ? "s" : ""}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
@@ -66,7 +290,6 @@ export default function QuizResults() {
     );
   }
 
-  // ✅ Fix: check explicitly for null, not falsy (so 0 works)
   if (earnedMarks === null || totalPossibleMarks === null) {
     return (
       <div className={styles.wrapper}>
@@ -108,6 +331,33 @@ export default function QuizResults() {
         Your essay questions will be graded separately. Check Your Progress page
         for updates.
       </p>
+
+      {isExpired ? (
+        <>
+          <hr />
+          <h2 style={{ marginBottom: "20px" }}>
+            Your answers are now available for review:
+          </h2>
+
+          {quizAnswers ? (
+            <div>
+              {renderMCQAnswers()}
+              {renderEssayAnswers()}
+            </div>
+          ) : (
+            <p style={{ fontStyle: "italic", color: "var(--text-muted)" }}>
+              No answer details available.
+            </p>
+          )}
+        </>
+      ) : (
+        <div>
+          <h2 style={{ marginBottom: "0.5rem" }}>
+            You will be able to see your answers after the Lecture Expiration
+          </h2>
+        </div>
+      )}
+
       <button
         onClick={() => router.push("/courses")}
         className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"

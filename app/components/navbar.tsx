@@ -25,8 +25,6 @@ import {
   MdLogin,
   MdLogout,
   MdMenu,
-  MdChevronLeft,
-  MdChevronRight,
   MdOutlineHelp,
 } from "react-icons/md";
 import {
@@ -34,8 +32,6 @@ import {
   VscLayoutSidebarLeft,
   VscLayoutSidebarLeftOff,
 } from "react-icons/vsc";
-
-import { GiProgression } from "react-icons/gi";
 
 export default function Navbar({
   onCollapse,

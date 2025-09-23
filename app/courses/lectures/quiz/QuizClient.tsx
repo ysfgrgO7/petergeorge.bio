@@ -510,7 +510,7 @@ export default function QuizClient() {
         .filter((q) => q.type === "mcq")
         .map((q, i) => (
           <div key={q.id} className={styles.question}>
-            <p>
+            <div>
               <div
                 style={{
                   display: "flex",
@@ -526,21 +526,7 @@ export default function QuizClient() {
                   }}
                 />
               </div>
-              {/* Display marks for each question */}
-              <span
-                style={{
-                  backgroundColor: "var(--blue)",
-                  color: "var(--white)",
-                  padding: "2px 8px",
-                  borderRadius: "12px",
-                  fontSize: "0.8em",
-                  marginLeft: "10px",
-                  fontWeight: "bold",
-                }}
-              >
-                ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
-              </span>
-            </p>
+            </div>
             {q.imageUrl && (
               <div className={styles.quizImageContainer}>
                 <img
@@ -555,6 +541,7 @@ export default function QuizClient() {
                 />
               </div>
             )}
+            <br />
             {q.options!.map((opt: string, j: number) => (
               <label
                 key={j}
@@ -575,6 +562,20 @@ export default function QuizClient() {
                 {opt}
               </label>
             ))}
+
+            <span
+              style={{
+                backgroundColor: "var(--blue)",
+                color: "var(--white)",
+                padding: "2px 8px",
+                borderRadius: "12px",
+                fontSize: "0.8em",
+                marginLeft: "10px",
+                fontWeight: "bold",
+              }}
+            >
+              ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
+            </span>
             <hr />
           </div>
         ))}
@@ -589,7 +590,7 @@ export default function QuizClient() {
             .filter((q) => q.type === "essay")
             .map((q, i) => (
               <div key={q.id} className={styles.question}>
-                <p>
+                <div>
                   <div
                     style={{
                       display: "flex",
@@ -608,21 +609,7 @@ export default function QuizClient() {
                       }}
                     />
                   </div>
-                  {/* Display marks for essay questions */}
-                  <span
-                    style={{
-                      backgroundColor: "var(--blue)",
-                      color: "var(--white)",
-                      padding: "2px 8px",
-                      borderRadius: "12px",
-                      fontSize: "0.8em",
-                      marginLeft: "10px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
-                  </span>
-                </p>
+                </div>
                 {q.imageUrl && (
                   <div className={styles.quizImageContainer}>
                     <img
@@ -647,6 +634,22 @@ export default function QuizClient() {
                     rows={8}
                   ></textarea>
                 </div>
+
+                <br />
+                {/* Display marks for essay questions */}
+                <span
+                  style={{
+                    backgroundColor: "var(--blue)",
+                    color: "var(--white)",
+                    padding: "2px 8px",
+                    borderRadius: "12px",
+                    fontSize: "0.8em",
+                    marginLeft: "10px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  ({q.marks || 1} {(q.marks || 1) === 1 ? "Mark" : "Marks"})
+                </span>
                 <hr />
               </div>
             ))}

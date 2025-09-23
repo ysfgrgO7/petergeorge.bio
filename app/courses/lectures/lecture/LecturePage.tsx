@@ -559,6 +559,15 @@ export default function LecturePage() {
                   </ul>
                 )}
             </div>
+            <button
+              onClick={() =>
+                router.push(
+                  `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+                )
+              }
+            >
+              Quiz Result
+            </button>
           </div>
         </>
       )}
