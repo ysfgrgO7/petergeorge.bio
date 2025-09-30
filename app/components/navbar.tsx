@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import styles from "./components.module.css";
 import { usePathname, useRouter } from "next/navigation";
+import { useTheme } from "@/app/components/ThemeProvider";
 import { auth, db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
@@ -42,6 +43,7 @@ export default function Navbar({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isDef, isHalloween, isXmas, isRamadan } = useTheme();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -238,14 +240,27 @@ export default function Navbar({
       <div className={styles.topbar}>
         <MdMenu className={styles.hamburger} onClick={toggleSidebar} />
         <div className={styles.ToplogoContainer}>
-          <Image
-            src="/Logo.png"
-            alt="LOGO"
-            width={45}
-            height={45}
-            draggable={false}
-            className={styles.logo}
-          />
+          {isDef && (
+            <Image
+              src="/Logo.png"
+              alt="LOGO"
+              width={45}
+              height={45}
+              draggable={false}
+              className={styles.logo}
+            />
+          )}
+
+          {isHalloween && (
+            <Image
+              src="/hallo.svg"
+              alt="LOGO"
+              width={45}
+              height={45}
+              draggable={false}
+              className={styles.logo}
+            />
+          )}
           <div className={styles.logo}>Master Biology</div>
         </div>
       </div>
@@ -272,16 +287,29 @@ export default function Navbar({
           onClick={() => router.push("/")}
           title="Home"
         >
-          <Image
-            src="/Logo.png"
-            alt="LOGO"
-            width={70}
-            height={70}
-            draggable={false}
-            style={{ marginBottom: "1rem" }}
-          />
+          {isDef && (
+            <Image
+              src="/Logo.png"
+              alt="LOGO"
+              width={70}
+              height={70}
+              draggable={false}
+            />
+          )}
+
+          {isHalloween && (
+            <Image
+              src="/hallo.svg"
+              alt="LOGO"
+              width={70}
+              height={70}
+              draggable={false}
+            />
+          )}
+
           {!isCollapsed && <div className={styles.logo}>Master Biology</div>}
         </button>
+        <br />
 
         {isLoggedIn ? (
           <>
@@ -338,6 +366,7 @@ export default function Navbar({
                 style={{
                   display: "flex",
                   alignItems: "center",
+                  color: "var(--fg)",
                   paddingLeft: "10px",
                   paddingBottom: "10px",
                   gap: "10px",
@@ -356,7 +385,7 @@ export default function Navbar({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--white)",
+                color: "var(--fg)",
               }}
               aria-label="Toggle sidebar"
               title="Toggle sidebar"
@@ -416,7 +445,7 @@ export default function Navbar({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                color: "var(--white)",
+                color: "var(--fg)",
               }}
               aria-label="Toggle sidebar"
               title="Toggle sidebar"

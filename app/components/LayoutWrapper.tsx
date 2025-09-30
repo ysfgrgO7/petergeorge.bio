@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Navbar from "./navbar";
-
+import Footer from "@/app/components/footer";
 export default function LayoutWrapper({
   children,
 }: {
@@ -33,7 +33,7 @@ export default function LayoutWrapper({
       if (window.innerWidth <= 768) {
         document.body.style.paddingLeft = "0px";
       } else {
-        document.body.style.paddingLeft = isCollapsed ? "70px" : "200px";
+        document.body.style.paddingLeft = isCollapsed ? "110px" : "240px";
       }
     };
 
@@ -50,6 +50,7 @@ export default function LayoutWrapper({
         <Navbar onCollapse={setIsCollapsed} isCollapsed={isCollapsed} />
       )}
       {children}
+      <Footer />
     </>
   );
 }

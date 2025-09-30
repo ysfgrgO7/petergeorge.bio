@@ -15,6 +15,7 @@ import { getLectureProgress } from "@/lib/studentProgress";
 import styles from "../../courses.module.css";
 
 import { IoChevronBackCircleSharp } from "react-icons/io5";
+import { MdEditDocument } from "react-icons/md";
 
 interface ProgressData {
   quizCompleted?: boolean;
@@ -435,31 +436,6 @@ export default function LecturePage() {
 
           <hr />
 
-          {/* Homework button - Updated rendering logic */}
-          {hasHomework && !homeworkCompleted && (
-            <button
-              onClick={() =>
-                router.push(
-                  `/courses/lectures/lecture/hw?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
-                )
-              }
-            >
-              📝 Start Homework
-            </button>
-          )}
-
-          {hasHomework && homeworkCompleted && (
-            <button
-              onClick={() =>
-                router.push(
-                  `/courses/lectures/lecture/hw/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
-                )
-              }
-            >
-              📝 Homework Result
-            </button>
-          )}
-
           {/* Related Videos -> only show if homework completed */}
           {(!hasHomework || homeworkCompleted) && homeworkVideos.length > 0 && (
             <>
@@ -559,15 +535,50 @@ export default function LecturePage() {
                   </ul>
                 )}
             </div>
-            <button
-              onClick={() =>
-                router.push(
-                  `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
-                )
-              }
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem",
+              }}
             >
-              Quiz Result
-            </button>
+              {progress?.quizCompleted && (
+                <button
+                  onClick={() =>
+                    router.push(
+                      `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+                    )
+                  }
+                >
+                  <MdEditDocument /> Quiz Result
+                </button>
+              )}
+              {/* Homework button - Updated rendering logic */}
+              {hasHomework && !homeworkCompleted && (
+                <button
+                  onClick={() =>
+                    router.push(
+                      `/courses/lectures/lecture/hw?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+                    )
+                  }
+                >
+                  <MdEditDocument /> Start Homework
+                </button>
+              )}
+
+              {hasHomework && homeworkCompleted && (
+                <button
+                  onClick={() =>
+                    router.push(
+                      `/courses/lectures/lecture/hw/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+                    )
+                  }
+                >
+                  <MdEditDocument /> Homework Result
+                </button>
+              )}
+            </div>
           </div>
         </>
       )}

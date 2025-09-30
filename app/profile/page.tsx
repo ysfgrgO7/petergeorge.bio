@@ -12,6 +12,8 @@ import {
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import styles from "./progress.module.css";
+import { useTheme } from "@/app/components/ThemeProvider";
+import Image from "next/image";
 
 interface QuizData {
   earnedMarks: number;
@@ -54,7 +56,7 @@ export default function ProgressPage() {
   const [loading, setLoading] = useState(true);
   const [studentInfo, setStudentInfo] = useState<UserProfile | null>(null);
   const [error, setError] = useState<string>("");
-
+  const { isDef, isHalloween, isXmas, isRamadan } = useTheme();
   const auth = getAuth();
   const router = useRouter();
 
@@ -205,6 +207,32 @@ export default function ProgressPage() {
       </div>
     );
   }
+  const infoItems = studentInfo
+    ? [
+        {
+          label: "Full Name",
+          value: `${studentInfo.firstName} ${studentInfo.secondName} ${studentInfo.thirdName} ${studentInfo.forthName}`,
+        },
+        { label: "Student Code", value: studentInfo.studentCode },
+        { label: "Email", value: studentInfo.email },
+        { label: "Gender", value: studentInfo.gender },
+        { label: "Year", value: studentInfo.year.toUpperCase() },
+        { label: "School", value: studentInfo.school },
+        { label: "Student Phone", value: studentInfo.studentPhone },
+        { label: "Fathers Phone", value: studentInfo.fatherPhone },
+        { label: "Mothers Phone", value: studentInfo.motherPhone },
+        {
+          label: "Registration Date",
+          value: new Date(studentInfo.createdAt).toLocaleDateString(),
+        },
+        studentInfo.devices?.length
+          ? {
+              label: "Devices",
+              value: `${studentInfo.devices.length} device(s)`,
+            }
+          : null,
+      ].filter(Boolean)
+    : [];
 
   return (
     <div className="wrapper">
@@ -212,57 +240,27 @@ export default function ProgressPage() {
         <div className={styles.section}>
           <h1>Personal Information</h1>
           <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <strong>Full Name:</strong>
-              <span>
-                {studentInfo.firstName} {studentInfo.secondName}{" "}
-                {studentInfo.thirdName} {studentInfo.forthName}
-              </span>
-            </div>
-            <div className={styles.infoItem}>
-              <strong>Student Code:</strong>
-              <span>{studentInfo.studentCode}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <strong>Email:</strong>
-              <span>{studentInfo.email}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <strong>Gender:</strong>
-              <span>{studentInfo.gender}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <strong>Year:</strong>
-              <span>{studentInfo.year.toUpperCase()}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <strong>School:</strong>
-              <span>{studentInfo.school}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <strong>Student Phone:</strong>
-              <span>{studentInfo.studentPhone}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <strong>Fathers Phone:</strong>
-              <span>{studentInfo.fatherPhone}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <strong>Mothers Phone:</strong>
-              <span>{studentInfo.motherPhone}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <strong>Registration Date:</strong>
-              <span>
-                {new Date(studentInfo.createdAt).toLocaleDateString()}
-              </span>
-            </div>
-            {studentInfo.devices?.length ? (
-              <div className={styles.infoItem}>
-                <strong>Devices:</strong>
-                <span>{studentInfo.devices.length} device(s)</span>
-              </div>
-            ) : null}
+            {infoItems.map((item, idx) =>
+              item ? (
+                <div key={idx} className={styles.infoItem}>
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 6 }}
+                  >
+                    {isHalloween && (
+                      <Image
+                        src="/hallo.svg"
+                        alt="Halloween Icon"
+                        width={18}
+                        height={18}
+                        className={styles.bullet}
+                      />
+                    )}
+                    <strong>{item.label}:</strong>
+                  </div>
+                  <span>{item.value}</span>
+                </div>
+              ) : null
+            )}
           </div>
         </div>
       )}

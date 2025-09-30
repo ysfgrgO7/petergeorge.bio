@@ -25,6 +25,7 @@ import {
 } from "react-icons/io5";
 import { MdQuiz } from "react-icons/md";
 import { FaPlay } from "react-icons/fa";
+import { useTheme } from "@/app/components/ThemeProvider";
 
 interface Lecture extends DocumentData {
   id: string;
@@ -65,6 +66,7 @@ function LecturesContent() {
   const year = searchParams.get("year") as string;
 
   // State
+  const { isDef, isHalloween, isXmas, isRamadan } = useTheme();
   const [courseLectures, setCourseLectures] = useState<Lecture[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>(
@@ -624,7 +626,15 @@ function LecturesContent() {
         <IoChevronBackCircleSharp /> Back to Courses
       </button>
 
-      <h1>Lectures</h1>
+      <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+        {isHalloween && (
+          <img src="/hallo.svg" alt="Halloween Icon" width={38} height={38} />
+        )}
+        <h1>Lectures</h1>
+        {isHalloween && (
+          <img src="/hallo.svg" alt="Halloween Icon" width={38} height={38} />
+        )}
+      </div>
 
       {totalQuizzes > 0 && (
         <div className={styles.progressBarContainer}>

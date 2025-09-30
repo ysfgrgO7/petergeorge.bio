@@ -12,6 +12,7 @@ import { db } from "@/lib/firebase";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import styles from "./courses.module.css";
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/app/components/ThemeProvider";
 
 interface Course extends DocumentData {
   id: string;
@@ -42,6 +43,7 @@ const groupAndSortCourses = (courses: Course[]): Record<string, Course[]> => {
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const { isDef, isHalloween, isXmas, isRamadan } = useTheme();
   const [studentYear, setStudentYear] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -153,9 +155,29 @@ export default function CoursesPage() {
           ) : (
             Object.keys(groupedCourses).map((year) => (
               <div key={year}>
-                <h2 className={styles.yearTitle}>
-                  {year.replace("year", "Year ")}
-                </h2>
+                <div style={{ display: "flex", gap: "5px", alignItems: "center" }} >
+                  {isHalloween && (
+                    <img
+                      src="/hallo.svg"
+                      alt="Halloween Icon"
+                      width={38}
+                      height={38}
+                    />
+                  )}
+                  <h2 className={styles.yearTitle}>
+                    {year.replace("year", "Year ")}
+                  </h2>
+
+                  {isHalloween && (
+                    <img
+                      src="/hallo.svg"
+                      alt="Halloween Icon"
+                      width={38}
+                      height={38}
+                    />
+                  )}
+                </div>
+                <br />
                 {groupedCourses[year].map((course) => (
                   <div key={course.id} className={styles.courseCard}>
                     <div className={styles.courseCardDetails}>

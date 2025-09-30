@@ -1,8 +1,6 @@
 html[data-theme="dark"] {
-  /* dark */
   --bg: #202a30;
   --fg: #d4d9d5;
-
   --black: #202a30;
   --white: #d4d9d5;
   --dark: #2f3843;
@@ -11,14 +9,18 @@ html[data-theme="dark"] {
   --green: #749f6e;
   --red: #976061;
   --magenta: #836e9f;
+
+  --grey: #2a343b; /* slightly lighter than bg */
+  --darkgrey: #202a3066; /* slightly darker than bg */
+  --grid: #c2c7c414; /* noticeably darker than bg */
+
   --border-radius: 10px;
   --box-shadow: 0px 0px 20px 2px var(--dark);
 }
+
 html[data-theme="light"] {
-  /* dark */
   --fg: #202a30;
   --bg: #d4d9d5;
-
   --black: #202a30;
   --white: #d4d9d5;
   --dark: #2f3843;
@@ -27,8 +29,36 @@ html[data-theme="light"] {
   --green: #749f6e;
   --red: #976061;
   --magenta: #836e9f;
+
+  --grey: #e2e5e3; /* slightly darker than bg */
+  --darkgrey: #c2c7c466; /* noticeably darker than bg */
+  --grid: #181f2414; /* slightly darker than bg */
+
   --border-radius: 10px;
   --box-shadow: 0px 0px 20px 2px var(--dark);
+}
+
+#bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 30px 30px;
+  background-color: var(--bg); /* dark base, slightly see-through */
+  pointer-events: none;
+  z-index: -1;
+}
+
+#bg-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle 150px at var(--mx, 20%) var(--my, 20%),
+    #1cbfff2d,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 
 * {
@@ -42,10 +72,9 @@ body {
   height: 100%;
   margin: 0;
 }
-
 body {
   color: var(--fg);
-  background: var(--bg);
+  background-color: var(--bg);
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

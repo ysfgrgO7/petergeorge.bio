@@ -38,12 +38,16 @@
 
 .infoItem {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-direction:column;
+  gap: 6px;
   padding: 0.75rem;
   background: var(--light);
   border-radius: 0.375rem;
   border-left: 5px solid var(--blue);
+}
+
+.bullet {
+  flex-shrink: 0;
 }
 
 .infoItem strong {

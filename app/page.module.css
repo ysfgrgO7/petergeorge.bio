@@ -1,78 +1,3 @@
-.buttonContainer {
-  display: flex;
-  flex-wrap: wrap; /* Allow buttons to wrap to the next line */
-  justify-content: center;
-  gap: 2rem; /* Use a smaller gap for better spacing */
-  width: 100%;
-}
-
-.buttonContainer button {
-  background-color: var(--dark);
-  color: var(--white);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem; /* Adjusted font size for mobile */
-  padding: 1.5rem; /* Adjusted padding */
-  border-radius: var(--border-radius);
-  border: 2px solid var(--dark);
-  box-shadow: var(--box-shadow);
-  cursor: pointer;
-  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-  width: 45%;
-  max-width: 300px;
-  height: 400px;
-  text-align: center;
-  gap: 1rem;
-}
-
-.buttonContainer button:hover {
-  transform: translateY(-10px);
-  box-shadow: 0px 10px 30px 5px var(--dark);
-  filter: brightness(1);
-}
-
-@media (max-width: 768px) {
-  .page {
-    gap: 2rem;
-  }
-
-  .page h1 {
-    font-size: 2rem;
-  }
-
-  .buttonContainer {
-    flex-direction: column;
-    align-items: center;
-    gap: 2rem;
-  }
-
-  .buttonContainer button {
-    width: 90%;
-    height: fit-content;
-    padding: 1rem;
-    font-size: 1.1rem;
-  }
-
-  .socialMedia {
-    gap: 1rem;
-  }
-
-  .icon {
-    font-size: 2.5rem;
-  }
-}
-
-/* .bg {
-  background-image: linear-gradient(
-    to bottom right,
-    var(--bg),
-    var(--light),
-    var(--blue)
-  );
-}
-
 .signButtons {
   display: none;
 }
@@ -92,10 +17,9 @@
 }
 
 .buttonContainer button {
-  background: rgba(47, 56, 67, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--white);
+  background: var(--darkgrey);
+  backdrop-filter: blur(2px);
+  color: var(--fg);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -111,6 +35,20 @@
   height: 350px;
   text-align: center;
   gap: 1rem;
+}
+
+.courseButton {
+  border: none;
+  padding: 2rem;
+  border-radius: 1rem;
+  color: var(--white);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.3s ease;
+}
+
+.courseButton:hover {
+  transform: scale(1.05);
 }
 
 .buttonContainer button:hover {
@@ -161,4 +99,4 @@
   .icon {
     font-size: 2.5rem;
   }
-} */
+}

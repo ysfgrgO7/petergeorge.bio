@@ -12,12 +12,18 @@
 .courseCard {
   border: 1px solid var(--dark);
   box-shadow: var(--box-shadow);
-  background-color: var(--bg);
-  filter: brightness(0.95);
+  background-color: var(--darkgrey);
   color: var(--fg);
   padding: 1rem;
   border-radius: var(--border-radius);
   margin-bottom: 1rem;
+  backdrop-filter: blur(2px);
+}
+
+.lectureCard:hover,
+.courseCard:hover {
+  transform: scale(1.02);
+  backdrop-filter: blur(0px);
 }
 
 .courseDetail {
@@ -78,14 +84,15 @@
 
 .quizSummaryFloating {
   position: fixed; /* Keep it in place while scrolling */
-  bottom: 100px; /* Adjust as needed */
+  top: 30px;
   right: 10px; /* Distance from the right edge */
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   height: 75%;
   width: 200px; /* Width of the floating window */
-  background-color: var(--bg); /* Light background */
+  background-color: var(--darkgrey); /* Light background */
+  backdrop-filter: blur(5px);
   filter: brightness(0.95);
   padding: 1.5rem;
   border-radius: var(--border-radius);

@@ -30,7 +30,11 @@ export default function Footer() {
     <footer className={styles.footerContainer}>
       <div className={styles.footer}>
         <p
-          style={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
           <a
             style={{ display: "flex", alignItems: "center" }}
@@ -82,7 +86,7 @@ export default function Footer() {
 
           <p>© 2025 Master Biology</p>
         </div>
-        <div style={{ padding: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
           <div className={styles.toggleWrapper}>
             <button
               onClick={() => toggleTheme("light")}

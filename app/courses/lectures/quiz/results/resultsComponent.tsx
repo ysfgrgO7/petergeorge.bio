@@ -37,6 +37,12 @@ interface QuizAnswers {
   essay: { [key: string]: EssayAnswer };
 }
 
+interface LectureData {
+  title?: string;
+  odyseeName?: string;
+  odyseeId?: string;
+}
+
 export default function QuizResults() {
   const router = useRouter();
   const params = useSearchParams();
@@ -53,6 +59,32 @@ export default function QuizResults() {
     null
   );
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers | null>(null);
+  const [lectureData, setLectureData] = useState<LectureData | null>(null);
+
+  // Function to get lecture URL
+  const getLectureUrl = () => {
+    if (!year || !courseId || !lectureId || !lectureData) {
+      return "/courses";
+    }
+
+    const baseParams = `year=${year}&courseId=${courseId}&lectureId=${lectureId}`;
+
+    if (lectureData.odyseeName && lectureData.odyseeId && lectureData.title) {
+      return `/courses/lectures/lecture?${baseParams}&odyseeName=${
+        lectureData.odyseeName
+      }&odyseeId=${lectureData.odyseeId}&title=${encodeURIComponent(
+        lectureData.title
+      )}`;
+    }
+
+    // Fallback to lectures page if we don't have all the needed data
+    return `/courses/lectures?year=${year}&courseId=${courseId}`;
+  };
+
+  const handleBackToLecture = () => {
+    const lectureUrl = getLectureUrl();
+    router.push(lectureUrl);
+  };
 
   useEffect(() => {
     const auth = getAuth();
@@ -87,6 +119,13 @@ export default function QuizResults() {
 
           if (lectureDocSnap.exists()) {
             const lectureData = lectureDocSnap.data();
+
+            // Store lecture data for URL construction
+            setLectureData({
+              title: lectureData.title,
+              odyseeName: lectureData.odyseeName,
+              odyseeId: lectureData.odyseeId,
+            });
 
             // Check system-specific enabled status
             let isLectureEnabled = true;
@@ -296,10 +335,10 @@ export default function QuizResults() {
         <h1>Quiz Results</h1>
         <p>No results found. Please complete the quiz first.</p>
         <button
-          onClick={() => router.push("/courses")}
+          onClick={handleBackToLecture}
           className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
         >
-          Back to Courses
+          Back to Lecture
         </button>
       </div>
     );
@@ -310,6 +349,15 @@ export default function QuizResults() {
 
   return (
     <div className={styles.wrapper}>
+      <br />
+      <button
+        onClick={handleBackToLecture}
+        className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
+      >
+        Back to Lecture
+      </button>
+      <br />
+      <br />
       <h1>Quiz Results</h1>
       <hr />
       <h2>Quiz Submitted!</h2>
@@ -359,10 +407,10 @@ export default function QuizResults() {
       )}
 
       <button
-        onClick={() => router.push("/courses")}
+        onClick={handleBackToLecture}
         className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
       >
-        Back to Courses
+        Back to Lecture
       </button>
     </div>
   );

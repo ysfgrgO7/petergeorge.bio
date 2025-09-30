@@ -2,9 +2,10 @@
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import LayoutWrapper from "@/app/components/LayoutWrapper";
-import Footer from "@/app/components/footer";
 import AdminProvider from "@/app/components/isAdmin";
+import BackgroundMotion from "@/app/components/BackgroundMotion";
 import PlaceChecker from "@/app/components/placeChecker"; // 👈 new client component
+import ThemeProvider from "@/app/components/ThemeProvider";
 
 const poppins = Poppins({
   weight: ["400", "600", "700"],
@@ -29,9 +30,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={poppins.className}>
         <AdminProvider>
-          <LayoutWrapper>{children}</LayoutWrapper>
-          <Footer />
-          <PlaceChecker /> {/* 👈 runs on client side */}
+          <ThemeProvider>
+            <div id="bg-grid"></div>
+            <LayoutWrapper>{children}</LayoutWrapper>
+            <PlaceChecker />
+            <BackgroundMotion /> {/* 👈 add here */}
+          </ThemeProvider>
         </AdminProvider>
       </body>
     </html>
