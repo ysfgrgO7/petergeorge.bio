@@ -43,7 +43,7 @@ html[data-theme="light"] {
   inset: 0;
   background-image: linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-  background-size: 30px 30px;
+  background-size: 40px 40px;
   background-color: var(--bg); /* dark base, slightly see-through */
   pointer-events: none;
   z-index: -1;
