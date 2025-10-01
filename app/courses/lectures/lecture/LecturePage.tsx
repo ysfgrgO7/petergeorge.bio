@@ -21,6 +21,8 @@ interface ProgressData {
   quizCompleted?: boolean;
   earnedMarks?: number;
   totalPossibleMarks?: number;
+  unlocked?: boolean;
+  isEnabled?: boolean;
 }
 
 interface LinkItem extends DocumentData {
@@ -70,23 +72,19 @@ export default function LecturePage() {
   const [isExpired, setIsExpired] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // New states for homework
   const [homeworkCompleted, setHomeworkCompleted] = useState(false);
-  const [hasHomework, setHasHomework] = useState(false); // ✅ New state variable
+  const [hasHomework, setHasHomework] = useState(false);
 
   useEffect(() => {
-    // This code only runs on the client
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
-    // Set initial value on mount
     handleResize();
 
-    // Add and remove event listener for dynamic updates
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []);
 
   useEffect(() => {
     const auth = getAuth();
@@ -97,7 +95,6 @@ export default function LecturePage() {
       }
       setUser(currentUser);
 
-      // Fetch student data to get student code and system
       let currentStudentData: StudentData | null = null;
       try {
         const studentDocRef = doc(db, "students", currentUser.uid);
@@ -112,111 +109,136 @@ export default function LecturePage() {
 
       if (year && courseId && lectureId) {
         try {
-          // Fetch the lecture document
+          let isLectureEnabled = true;
+
+          // STEP 1: Check lecture-level enable/disable first
           const lectureDocRef = doc(
             db,
             `years/${year}/courses/${courseId}/lectures/${lectureId}`
           );
           const lectureDocSnap = await getDoc(lectureDocRef);
 
+          let lectureLevelEnabled = true;
+
           if (lectureDocSnap.exists()) {
             const lectureData = lectureDocSnap.data();
 
-            // NEW: Check system-specific enabled status
-            let isLectureEnabled = true;
-
-            if (currentStudentData?.system) {
-              // Check the specific system field
-              if (currentStudentData.system === "center") {
-                isLectureEnabled = lectureData?.isEnabledCenter !== false; // Default to true if undefined
-              } else if (currentStudentData.system === "online") {
-                isLectureEnabled = lectureData?.isEnabledOnline !== false; // Default to true if undefined
-              }
-            } else {
-              // Fallback to general isEnabled if no system is specified
-              isLectureEnabled = lectureData?.isEnabled ?? true;
+            // Check lecture-level based on student system
+            if (currentStudentData?.system === "center") {
+              lectureLevelEnabled = lectureData.isEnabledCenter !== false;
+            } else if (currentStudentData?.system === "online") {
+              lectureLevelEnabled = lectureData.isEnabledOnline !== false;
             }
+          }
 
-            // Just mark expired, don't stop other fetching
-            if (!isLectureEnabled) {
-              setIsExpired(true);
-            }
-
-            // Course title
-            const courseDocRef = doc(db, `years/${year}/courses/${courseId}`);
-            const courseDocSnap = await getDoc(courseDocRef);
-            if (courseDocSnap.exists()) {
-              setCourseTitle(courseDocSnap.data().title);
-            }
-
-            // Extra links
-            const linksRef = collection(
-              db,
-              `years/${year}/courses/${courseId}/lectures/${lectureId}/links`
-            );
-            const linksSnapshot = await getDocs(linksRef);
-            const fetchedLinks: LinkItem[] = linksSnapshot.docs.map(
-              (doc) => ({ id: doc.id, ...doc.data() } as LinkItem)
-            );
-            setLinks(fetchedLinks);
-
-            // Homework videos
-            const homeworkVideosRef = collection(
-              db,
-              `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkVideos`
-            );
-            const homeworkVideosSnapshot = await getDocs(homeworkVideosRef);
-            const fetchedHomeworkVideos: HomeworkVideo[] =
-              homeworkVideosSnapshot.docs.map(
-                (doc) => ({ id: doc.id, ...doc.data() } as HomeworkVideo)
-              );
-            setHomeworkVideos(fetchedHomeworkVideos);
-
-            // Extra videos
-            const extraVideosRef = collection(
-              db,
-              `years/${year}/courses/${courseId}/lectures/${lectureId}/extraVideos`
-            );
-            const extraVideosSnapshot = await getDocs(extraVideosRef);
-            const fetchedExtraVideos: ExtraVideo[] =
-              extraVideosSnapshot.docs.map(
-                (doc) => ({ id: doc.id, ...doc.data() } as ExtraVideo)
-              );
-            setExtraVideos(fetchedExtraVideos);
-
-            // Progress
-            const lectureProgress = await getLectureProgress(
-              currentUser.uid,
-              year,
-              courseId,
-              lectureId
-            );
-            setProgress(lectureProgress);
-
-            // ✅ Fetch homework completion status
-            const hwRef = doc(
+          // STEP 2: Apply logic based on lecture-level status
+          if (lectureLevelEnabled) {
+            // If lecture-level is ENABLED, everyone can see it (ignore student progress isEnabled)
+            isLectureEnabled = true;
+          } else {
+            // If lecture-level is DISABLED, check student progress for exceptions
+            const progressDocRef = doc(
               db,
               "students",
               currentUser.uid,
-              "homeworkProgress",
+              "progress",
               `${year}_${courseId}_${lectureId}`
             );
-            const hwSnap = await getDoc(hwRef);
-            if (hwSnap.exists()) {
-              const hwData = hwSnap.data();
-              setHomeworkCompleted(hwData.homeworkCompleted === true);
-            }
+            const progressDocSnap = await getDoc(progressDocRef);
 
-            // ✅ Check for homework existence
-            const homeworkQuestionsRef = collection(
-              db,
-              `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`
-            );
-            const homeworkQuestionsSnapshot = await getDocs(
-              homeworkQuestionsRef
-            );
-            setHasHomework(!homeworkQuestionsSnapshot.empty);
+            if (progressDocSnap.exists()) {
+              const progressData = progressDocSnap.data();
+
+              // Only check student-specific isEnabled if lecture is unlocked
+              if (progressData.unlocked === true) {
+                // Use student-specific isEnabled, default to false if not set
+                isLectureEnabled = progressData.isEnabled === true;
+              } else {
+                // Not unlocked, so disabled
+                isLectureEnabled = false;
+              }
+            } else {
+              // No progress document and lecture-level is disabled, so disabled
+              isLectureEnabled = false;
+            }
           }
+
+          // If lecture is disabled (either globally or for this specific student), mark as expired
+          if (!isLectureEnabled) {
+            setIsExpired(true);
+          }
+
+          // Course title
+          const courseDocRef = doc(db, `years/${year}/courses/${courseId}`);
+          const courseDocSnap = await getDoc(courseDocRef);
+          if (courseDocSnap.exists()) {
+            setCourseTitle(courseDocSnap.data().title);
+          }
+
+          // Extra links
+          const linksRef = collection(
+            db,
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/links`
+          );
+          const linksSnapshot = await getDocs(linksRef);
+          const fetchedLinks: LinkItem[] = linksSnapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() } as LinkItem)
+          );
+          setLinks(fetchedLinks);
+
+          // Homework videos
+          const homeworkVideosRef = collection(
+            db,
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkVideos`
+          );
+          const homeworkVideosSnapshot = await getDocs(homeworkVideosRef);
+          const fetchedHomeworkVideos: HomeworkVideo[] =
+            homeworkVideosSnapshot.docs.map(
+              (doc) => ({ id: doc.id, ...doc.data() } as HomeworkVideo)
+            );
+          setHomeworkVideos(fetchedHomeworkVideos);
+
+          // Extra videos
+          const extraVideosRef = collection(
+            db,
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/extraVideos`
+          );
+          const extraVideosSnapshot = await getDocs(extraVideosRef);
+          const fetchedExtraVideos: ExtraVideo[] = extraVideosSnapshot.docs.map(
+            (doc) => ({ id: doc.id, ...doc.data() } as ExtraVideo)
+          );
+          setExtraVideos(fetchedExtraVideos);
+
+          // Progress
+          const lectureProgress = await getLectureProgress(
+            currentUser.uid,
+            year,
+            courseId,
+            lectureId
+          );
+          setProgress(lectureProgress);
+
+          // Fetch homework completion status
+          const hwRef = doc(
+            db,
+            "students",
+            currentUser.uid,
+            "homeworkProgress",
+            `${year}_${courseId}_${lectureId}`
+          );
+          const hwSnap = await getDoc(hwRef);
+          if (hwSnap.exists()) {
+            const hwData = hwSnap.data();
+            setHomeworkCompleted(hwData.homeworkCompleted === true);
+          }
+
+          // Check for homework existence
+          const homeworkQuestionsRef = collection(
+            db,
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`
+          );
+          const homeworkQuestionsSnapshot = await getDocs(homeworkQuestionsRef);
+          setHasHomework(!homeworkQuestionsSnapshot.empty);
         } catch (error) {
           console.error("Error fetching data:", error);
         } finally {
@@ -264,7 +286,6 @@ export default function LecturePage() {
             <span style={{ fontSize: "12px", opacity: 0.9 }}>
               {studentData.firstName} {studentData.secondName}
             </span>
-            {/* NEW: Show system type */}
             {studentData.system && (
               <>
                 <br />
@@ -335,19 +356,21 @@ export default function LecturePage() {
                 }}
               >
                 <h2 style={{ color: "red", marginBottom: "0.5rem" }}>
-                  The Lecture has Expired 🔒
+                  This Lecture is Currently Disabled
                 </h2>
                 <p>
-                  This lecture is currently not available for your student
-                  system.
+                  This lecture has been temporarily disabled by your instructor.
                 </p>
-                {/* NEW: Show which system the student belongs to */}
                 {studentData?.system && (
                   <p style={{ fontSize: "0.9rem", opacity: 0.8 }}>
                     Student System:{" "}
                     <strong>{studentData.system.toUpperCase()}</strong>
                   </p>
                 )}
+                <p style={{ fontSize: "0.9rem", marginTop: "1rem" }}>
+                  Please contact your instructor if you believe this is an
+                  error.
+                </p>
               </div>
             ) : (
               <div

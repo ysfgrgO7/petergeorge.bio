@@ -21,17 +21,15 @@ import styles from "./admin.module.css";
 import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
 import MessageModal from "@/app/MessageModal";
 
-// Define an interface for the Lecture structure in the subcollection
 interface Lecture extends DocumentData {
-  id: string; // Document ID for the lecture in the subcollection
+  id: string;
   title: string;
   odyseeName: string;
   odyseeId: string;
-  order: number; // To maintain the display order of lectures
-  isHidden?: boolean; // New optional field to track visibility
-  isEnabled?: boolean; // General enabled status (kept for backward compatibility)
-  isEnabledCenter?: boolean; // NEW: Enabled status for center students
-  isEnabledOnline?: boolean; // NEW: Enabled status for online students
+  order: number;
+  isHidden?: boolean;
+  isEnabledCenter?: boolean;
+  isEnabledOnline?: boolean;
 }
 
 interface Course extends DocumentData {
@@ -42,14 +40,13 @@ interface Course extends DocumentData {
 }
 
 export default function AdminDashboard() {
-  // New state variables for admin check and loading
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [title, setTitle] = useState("");
-  const [thumbnailUrl, setThumbnailUrl] = useState(""); // NEW: Added thumbnailUrl state
+  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [yearForNewCourse, setYearForNewCourse] = useState<
     "year1" | "year3 (Biology)" | "year3 (Geology)"
   >("year1");
@@ -66,22 +63,23 @@ export default function AdminDashboard() {
 
   const [courseLectures, setCourseLectures] = useState<
     Record<string, Lecture[]>
-  >({}); // Store lectures per courseId
+  >({});
   const [loadingLectures, setLoadingLectures] = useState<Set<string>>(
     new Set()
-  ); // Loading state per course for lectures
+  );
 
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
 
   const [cardsDirection, setCardsDirection] =
-    useState<React.CSSProperties["flexDirection"]>("column-reverse"); // State for card direction
+    useState<React.CSSProperties["flexDirection"]>("column-reverse");
   const [generatedCode, setGeneratedCode] = useState<string>("");
 
-  // for greying out button
   const [lectureQuizzesReady, setLectureQuizzesReady] = useState<
     Record<string, boolean>
   >({});
+
+  const [updatingLecture, setUpdatingLecture] = useState<string | null>(null);
 
   const checkQuizzesExist = async (
     year: string,
@@ -126,34 +124,102 @@ export default function AdminDashboard() {
     }
   };
 
-  // Admin Check Logic
+  // Helper function to sync student progress with lecture enabled status
+  const syncStudentProgressForLecture = async (
+    year: string,
+    courseId: string,
+    lectureId: string,
+    newEnabledStatus: boolean,
+    systemType: "center" | "online"
+  ) => {
+    try {
+      const studentsRef = collection(db, "students");
+      const studentsSnap = await getDocs(studentsRef);
+
+      let updatedCount = 0;
+      let skippedCount = 0;
+      let totalChecked = 0;
+
+      console.log(`Starting sync for ${systemType} students...`);
+      console.log(`Total students found: ${studentsSnap.docs.length}`);
+
+      for (const studentDoc of studentsSnap.docs) {
+        const uid = studentDoc.id;
+        const studentData = studentDoc.data();
+
+        totalChecked++;
+
+        // Check if student belongs to the system we're updating
+        const studentSystem = studentData.system;
+        console.log(`Student ${uid}: system = ${studentSystem}`);
+
+        if (studentSystem !== systemType) {
+          skippedCount++;
+          console.log(
+            `Skipping student ${uid} - wrong system (${studentSystem} !== ${systemType})`
+          );
+          continue;
+        }
+
+        const progressDocId = `${year}_${courseId}_${lectureId}`;
+        const progressRef = doc(db, "students", uid, "progress", progressDocId);
+
+        const progressSnap = await getDoc(progressRef);
+
+        if (progressSnap.exists()) {
+          const progressData = progressSnap.data();
+
+          console.log(`Student ${uid} progress:`, progressData);
+
+          // Only update if unlocked is true
+          if (progressData.unlocked === true) {
+            console.log(
+              `Updating student ${uid} isEnabled to ${newEnabledStatus}`
+            );
+            await updateDoc(progressRef, {
+              isEnabled: newEnabledStatus,
+            });
+            updatedCount++;
+          } else {
+            console.log(`Student ${uid} not unlocked, skipping`);
+          }
+        } else {
+          console.log(`No progress document for student ${uid}`);
+        }
+      }
+
+      console.log(
+        `Sync complete: ${updatedCount} updated, ${skippedCount} skipped (wrong system), ${totalChecked} total checked`
+      );
+      return updatedCount;
+    } catch (error) {
+      console.error("Error syncing student progress:", error);
+      throw error;
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // User is logged in, now check Firestore for admin status
         if (user.email) {
           const adminDocRef = doc(db, "admins", user.email);
           const adminDocSnap = await getDoc(adminDocRef);
 
           if (adminDocSnap.exists()) {
-            // Document exists, user is an admin
             setIsAdmin(true);
           } else {
-            // Document does not exist, not an admin, redirect
             router.push("/");
           }
         } else {
-          // User has no email, redirect
           router.push("/");
         }
       } else {
-        // No user logged in, redirect
         router.push("/");
       }
       setLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup the listener on component unmount
+    return () => unsubscribe();
   }, [router]);
 
   const toggleLecturePanel = async (courseId: string) => {
@@ -163,7 +229,6 @@ export default function AdminDashboard() {
         newSet.delete(courseId);
       } else {
         newSet.add(courseId);
-        // Fetch lectures when panel is opened, for the currently active year tab
         if (!courseLectures[courseId]) {
           fetchLecturesForCourse(activeYearTab, courseId);
         }
@@ -178,7 +243,6 @@ export default function AdminDashboard() {
     );
   };
 
-  // Function to fetch courses for a specific year
   const fetchCourses = async (
     yearToFetch: "year1" | "year3 (Biology)" | "year3 (Geology)"
   ) => {
@@ -203,7 +267,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Function to fetch lectures for a specific course within a specific year
   const fetchLecturesForCourse = async (
     courseYear: "year1" | "year3 (Biology)" | "year3 (Geology)",
     courseId: string
@@ -240,7 +303,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // UPDATED: Handler to create a new course with thumbnailUrl instead of description
   const handleCreate = async () => {
     if (!title.trim()) {
       setModalMessage("Course title cannot be empty.");
@@ -250,12 +312,12 @@ export default function AdminDashboard() {
     try {
       await addDoc(collection(db, "years", yearForNewCourse, "courses"), {
         title,
-        description: "", // Set empty description since we removed the input
-        thumbnailUrl: thumbnailUrl.trim(), // Use the thumbnailUrl from state
+        description: "",
+        thumbnailUrl: thumbnailUrl.trim(),
       });
       setTitle("");
-      setThumbnailUrl(""); // Clear thumbnailUrl after creation
-      fetchCourses(activeYearTab); // Re-fetch courses for the currently active tab
+      setThumbnailUrl("");
+      fetchCourses(activeYearTab);
       setModalMessage("Course created successfully!");
       setShowModal(true);
     } catch (error: unknown) {
@@ -307,9 +369,8 @@ export default function AdminDashboard() {
         odyseeId: info.id,
         order: newOrder,
         isHidden: true,
-        isEnabled: true, // Keep for backward compatibility
-        isEnabledCenter: true, // NEW: Enabled for center students by default
-        isEnabledOnline: true, // NEW: Enabled for online students by default
+        isEnabledCenter: true,
+        isEnabledOnline: true,
       });
 
       setLectureTitle("");
@@ -354,26 +415,41 @@ export default function AdminDashboard() {
     }
   };
 
-  // NEW: Handler to toggle enabled status for center students
   const handleToggleLectureEnabledCenter = async (
     courseId: string,
     lectureId: string,
     currentStatus: boolean
   ) => {
+    const updateKey = `center_${lectureId}`;
+    setUpdatingLecture(updateKey);
+
     try {
       const lectureRef = doc(
         db,
         `years/${activeYearTab}/courses/${courseId}/lectures`,
         lectureId
       );
+
+      const newStatus = !currentStatus;
+
       await updateDoc(lectureRef, {
-        isEnabledCenter: !currentStatus,
+        isEnabledCenter: newStatus,
       });
+
+      // Sync student progress to match the new status
+      const updatedCount = await syncStudentProgressForLecture(
+        activeYearTab,
+        courseId,
+        lectureId,
+        newStatus,
+        "center"
+      );
+
       fetchLecturesForCourse(activeYearTab, courseId);
       setModalMessage(
-        `Lecture status for center students updated successfully! It is now ${
-          !currentStatus ? "enabled" : "disabled"
-        }.`
+        `Lecture status for center students updated to ${
+          newStatus ? "enabled" : "disabled"
+        }. ${updatedCount} center student progress records synced.`
       );
       setShowModal(true);
     } catch (error: unknown) {
@@ -386,29 +462,46 @@ export default function AdminDashboard() {
           (error as Error).message
       );
       setShowModal(true);
+    } finally {
+      setUpdatingLecture(null);
     }
   };
 
-  // NEW: Handler to toggle enabled status for online students
   const handleToggleLectureEnabledOnline = async (
     courseId: string,
     lectureId: string,
     currentStatus: boolean
   ) => {
+    const updateKey = `online_${lectureId}`;
+    setUpdatingLecture(updateKey);
+
     try {
       const lectureRef = doc(
         db,
         `years/${activeYearTab}/courses/${courseId}/lectures`,
         lectureId
       );
+
+      const newStatus = !currentStatus;
+
       await updateDoc(lectureRef, {
-        isEnabledOnline: !currentStatus,
+        isEnabledOnline: newStatus,
       });
+
+      // Sync student progress to match the new status
+      const updatedCount = await syncStudentProgressForLecture(
+        activeYearTab,
+        courseId,
+        lectureId,
+        newStatus,
+        "online"
+      );
+
       fetchLecturesForCourse(activeYearTab, courseId);
       setModalMessage(
-        `Lecture status for online students updated successfully! It is now ${
-          !currentStatus ? "enabled" : "disabled"
-        }.`
+        `Lecture status for online students updated to ${
+          newStatus ? "enabled" : "disabled"
+        }. ${updatedCount} online student progress records synced.`
       );
       setShowModal(true);
     } catch (error: unknown) {
@@ -421,6 +514,8 @@ export default function AdminDashboard() {
           (error as Error).message
       );
       setShowModal(true);
+    } finally {
+      setUpdatingLecture(null);
     }
   };
 
@@ -446,7 +541,7 @@ export default function AdminDashboard() {
         isUsed: false,
       });
 
-      setGeneratedCode(newCode); // Set the generated code in state
+      setGeneratedCode(newCode);
       setModalMessage(`Universal one-time use code generated: ${newCode}`);
       setShowModal(true);
     } catch (error) {
@@ -456,10 +551,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // NEW: Function to generate and save a universal one-time code
-
   useEffect(() => {
-    // Only fetch courses if the user is an admin and the page is not loading
     if (isAdmin) {
       fetchCourses(activeYearTab);
     }
@@ -469,15 +561,13 @@ export default function AdminDashboard() {
     setYearForNewCourse(activeYearTab);
   }, [activeYearTab]);
 
-  // If loading or not an admin, show a loading message or nothing
   if (loading) {
     return <div>Loading...</div>;
   }
   if (!isAdmin) {
-    return null; // The redirect will handle sending them away
+    return null;
   }
 
-  // Rest of the component renders only if the user is an admin
   return (
     <div className="wrapper">
       <h1>Admin Dashboard</h1>
@@ -682,50 +772,72 @@ export default function AdminDashboard() {
                                 : "Hide Lecture"}
                             </button>
 
-                            {/* NEW: Button to toggle enabled/disabled status for center students */}
                             <button
+                              disabled={
+                                updatingLecture === `center_${lecture.id}`
+                              }
                               style={{
                                 backgroundColor:
-                                  lecture.isEnabledCenter !== false
+                                  updatingLecture === `center_${lecture.id}`
+                                    ? "grey"
+                                    : lecture.isEnabledCenter !== false
                                     ? "var(--green)"
                                     : "var(--red)",
                                 color: "white",
+                                cursor:
+                                  updatingLecture === `center_${lecture.id}`
+                                    ? "not-allowed"
+                                    : "pointer",
                               }}
                               onClick={() =>
                                 handleToggleLectureEnabledCenter(
                                   course.id,
                                   lecture.id,
-                                  lecture.isEnabledCenter !== false // Default to true if undefined
+                                  lecture.isEnabledCenter !== false
                                 )
                               }
                             >
-                              Center:{" "}
-                              {lecture.isEnabledCenter !== false
-                                ? "Enabled"
-                                : "Disabled"}
+                              {updatingLecture === `center_${lecture.id}`
+                                ? "Updating..."
+                                : `Center: ${
+                                    lecture.isEnabledCenter !== false
+                                      ? "Enabled"
+                                      : "Disabled"
+                                  }`}
                             </button>
 
-                            {/* NEW: Button to toggle enabled/disabled status for online students */}
                             <button
+                              disabled={
+                                updatingLecture === `online_${lecture.id}`
+                              }
                               style={{
                                 backgroundColor:
-                                  lecture.isEnabledOnline !== false
+                                  updatingLecture === `online_${lecture.id}`
+                                    ? "grey"
+                                    : lecture.isEnabledOnline !== false
                                     ? "var(--green)"
                                     : "var(--red)",
                                 color: "white",
+                                cursor:
+                                  updatingLecture === `online_${lecture.id}`
+                                    ? "not-allowed"
+                                    : "pointer",
                               }}
                               onClick={() =>
                                 handleToggleLectureEnabledOnline(
                                   course.id,
                                   lecture.id,
-                                  lecture.isEnabledOnline !== false // Default to true if undefined
+                                  lecture.isEnabledOnline !== false
                                 )
                               }
                             >
-                              Online:{" "}
-                              {lecture.isEnabledOnline !== false
-                                ? "Enabled"
-                                : "Disabled"}
+                              {updatingLecture === `online_${lecture.id}`
+                                ? "Updating..."
+                                : `Online: ${
+                                    lecture.isEnabledOnline !== false
+                                      ? "Enabled"
+                                      : "Disabled"
+                                  }`}
                             </button>
 
                             <button

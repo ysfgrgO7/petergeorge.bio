@@ -10,6 +10,7 @@ import {
   doc,
   getDoc,
   DocumentData,
+  updateDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import {
@@ -33,6 +34,8 @@ interface StudentProgress {
   attempts: number;
   lastAttempt?: string;
   studentYear?: string;
+  isEnabled?: boolean;
+  system?: "center" | "online";
 }
 
 interface LectureInfo {
@@ -52,6 +55,10 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"unlocked" | "completed">("unlocked");
+  const [systemFilter, setSystemFilter] = useState<"all" | "center" | "online">(
+    "all"
+  );
+  const [updatingStudent, setUpdatingStudent] = useState<string | null>(null);
 
   const courseId = searchParams.get("courseId");
   const lectureId = searchParams.get("lectureId");
@@ -168,6 +175,8 @@ export default function StudentsPage() {
           unlocked: false,
           quizCompleted: false,
           attempts: 0,
+          isEnabled: true,
+          system: studentData.system as "center" | "online" | undefined,
         };
 
         if (progressSnap.exists()) {
@@ -182,6 +191,7 @@ export default function StudentsPage() {
               | undefined,
             attempts: (progressData.attempts as number) || 0,
             lastAttempt: progressData.lastAttempt as string | undefined,
+            isEnabled: progressData.isEnabled !== false,
           };
 
           allYearStudentsArray.push(studentProgress);
@@ -209,14 +219,76 @@ export default function StudentsPage() {
     }
   };
 
+  const handleToggleEnabled = async (
+    studentId: string,
+    currentStatus: boolean,
+    event: React.MouseEvent
+  ) => {
+    event.stopPropagation();
+
+    if (!lectureInfo) return;
+
+    setUpdatingStudent(studentId);
+
+    try {
+      const progressDocId = `${lectureInfo.year}_${courseId}_${lectureId}`;
+      const progressRef = doc(
+        db,
+        "students",
+        studentId,
+        "progress",
+        progressDocId
+      );
+
+      const progressSnap = await getDoc(progressRef);
+
+      if (progressSnap.exists() && progressSnap.data().unlocked === true) {
+        await updateDoc(progressRef, {
+          isEnabled: !currentStatus,
+        });
+
+        // Update local state
+        setStudents((prev) =>
+          prev.map((s) =>
+            s.studentId === studentId ? { ...s, isEnabled: !currentStatus } : s
+          )
+        );
+        setAllYearStudents((prev) =>
+          prev.map((s) =>
+            s.studentId === studentId ? { ...s, isEnabled: !currentStatus } : s
+          )
+        );
+      } else {
+        alert("Cannot toggle: Lecture is not unlocked for this student.");
+      }
+    } catch (err) {
+      console.error("Error toggling enabled status:", err);
+      alert("Failed to update enabled status.");
+    } finally {
+      setUpdatingStudent(null);
+    }
+  };
+
   const getFilteredStudents = () => {
+    let filtered = students;
+
+    // Apply status filter
     switch (filter) {
       case "completed":
-        return students.filter((s) => s.quizCompleted);
+        filtered = filtered.filter((s) => s.quizCompleted);
+        break;
       case "unlocked":
       default:
-        return students.filter((s) => s.unlocked);
+        filtered = filtered.filter((s) => s.unlocked);
+        break;
     }
+
+    // Apply system filter
+    if (systemFilter !== "all") {
+      filtered = filtered.filter((s) => s.system === systemFilter);
+    }
+
+    return filtered;
   };
 
   const getPercentage = (earned: number, totalPossibleMarks: number) => {
@@ -228,6 +300,8 @@ export default function StudentsPage() {
     const totalEnrolled = students.length;
     const totalInYear = allYearStudents.length;
     const completed = students.filter((s) => s.quizCompleted).length;
+    const centerStudents = students.filter((s) => s.system === "center").length;
+    const onlineStudents = students.filter((s) => s.system === "online").length;
     const averageScore =
       students
         .filter((s) => s.earnedMarks !== undefined && s.totalPossibleMark)
@@ -240,6 +314,8 @@ export default function StudentsPage() {
       totalEnrolled,
       totalInYear,
       completed,
+      centerStudents,
+      onlineStudents,
       averageScore: Math.round(averageScore),
     };
   };
@@ -316,30 +392,72 @@ export default function StudentsPage() {
       {/* Students List */}
       <div className={styles.studentsCard}>
         {/* Filters */}
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-          {[
-            { key: "unlocked", label: "Enrolled", count: stats.totalEnrolled },
-            { key: "completed", label: "Completed", count: stats.completed },
-          ].map(({ key, label, count }) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key as "unlocked" | "completed")}
-              className={`${styles.filterButton} ${
-                filter === key ? styles.active : styles.inactive
-              }`}
-            >
-              {label} ({count})
-            </button>
-          ))}
+        <div
+          style={{
+            display: "flex",
+            gap: "1rem",
+            marginBottom: "1rem",
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", gap: "1rem" }}>
+            {[
+              {
+                key: "unlocked",
+                label: "Enrolled",
+                count: stats.totalEnrolled,
+              },
+              { key: "completed", label: "Completed", count: stats.completed },
+            ].map(({ key, label, count }) => (
+              <button
+                key={key}
+                onClick={() => setFilter(key as "unlocked" | "completed")}
+                className={`${styles.filterButton} ${
+                  filter === key ? styles.active : styles.inactive
+                }`}
+              >
+                {label} ({count})
+              </button>
+            ))}
+          </div>
+
+          <div
+            style={{
+              borderLeft: "2px solid var(--border)",
+              paddingLeft: "1rem",
+              display: "flex",
+              gap: "1rem",
+            }}
+          >
+            {[
+              { key: "all", label: "All Systems", count: stats.totalEnrolled },
+              { key: "center", label: "Center", count: stats.centerStudents },
+              { key: "online", label: "Online", count: stats.onlineStudents },
+            ].map(({ key, label, count }) => (
+              <button
+                key={key}
+                onClick={() =>
+                  setSystemFilter(key as "all" | "center" | "online")
+                }
+                className={`${styles.filterButton} ${
+                  systemFilter === key ? styles.active : styles.inactive
+                }`}
+              >
+                {label} ({count})
+              </button>
+            ))}
+          </div>
         </div>
 
         <table className={styles.studentsTable}>
           <thead>
             <tr>
               <th>Students ({filteredStudents.length})</th>
-              <th>Status</th>
+              <th>System</th>
+              <th>Access</th>
               <th>Attempts</th>
               <th>Score</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -372,20 +490,68 @@ export default function StudentsPage() {
                   </div>
                 </td>
 
-                {/* Status */}
-                <td style={{ fontSize: "2rem" }}>
-                  {student.quizCompleted ? (
-                    <IoCheckmarkCircle style={{ color: "var(--green)" }} />
-                  ) : (
-                    <IoTime
-                      style={{
-                        backgroundColor: "var(--red)",
-                        color: "var(--dark)",
-                        borderRadius: "var(--border-radius)",
-                        padding: "2px",
-                      }}
-                    />
-                  )}
+                {/* System Type */}
+                <td>
+                  <span
+                    style={{
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: "var(--border-radius)",
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      textTransform: "uppercase",
+                      backgroundColor:
+                        student.system === "center"
+                          ? "rgba(59, 130, 246, 0.2)"
+                          : student.system === "online"
+                          ? "rgba(168, 85, 247, 0.2)"
+                          : "rgba(107, 114, 128, 0.2)",
+                      color:
+                        student.system === "center"
+                          ? "rgb(59, 130, 246)"
+                          : student.system === "online"
+                          ? "rgb(168, 85, 247)"
+                          : "rgb(107, 114, 128)",
+                    }}
+                  >
+                    {student.system || "N/A"}
+                  </span>
+                </td>
+
+                {/* Access Toggle */}
+                <td onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={(e) =>
+                      handleToggleEnabled(
+                        student.studentId,
+                        student.isEnabled ?? true,
+                        e
+                      )
+                    }
+                    disabled={updatingStudent === student.studentId}
+                    style={{
+                      backgroundColor:
+                        student.isEnabled !== false
+                          ? "var(--green)"
+                          : "var(--red)",
+                      color: "white",
+                      padding: "0.5rem 1rem",
+                      borderRadius: "var(--border-radius)",
+                      border: "none",
+                      cursor:
+                        updatingStudent === student.studentId
+                          ? "wait"
+                          : "pointer",
+                      opacity: updatingStudent === student.studentId ? 0.6 : 1,
+                      fontSize: "0.875rem",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {updatingStudent === student.studentId
+                      ? "Updating..."
+                      : student.isEnabled !== false
+                      ? "Enabled"
+                      : "Disabled"}
+                  </button>
                 </td>
 
                 {/* Attempts */}
@@ -424,6 +590,22 @@ export default function StudentsPage() {
                         </div>
                       </div>
                     )}
+                </td>
+
+                {/* Status */}
+                <td style={{ fontSize: "2rem" }}>
+                  {student.quizCompleted ? (
+                    <IoCheckmarkCircle style={{ color: "var(--green)" }} />
+                  ) : (
+                    <IoTime
+                      style={{
+                        backgroundColor: "var(--red)",
+                        color: "var(--dark)",
+                        borderRadius: "var(--border-radius)",
+                        padding: "2px",
+                      }}
+                    />
+                  )}
                 </td>
               </tr>
             ))}
