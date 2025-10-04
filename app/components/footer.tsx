@@ -6,7 +6,7 @@ import { FaInstagram, FaFacebook, FaYoutube, FaTiktok } from "react-icons/fa";
 import { MdSunny } from "react-icons/md";
 import { IoLogoWhatsapp } from "react-icons/io";
 import { FaMoon } from "react-icons/fa";
-import { MdOutlineLightMode } from "react-icons/md"; // optional extra icon
+
 export default function Footer() {
   useEffect(() => {
     // Check for a saved theme in localStorage
@@ -86,7 +86,13 @@ export default function Footer() {
 
           <p>© 2025 Master Biology</p>
         </div>
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
           <div className={styles.toggleWrapper}>
             <button
               onClick={() => toggleTheme("light")}

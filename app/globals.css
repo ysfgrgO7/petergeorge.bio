@@ -95,10 +95,10 @@ select {
   text-align: left;
   justify-content: left;
   border-radius: var(--border-radius);
-  border: 1px solid var(--dark);
+  border: 1px solid var(--darkgrey);
   box-sizing: border-box;
-  background-color: var(--white);
-  filter: brightness(1.05);
+  background-color: var(--grey);
+  color: var(--fg);
 }
 
 textarea {
