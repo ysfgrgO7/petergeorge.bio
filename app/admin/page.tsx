@@ -30,6 +30,7 @@ interface Lecture extends DocumentData {
   isHidden?: boolean;
   isEnabledCenter?: boolean;
   isEnabledOnline?: boolean;
+  isEnabledSchool?: boolean;
 }
 
 interface Course extends DocumentData {
@@ -130,7 +131,7 @@ export default function AdminDashboard() {
     courseId: string,
     lectureId: string,
     newEnabledStatus: boolean,
-    systemType: "center" | "online"
+    systemType: "center" | "online" | "school"
   ) => {
     try {
       const studentsRef = collection(db, "students");
@@ -371,6 +372,7 @@ export default function AdminDashboard() {
         isHidden: true,
         isEnabledCenter: true,
         isEnabledOnline: true,
+        isEnabledSchool: true,
       });
 
       setLectureTitle("");
@@ -511,6 +513,58 @@ export default function AdminDashboard() {
       );
       setModalMessage(
         "Failed to update lecture status for online students: " +
+          (error as Error).message
+      );
+      setShowModal(true);
+    } finally {
+      setUpdatingLecture(null);
+    }
+  };
+
+  const handleToggleLectureEnabledSchool = async (
+    courseId: string,
+    lectureId: string,
+    currentStatus: boolean
+  ) => {
+    const updateKey = `school_${lectureId}`;
+    setUpdatingLecture(updateKey);
+
+    try {
+      const lectureRef = doc(
+        db,
+        `years/${activeYearTab}/courses/${courseId}/lectures`,
+        lectureId
+      );
+
+      const newStatus = !currentStatus;
+
+      await updateDoc(lectureRef, {
+        isEnabledSchool: newStatus,
+      });
+
+      // Sync student progress to match the new status
+      const updatedCount = await syncStudentProgressForLecture(
+        activeYearTab,
+        courseId,
+        lectureId,
+        newStatus,
+        "school"
+      );
+
+      fetchLecturesForCourse(activeYearTab, courseId);
+      setModalMessage(
+        `Lecture status for School students updated to ${
+          newStatus ? "enabled" : "disabled"
+        }. ${updatedCount} school student progress records synced.`
+      );
+      setShowModal(true);
+    } catch (error: unknown) {
+      console.error(
+        "Error updating lecture status for school students:",
+        error
+      );
+      setModalMessage(
+        "Failed to update lecture status for school students: " +
           (error as Error).message
       );
       setShowModal(true);
@@ -835,6 +889,40 @@ export default function AdminDashboard() {
                                 ? "Updating..."
                                 : `Online: ${
                                     lecture.isEnabledOnline !== false
+                                      ? "Enabled"
+                                      : "Disabled"
+                                  }`}
+                            </button>
+
+                            <button
+                              disabled={
+                                updatingLecture === `school_${lecture.id}`
+                              }
+                              style={{
+                                backgroundColor:
+                                  updatingLecture === `school_${lecture.id}`
+                                    ? "grey"
+                                    : lecture.isEnabledSchool !== false
+                                    ? "var(--green)"
+                                    : "var(--red)",
+                                color: "white",
+                                cursor:
+                                  updatingLecture === `school_${lecture.id}`
+                                    ? "not-allowed"
+                                    : "pointer",
+                              }}
+                              onClick={() =>
+                                handleToggleLectureEnabledSchool(
+                                  course.id,
+                                  lecture.id,
+                                  lecture.isEnabledSchool !== false
+                                )
+                              }
+                            >
+                              {updatingLecture === `school_${lecture.id}`
+                                ? "Updating..."
+                                : `School: ${
+                                    lecture.isEnabledSchool !== false
                                       ? "Enabled"
                                       : "Disabled"
                                   }`}

@@ -20,10 +20,10 @@
   backdrop-filter: blur(2px);
 }
 
-.lectureCard:hover,
 .courseCard:hover {
   transform: scale(1.02);
   backdrop-filter: blur(0px);
+  cursor: pointer;
 }
 
 .courseDetail {
@@ -31,7 +31,6 @@
 }
 
 .courseCardDetails {
-  padding-top: 1rem;
   display: flex;
   align-items: center;
   flex-direction: row-reverse;
@@ -122,14 +121,14 @@
 .progressBar {
   width: 100%;
   height: 20px;
-  background-color: #e0e0e0;
+  background-color: var(--grey);
   border-radius: var(--border-radius);
   overflow: hidden;
 }
 
 .progressBarFill {
   height: 100%;
-  background-color: #4caf50;
+  background-color: var(--green);
   transition: width 0.5s ease-in-out;
   width: 0;
 }
@@ -205,7 +204,6 @@
   }
 
   .courseCardDetails {
-    padding-top: 1rem;
     display: flex;
     align-items: center;
     flex-direction: column;

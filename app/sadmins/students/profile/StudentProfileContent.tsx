@@ -4,7 +4,22 @@ import React, { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  updateDoc,
+  deleteField,
+} from "firebase/firestore";
+import {
+  MdEdit,
+  MdSave,
+  MdClose,
+  MdContentCopy,
+  MdCheck,
+  MdDelete,
+} from "react-icons/md";
 import styles from "./student-profile.module.css";
 
 interface StudentInfo {
@@ -21,8 +36,8 @@ interface StudentInfo {
   school: string;
   studentCode: string;
   uid: string;
-  createdAt: string;
   devices?: string[];
+  system?: string;
 }
 
 interface QuizData {
@@ -38,10 +53,169 @@ interface ProgressItem {
   isHidden: boolean;
 }
 
+function EditableField({
+  label,
+  value,
+  fieldKey,
+  onSave,
+  editable = true,
+}: {
+  label: string;
+  value: string;
+  fieldKey: string;
+  onSave: (field: string, newValue: string) => Promise<void>;
+  editable?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+
+  const handleSave = async () => {
+    await onSave(fieldKey, editValue);
+    setEditing(false);
+  };
+
+  return (
+    <div className={styles.infoItem}>
+      <strong>{label}:</strong>
+      {editing ? (
+        <div className={styles.editContainer}>
+          <input
+            type="text"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className={styles.editInput}
+          />
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button onClick={handleSave} title="Save">
+              <MdSave size={16} />
+            </button>
+            <button
+              style={{ backgroundColor: "var(--red)" }}
+              onClick={() => setEditing(false)}
+              title="Cancel"
+            >
+              <MdClose size={16} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.editContainer}>
+          <span>{value || "—"}</span>
+          {editable && (
+            <button onClick={() => setEditing(true)} title="Edit">
+              <MdEdit size={14} />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EditableSelect({
+  label,
+  value,
+  fieldKey,
+  options,
+  onSave,
+}: {
+  label: string;
+  value: string;
+  fieldKey: string;
+  options: { value: string; label: string }[];
+  onSave: (field: string, newValue: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+
+  const handleSave = async () => {
+    await onSave(fieldKey, editValue);
+    setEditing(false);
+  };
+
+  return (
+    <div className={styles.infoItem}>
+      <strong>{label}:</strong>
+      {editing ? (
+        <div className={styles.editContainer}>
+          <select
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+          >
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button onClick={handleSave} title="Save">
+              <MdSave size={16} />
+            </button>
+            <button
+              style={{ backgroundColor: "var(--red)" }}
+              onClick={() => setEditing(false)}
+              title="Cancel"
+            >
+              <MdClose size={16} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className={styles.editContainer}>
+          <span style={{ textTransform: "capitalize" }}>
+            {value || "Not set"}
+          </span>
+          <button onClick={() => setEditing(true)} title="Edit">
+            <MdEdit size={14} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReadonlyField({
+  label,
+  value,
+  copyable,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  copyable?: boolean;
+  onCopy?: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    onCopy?.();
+  };
+
+  return (
+    <div className={styles.infoItem}>
+      <div className={styles.editContainer}>
+        <strong>{label}:</strong>
+        {copyable && (
+          <button onClick={handleCopy} title={copied ? "Copied!" : "Copy"}>
+            {copied ? <MdCheck size={14} /> : <MdContentCopy size={14} />}
+          </button>
+        )}
+      </div>
+      <span>{value || "—"}</span>
+    </div>
+  );
+}
+
 export default function StudentProfileContent() {
   const searchParams = useSearchParams();
   const studentId = searchParams.get("id");
   const router = useRouter();
+
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
@@ -50,20 +224,13 @@ export default function StudentProfileContent() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user && user.email) {
-        // Check if user is admin
-        const adminDocRef = doc(db, "superAdmins", user.email);
-        const adminDocSnap = await getDoc(adminDocRef);
+      if (!user?.email) return router.push("/");
 
-        if (adminDocSnap.exists()) {
-          setIsAdmin(true);
-          await fetchStudentData();
-        } else {
-          router.push("/");
-        }
-      } else {
-        router.push("/");
-      }
+      const adminDoc = await getDoc(doc(db, "superAdmins", user.email));
+      if (!adminDoc.exists()) return router.push("/");
+
+      setIsAdmin(true);
+      await fetchStudentData();
     });
 
     return () => unsubscribe();
@@ -78,12 +245,7 @@ export default function StudentProfileContent() {
 
     try {
       setLoading(true);
-      setError("");
-
-      // Fetch student basic info
-      const studentDocRef = doc(db, "students", studentId);
-      const studentDoc = await getDoc(studentDocRef);
-
+      const studentDoc = await getDoc(doc(db, "students", studentId));
       if (!studentDoc.exists()) {
         setError("Student not found.");
         return;
@@ -92,192 +254,192 @@ export default function StudentProfileContent() {
       const studentData = studentDoc.data() as StudentInfo;
       setStudentInfo(studentData);
 
-      // Fetch student progress
-      const progressCollectionRef = collection(
-        db,
-        "students",
-        studentId,
-        "progress"
+      const progressSnapshot = await getDocs(
+        collection(db, "students", studentId, "progress")
       );
 
-      const progressSnapshot = await getDocs(progressCollectionRef);
+      const items: ProgressItem[] = await Promise.all(
+        progressSnapshot.docs.map(async (docSnap) => {
+          const quiz = docSnap.data() as QuizData;
+          const [year, courseId, lectureId] = docSnap.id.split("_");
 
-      if (!progressSnapshot.empty) {
-        const items: ProgressItem[] = await Promise.all(
-          progressSnapshot.docs.map(async (docSnap) => {
-            const quiz = docSnap.data() as QuizData;
-            const docId = docSnap.id;
-
-            const [year, courseId, lectureId] = docId.split("_");
-
-            // Fetch course title
-            let courseTitle = courseId;
-            try {
-              const courseDocRef = doc(db, "years", year, "courses", courseId);
-              const courseDoc = await getDoc(courseDocRef);
-              if (courseDoc.exists()) {
-                courseTitle = courseDoc.data().title || courseId;
-              }
-            } catch (err) {
-              console.warn("Failed to fetch course title for", courseId, err);
+          let courseTitle = courseId;
+          try {
+            const courseDoc = await getDoc(
+              doc(db, "years", year, "courses", courseId)
+            );
+            if (courseDoc.exists()) {
+              courseTitle = courseDoc.data().title || courseId;
             }
+          } catch {}
 
-            // Fetch lecture details
-            let lectureTitle = lectureId;
-            let isHidden = false;
-            try {
-              const lectureDocRef = doc(
-                db,
-                "years",
-                year,
-                "courses",
-                courseId,
-                "lectures",
-                lectureId
-              );
-              const lectureDoc = await getDoc(lectureDocRef);
-              if (lectureDoc.exists()) {
-                const data = lectureDoc.data();
-                lectureTitle = data.title || lectureId;
-                isHidden = !!data.isHidden;
-              }
-            } catch (err) {
-              console.warn("Failed to fetch lecture title for", lectureId, err);
+          let lectureTitle = lectureId;
+          let isHidden = false;
+          try {
+            const lectureDoc = await getDoc(
+              doc(db, "years", year, "courses", courseId, "lectures", lectureId)
+            );
+            if (lectureDoc.exists()) {
+              const data = lectureDoc.data();
+              lectureTitle = data.title || lectureId;
+              isHidden = !!data.isHidden;
             }
+          } catch {}
 
-            return {
-              id: docId,
-              quiz,
-              courseTitle,
-              lectureTitle,
-              isHidden,
-            };
-          })
-        );
+          return {
+            id: docSnap.id,
+            quiz,
+            courseTitle,
+            lectureTitle,
+            isHidden,
+          };
+        })
+      );
 
-        // Filter out hidden lectures
-        const visibleItems = items.filter((item) => !item.isHidden);
-        setProgressData(visibleItems);
-      }
+      setProgressData(items.filter((i) => !i.isHidden));
     } catch (err) {
-      console.error("Error fetching student data:", err);
-      setError("Failed to load student data. Please try again.");
+      console.error(err);
+      setError("Failed to load student data.");
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateOverallStats = () => {
-    if (progressData.length === 0)
-      return { totalQuizzes: 0, totalMarks: 0, earnedMarks: 0, percentage: 0 };
-
-    const totalQuizzes = progressData.length;
-    const totalMarks = progressData.reduce(
-      (sum, item) => sum + item.quiz.totalPossibleMarks,
-      0
-    );
-    const earnedMarks = progressData.reduce(
-      (sum, item) => sum + item.quiz.earnedMarks,
-      0
-    );
-    const percentage =
-      totalMarks > 0 ? Math.round((earnedMarks / totalMarks) * 100) : 0;
-
-    return { totalQuizzes, totalMarks, earnedMarks, percentage };
+  const handleSave = async (field: string, value: string) => {
+    if (!studentId || !studentInfo) return;
+    await updateDoc(doc(db, "students", studentId), { [field]: value });
+    setStudentInfo({ ...studentInfo, [field]: value });
   };
 
-  const stats = calculateOverallStats();
+  const handleDeleteDevices = async () => {
+    if (!studentId || !studentInfo) return;
+    const confirmed = window.confirm("Delete all registered devices?");
+    if (!confirmed) return;
 
-  if (loading) {
+    await updateDoc(doc(db, "students", studentId), { devices: deleteField() });
+    setStudentInfo({ ...studentInfo, devices: undefined });
+  };
+
+  if (loading)
     return (
       <div className={styles.center}>
         <p>Loading student profile...</p>
       </div>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
       <div className={styles.center}>
         <p className={styles.error}>{error}</p>
-        <button onClick={() => router.push("/students")}>Go Back</button>
+        <button onClick={() => router.push("/sadmins/students")}>
+          Go Back
+        </button>
       </div>
     );
-  }
 
-  if (!studentInfo) {
+  if (!studentInfo)
     return (
       <div className={styles.center}>
         <p>Student not found.</p>
-        <button onClick={() => router.push("/students")}>Go Back</button>
+        <button onClick={() => router.push("/sadmins/students")}>
+          Go Back
+        </button>
       </div>
     );
-  }
+
+  const personalFields = [
+    { key: "firstName", label: "First Name" },
+    { key: "secondName", label: "Second Name" },
+    { key: "thirdName", label: "Third Name" },
+    { key: "forthName", label: "Fourth Name" },
+    { key: "email", label: "Email" },
+    { key: "school", label: "School" },
+    { key: "studentPhone", label: "Student Phone" },
+    { key: "fatherPhone", label: "Father's Phone" },
+    { key: "motherPhone", label: "Mother's Phone" },
+  ];
 
   return (
     <div className="wrapper">
       <div className={styles.header}>
-        <button onClick={() => router.push("/students")}>
-          ← Back to Students
-        </button>
+        <button onClick={() => router.push("/sadmins/students")}>← Back</button>
         <h1>Student Profile</h1>
       </div>
 
-      {/* Student Information */}
+      {/* Personal Info */}
       <div className={styles.section}>
         <h2>Personal Information</h2>
         <div className={styles.infoGrid}>
-          <div className={styles.infoItem}>
-            <strong>Full Name:</strong>
-            <span>
-              {studentInfo.firstName} {studentInfo.secondName}{" "}
-              {studentInfo.thirdName} {studentInfo.forthName}
-            </span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>Student Code:</strong>
-            <span>{studentInfo.studentCode}</span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>Student UID:</strong>
-            <span>{studentInfo.uid}</span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>Email:</strong>
-            <span>{studentInfo.email}</span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>Gender:</strong>
-            <span>{studentInfo.gender}</span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>Year:</strong>
-            <span>{studentInfo.year.toUpperCase()}</span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>School:</strong>
-            <span>{studentInfo.school}</span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>Student Phone:</strong>
-            <span>{studentInfo.studentPhone}</span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>Fathers Phone:</strong>
-            <span>{studentInfo.fatherPhone}</span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>Mothers Phone:</strong>
-            <span>{studentInfo.motherPhone}</span>
-          </div>
-          <div className={styles.infoItem}>
-            <strong>Registration Date:</strong>
-            <span>{new Date(studentInfo.createdAt).toLocaleDateString()}</span>
-          </div>
-          {studentInfo.devices && studentInfo.devices.length > 0 && (
+          {personalFields.map(({ key, label }) => (
+            <EditableField
+              key={key}
+              label={label}
+              value={
+                Array.isArray(studentInfo[key as keyof StudentInfo])
+                  ? (studentInfo[key as keyof StudentInfo] as string[]).join(
+                      ", "
+                    )
+                  : (studentInfo[key as keyof StudentInfo] as string) || ""
+              }
+              fieldKey={key}
+              onSave={handleSave}
+            />
+          ))}
+
+          <EditableSelect
+            label="Gender"
+            fieldKey="gender"
+            value={studentInfo.gender}
+            onSave={handleSave}
+            options={[
+              { value: "male", label: "Male" },
+              { value: "female", label: "Female" },
+            ]}
+          />
+
+          <EditableSelect
+            label="System"
+            fieldKey="system"
+            value={studentInfo.system || "online"}
+            onSave={handleSave}
+            options={[
+              { value: "online", label: "Online" },
+              { value: "center", label: "Center" },
+              { value: "school", label: "School" },
+            ]}
+          />
+
+          <EditableSelect
+            label="Year"
+            fieldKey="year"
+            value={studentInfo.year}
+            onSave={handleSave}
+            options={[
+              { value: "year1", label: "Year 1" },
+              { value: "year3", label: "Year 3" },
+            ]}
+          />
+
+          <ReadonlyField
+            label="Student Code"
+            value={studentInfo.studentCode}
+            copyable
+          />
+          <ReadonlyField label="UID" value={studentInfo.uid} copyable />
+
+          {studentInfo.devices && (
             <div className={styles.infoItem}>
               <strong>Devices:</strong>
-              <span>{studentInfo.devices.length} device(s)</span>
+              <div className={styles.editContainer}>
+                <span>{studentInfo.devices.length} device(s)</span>
+                <button
+                  style={{ backgroundColor: "var(--red)" }}
+                  onClick={handleDeleteDevices}
+                  title="Delete Devices"
+                >
+                  <MdDelete size={14} />
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -286,7 +448,7 @@ export default function StudentProfileContent() {
       {/* Quiz Results */}
       <div className={styles.section}>
         <h2>Quiz Results</h2>
-        {progressData.length > 0 ? (
+        {progressData.length ? (
           <table className={styles.table}>
             <thead>
               <tr>
@@ -298,7 +460,7 @@ export default function StudentProfileContent() {
             </thead>
             <tbody>
               {progressData.map((item) => {
-                const percentage = Math.round(
+                const pct = Math.round(
                   (item.quiz.earnedMarks / item.quiz.totalPossibleMarks) * 100
                 );
                 return (
@@ -311,14 +473,14 @@ export default function StudentProfileContent() {
                     <td>
                       <span
                         className={`${styles.percentage} ${
-                          percentage >= 70
+                          pct >= 70
                             ? styles.good
-                            : percentage >= 50
+                            : pct >= 50
                             ? styles.average
                             : styles.poor
                         }`}
                       >
-                        {percentage}%
+                        {pct}%
                       </span>
                     </td>
                   </tr>
@@ -328,7 +490,7 @@ export default function StudentProfileContent() {
           </table>
         ) : (
           <p className={styles.empty}>
-            This student hasnt completed any quizzes yet.
+            This student hasn’t completed any quizzes yet.
           </p>
         )}
       </div>

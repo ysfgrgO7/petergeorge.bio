@@ -155,7 +155,9 @@ export default function CoursesPage() {
           ) : (
             Object.keys(groupedCourses).map((year) => (
               <div key={year}>
-                <div style={{ display: "flex", gap: "5px", alignItems: "center" }} >
+                <div
+                  style={{ display: "flex", gap: "5px", alignItems: "center" }}
+                >
                   {isHalloween && (
                     <img
                       src="/hallo.svg"
@@ -179,7 +181,11 @@ export default function CoursesPage() {
                 </div>
                 <br />
                 {groupedCourses[year].map((course) => (
-                  <div key={course.id} className={styles.courseCard}>
+                  <div
+                    onClick={() => handleCourseClick(course)}
+                    key={course.id}
+                    className={styles.courseCard}
+                  >
                     <div className={styles.courseCardDetails}>
                       <div className={styles.thumbnailContainer}>
                         {course.thumbnailUrl && !imageErrors[course.id] ? (

@@ -69,6 +69,7 @@ function LecturesContent() {
   const { isDef, isHalloween, isXmas, isRamadan } = useTheme();
   const [courseLectures, setCourseLectures] = useState<Lecture[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [studentSystem, setStudentSystem] = useState<string>("");
   const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>(
     {}
   );
@@ -163,7 +164,51 @@ function LecturesContent() {
     (lecture: Lecture, index: number) => {
       const progress = progressMap[getProgressKey(lecture.id)];
       const previousLecture = courseLectures[index - 1];
+      const isSchoolSystem = studentSystem.toLowerCase() === "school";
 
+      // For school system, check only homework and quiz completion
+      if (isSchoolSystem) {
+        // First lecture is always unlocked for school students
+        if (index === 0) {
+          return {
+            isLocked: false,
+            canUnlockWithCode: false,
+            lockReason: null,
+          };
+        }
+
+        const previousProgress =
+          progressMap[getProgressKey(previousLecture.id)];
+        const previousHomeworkProgress =
+          homeworkProgressMap[getProgressKey(previousLecture.id)];
+
+        const isPreviousQuizCompleted =
+          (!previousLecture.hasQuiz || previousProgress?.quizCompleted) ??
+          false;
+        const isPreviousHomeworkCompleted =
+          (!previousLecture.hasHomework ||
+            previousHomeworkProgress?.homeworkCompleted) ??
+          false;
+
+        const isLocked =
+          !isPreviousQuizCompleted || !isPreviousHomeworkCompleted;
+
+        let lockReason = null;
+        if (!isPreviousQuizCompleted) {
+          lockReason = "Complete the quiz for the previous lecture to unlock.";
+        } else if (!isPreviousHomeworkCompleted) {
+          lockReason =
+            "Complete the homework for the previous lecture to unlock.";
+        }
+
+        return {
+          isLocked,
+          canUnlockWithCode: false,
+          lockReason,
+        };
+      }
+
+      // For non-school systems, use code-based unlocking
       // First lecture is always unlockable with code
       if (index === 0) {
         return {
@@ -217,7 +262,13 @@ function LecturesContent() {
         lockReason,
       };
     },
-    [courseLectures, progressMap, homeworkProgressMap, getProgressKey]
+    [
+      courseLectures,
+      progressMap,
+      homeworkProgressMap,
+      getProgressKey,
+      studentSystem,
+    ]
   );
 
   // Get lecture URL based on state
@@ -240,15 +291,27 @@ function LecturesContent() {
     [year, courseId]
   );
 
-  // Auth effect
+  // Auth effect - Fetch student system
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         router.push("/login");
         return;
       }
       setUser(currentUser);
+
+      // Fetch student system
+      try {
+        const studentRef = doc(db, "students", currentUser.uid);
+        const studentSnap = await getDoc(studentRef);
+        if (studentSnap.exists()) {
+          const studentData = studentSnap.data();
+          setStudentSystem(studentData.system || "");
+        }
+      } catch (error) {
+        console.error("Error fetching student system:", error);
+      }
     });
     return () => unsubscribe();
   }, [router]);
@@ -578,7 +641,8 @@ function LecturesContent() {
 
       const maxAttemptsReached = (progress.attempts || 0) >= MAX_ATTEMPTS;
       const quizCompleted = progress.quizCompleted;
-      const hasAttempted = progress.earnedMarks !== undefined;
+      const hasAttempted =
+        progress.earnedMarks !== undefined && progress.earnedMarks !== null;
 
       if (maxAttemptsReached && !quizCompleted) {
         return null; // No button for max attempts reached
@@ -669,7 +733,12 @@ function LecturesContent() {
                 }`}
               >
                 <h3>
-                  {isLocked ? <IoLockClosed /> : <IoLockOpen />} {lecture.title}
+                  {isLocked ? (
+                    <IoLockClosed style={{ color: "var(--red)" }} />
+                  ) : (
+                    <IoLockOpen style={{ color: "var(--green)" }} />
+                  )}{" "}
+                  {lecture.title}
                 </h3>
 
                 {isLocked ? (

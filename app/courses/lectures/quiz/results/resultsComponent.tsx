@@ -62,27 +62,24 @@ export default function QuizResults() {
   const [lectureData, setLectureData] = useState<LectureData | null>(null);
 
   // Function to get lecture URL
-  const getLectureUrl = () => {
+  const getCourseUrl = () => {
     if (!year || !courseId || !lectureId || !lectureData) {
       return "/courses";
     }
 
-    const baseParams = `year=${year}&courseId=${courseId}&lectureId=${lectureId}`;
+    const baseParams = `year=${year}&courseId=${courseId}`;
+    // http://localhost:3000/courses/lectures?year=year1&courseId=RKr56CGDm3bkRIdY3OqY
 
     if (lectureData.odyseeName && lectureData.odyseeId && lectureData.title) {
-      return `/courses/lectures/lecture?${baseParams}&odyseeName=${
-        lectureData.odyseeName
-      }&odyseeId=${lectureData.odyseeId}&title=${encodeURIComponent(
-        lectureData.title
-      )}`;
+      return `/courses/lectures?${baseParams}`;
     }
 
     // Fallback to lectures page if we don't have all the needed data
     return `/courses/lectures?year=${year}&courseId=${courseId}`;
   };
 
-  const handleBackToLecture = () => {
-    const lectureUrl = getLectureUrl();
+  const handleBackToCourse = () => {
+    const lectureUrl = getCourseUrl();
     router.push(lectureUrl);
   };
 
@@ -335,10 +332,10 @@ export default function QuizResults() {
         <h1>Quiz Results</h1>
         <p>No results found. Please complete the quiz first.</p>
         <button
-          onClick={handleBackToLecture}
+          onClick={handleBackToCourse}
           className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
         >
-          Back to Lecture
+          Back to Course
         </button>
       </div>
     );
@@ -351,10 +348,10 @@ export default function QuizResults() {
     <div className={styles.wrapper}>
       <br />
       <button
-        onClick={handleBackToLecture}
+        onClick={handleBackToCourse}
         className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
       >
-        Back to Lecture
+        Back to Course
       </button>
       <br />
       <br />
@@ -407,10 +404,10 @@ export default function QuizResults() {
       )}
 
       <button
-        onClick={handleBackToLecture}
+        onClick={handleBackToCourse}
         className="mt-8 px-6 py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-300 ease-in-out"
       >
-        Back to Lecture
+        Back to Course
       </button>
     </div>
   );

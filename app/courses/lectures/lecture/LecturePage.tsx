@@ -47,7 +47,7 @@ interface StudentData {
   studentCode?: string;
   firstName?: string;
   secondName?: string;
-  system?: "center" | "online";
+  system?: "center" | "online" | "school";
 }
 
 export default function LecturePage() {
@@ -128,6 +128,8 @@ export default function LecturePage() {
               lectureLevelEnabled = lectureData.isEnabledCenter !== false;
             } else if (currentStudentData?.system === "online") {
               lectureLevelEnabled = lectureData.isEnabledOnline !== false;
+            } else if (currentStudentData?.system === "school") {
+              lectureLevelEnabled = lectureData.isEnabledSchool !== false;
             }
           }
 

@@ -5,15 +5,22 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { db, auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  updateDoc,
+} from "firebase/firestore";
 import styles from "./students.module.css";
 
 interface StudentData {
-  uid: string; // Added uid to identify the student
+  uid: string;
   firstName: string;
   secondName: string;
   thirdName: string;
   forthName: string;
+  system: string;
   studentPhone: string;
   fatherPhone: string;
   motherPhone: string;
@@ -28,6 +35,10 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<StudentData[]>([]);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  // Define available systems
+  const systemOptions = ["center", "online", "school"];
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -63,11 +74,12 @@ export default function StudentsPage() {
           (doc) => {
             const data = doc.data() as StudentData;
             return {
-              uid: doc.id, // Use document ID as uid
+              uid: doc.id,
               firstName: data.firstName || "",
               secondName: data.secondName || "",
               thirdName: data.thirdName || "",
               forthName: data.forthName || "",
+              system: data.system || "",
               studentPhone: data.studentPhone || "",
               fatherPhone: data.fatherPhone || "",
               motherPhone: data.motherPhone || "",
@@ -96,6 +108,29 @@ export default function StudentsPage() {
 
     fetchStudents();
   }, []);
+
+  // Handle system change
+  const handleSystemChange = async (uid: string, newSystem: string) => {
+    setUpdating(uid);
+    try {
+      const studentRef = doc(db, "students", uid);
+      await updateDoc(studentRef, {
+        system: newSystem,
+      });
+
+      // Update local state
+      setStudents((prevStudents) =>
+        prevStudents.map((student) =>
+          student.uid === uid ? { ...student, system: newSystem } : student
+        )
+      );
+    } catch (err) {
+      console.error("Error updating system:", err);
+      alert("Failed to update system. Please try again.");
+    } finally {
+      setUpdating(null);
+    }
+  };
 
   // group students by year
   const grouped: Record<string, StudentData[]> = {};
@@ -153,6 +188,7 @@ export default function StudentsPage() {
                 <thead>
                   <tr>
                     <th>Full Name</th>
+                    <th>System</th>
                     <th>Gender</th>
                     <th>Student Phone</th>
                     <th>Fathers Phone</th>
@@ -170,6 +206,36 @@ export default function StudentsPage() {
                           {student.firstName} {student.secondName}{" "}
                           {student.thirdName} {student.forthName}
                         </Link>
+                      </td>
+                      <td>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                          }}
+                        >
+                          {student.system}
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleSystemChange(student.uid, e.target.value);
+                              }
+                            }}
+                            disabled={updating === student.uid}
+                            className={styles.systemDropdown}
+                          >
+                            <option value="">Change</option>
+                            {systemOptions
+                              .filter((option) => option !== student.system)
+                              .map((option) => (
+                                <option key={option} value={option}>
+                                  {option}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
                       </td>
                       <td>{student.gender}</td>
                       <td>{student.studentPhone}</td>
