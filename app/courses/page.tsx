@@ -158,26 +158,15 @@ export default function CoursesPage() {
                 <div
                   style={{ display: "flex", gap: "5px", alignItems: "center" }}
                 >
-                  {isHalloween && (
-                    <img
-                      src="/hallo.svg"
-                      alt="Halloween Icon"
-                      width={38}
-                      height={38}
-                    />
-                  )}
+                  {isHalloween && <h1>🎃</h1>}
+                  {isXmas && <h1>🎄</h1>}
+                  {isRamadan && <h1>🌙</h1>}
                   <h2 className={styles.yearTitle}>
                     {year.replace("year", "Year ")}
                   </h2>
-
-                  {isHalloween && (
-                    <img
-                      src="/hallo.svg"
-                      alt="Halloween Icon"
-                      width={38}
-                      height={38}
-                    />
-                  )}
+                  {isHalloween && <h1>🎃</h1>}
+                  {isXmas && <h1>🎄</h1>}
+                  {isRamadan && <h1>🌙</h1>}
                 </div>
                 <br />
                 {groupedCourses[year].map((course) => (

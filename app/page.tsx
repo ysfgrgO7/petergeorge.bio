@@ -237,6 +237,17 @@ export default function Home() {
                       />
                     </span>
                   )}
+
+                  {isXmas && (
+                    <span style={{ fontSize: "10rem" }}>
+                      <Image
+                        src="/xmasHat.png"
+                        alt="Christmas"
+                        width={155}
+                        height={140}
+                      />
+                    </span>
+                  )}
                   {btn.label}
                 </button>
               );

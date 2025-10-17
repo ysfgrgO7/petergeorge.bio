@@ -261,6 +261,17 @@ export default function Navbar({
               className={styles.logo}
             />
           )}
+
+          {isXmas && (
+            <Image
+              src="/xmasHat.png"
+              alt="LOGO"
+              width={55}
+              height={45}
+              draggable={false}
+              className={styles.logo}
+            />
+          )}
           <div className={styles.logo}>Master Biology</div>
         </div>
       </div>
@@ -283,6 +294,8 @@ export default function Navbar({
             backgroundColor: "transparent",
             color: "var(--white)",
             border: "none",
+            display: "flex",
+            justifyContent: "center",
           }}
           onClick={() => router.push("/")}
           title="Home"
@@ -307,7 +320,20 @@ export default function Navbar({
             />
           )}
 
-          {!isCollapsed && <div className={styles.logo}>Master Biology</div>}
+          {isXmas && (
+            <Image
+              src="/LogoChristmas.png"
+              alt="LOGO"
+              width={90}
+              height={120}
+              draggable={false}
+              className={styles.logo}
+            />
+          )}
+
+          {!isXmas && !isCollapsed && (
+            <div className={styles.logo}>Master Biology</div>
+          )}
         </button>
         <br />
 

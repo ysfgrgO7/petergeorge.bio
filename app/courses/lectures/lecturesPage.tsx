@@ -691,13 +691,13 @@ function LecturesContent() {
       </button>
 
       <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-        {isHalloween && (
-          <img src="/hallo.svg" alt="Halloween Icon" width={38} height={38} />
-        )}
+        {isHalloween && <h1>🎃</h1>}
+        {isXmas && <h1>🎄</h1>}
+        {isRamadan && <h1>🌙</h1>}
         <h1>Lectures</h1>
-        {isHalloween && (
-          <img src="/hallo.svg" alt="Halloween Icon" width={38} height={38} />
-        )}
+        {isHalloween && <h1>🎃</h1>}
+        {isXmas && <h1>🎄</h1>}
+        {isRamadan && <h1>🌙</h1>}
       </div>
 
       {totalQuizzes > 0 && (

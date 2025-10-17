@@ -238,23 +238,20 @@ export default function ProgressPage() {
     <div className="wrapper">
       {studentInfo && (
         <div className={styles.section}>
-          <h1>Personal Information</h1>
+          <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+            {isHalloween && <h1>🎃</h1>}
+            {isXmas && <h1>🎄</h1>}
+            {isRamadan && <h1>🌙</h1>}
+            <h1>Personal Information</h1>
+          </div>
           <div className={styles.infoGrid}>
             {infoItems.map((item, idx) =>
               item ? (
                 <div key={idx} className={styles.infoItem}>
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 6 }}
-                  >
-                    {isHalloween && (
-                      <Image
-                        src="/hallo.svg"
-                        alt="Halloween Icon"
-                        width={18}
-                        height={18}
-                        className={styles.bullet}
-                      />
-                    )}
+                  <div style={{ display: "flex" }}>
+                    {isHalloween && <p>🎃</p>}
+                    {isXmas && <p>🎄</p>}
+                    {isRamadan && <p>🌙</p>}
                     <strong>{item.label}:</strong>
                   </div>
                   <span>{item.value}</span>
@@ -265,7 +262,12 @@ export default function ProgressPage() {
         </div>
       )}
 
-      <h1 className={styles.heading}>My Quiz Progress</h1>
+      <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+        {isHalloween && <h1>🎃</h1>}
+        {isXmas && <h1>🎄</h1>}
+        {isRamadan && <h1>🌙</h1>}
+        <h1 className={styles.heading}>My Quiz Progress</h1>
+      </div>
 
       {error ? (
         <p className={styles.error}>{error}</p>

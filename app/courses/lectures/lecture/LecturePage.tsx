@@ -13,7 +13,7 @@ import {
 import { db } from "@/lib/firebase";
 import { getLectureProgress } from "@/lib/studentProgress";
 import styles from "../../courses.module.css";
-
+import { useTheme } from "@/app/components/ThemeProvider";
 import { IoChevronBackCircleSharp } from "react-icons/io5";
 import { MdEditDocument } from "react-icons/md";
 
@@ -53,6 +53,8 @@ interface StudentData {
 export default function LecturePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const { isDef, isHalloween, isXmas, isRamadan } = useTheme();
 
   const year = searchParams.get("year");
   const courseId = searchParams.get("courseId");
@@ -339,7 +341,12 @@ export default function LecturePage() {
         <p>Loading details...</p>
       ) : (
         <>
-          <h1 className={styles.lectureTitle}>{lectureTitle}</h1>
+          <div style={{ display: "flex" }}>
+            {isHalloween && <h1>🎃</h1>}
+            {isXmas && <h1>🎄</h1>}
+            {isRamadan && <h1>🌙</h1>}
+            <h1 className={styles.lectureTitle}>{lectureTitle}</h1>
+          </div>
 
           {/* Main lecture video OR expired message */}
           <div className={styles.videoContainer}>
@@ -465,7 +472,12 @@ export default function LecturePage() {
           {(!hasHomework || homeworkCompleted) && homeworkVideos.length > 0 && (
             <>
               <section>
-                <h1>Related Videos</h1>
+                <div style={{ display: "flex" }}>
+                  {isHalloween && <h1>🎃</h1>}
+                  {isXmas && <h1>🎄</h1>}
+                  {isRamadan && <h1>🌙</h1>}
+                  <h1>Related Videos</h1>
+                </div>
                 {homeworkVideos.map((video) => (
                   <div
                     key={video.id}
@@ -508,6 +520,17 @@ export default function LecturePage() {
 
           {/* Sidebar info */}
           <div className={styles.quizSummaryFloating}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                fontSize: "1.7rem",
+              }}
+            >
+              {isHalloween && <h1>🎃</h1>}
+              {isXmas && <h1>🎄</h1>}
+              {isRamadan && <h1>🌙</h1>}
+            </div>
             <div>
               <p>
                 <strong>Course:</strong> {courseTitle || "N/A"}
