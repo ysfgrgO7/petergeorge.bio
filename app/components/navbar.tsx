@@ -272,6 +272,29 @@ export default function Navbar({
               className={styles.logo}
             />
           )}
+          {isRamadan && (
+            <div
+              style={{
+                position: "relative",
+                width: "65px",
+                height: "65px",
+                top: "0",
+              }}
+            >
+              <Image
+                src="/lantern.png"
+                alt="lantern"
+                fill
+                draggable={false}
+                className={styles.logo}
+                style={{
+                  objectFit: "cover",
+                  top: "0",
+                  left: "0",
+                }}
+              />
+            </div>
+          )}
           <div className={styles.logo}>Master Biology</div>
         </div>
       </div>
@@ -329,6 +352,29 @@ export default function Navbar({
               draggable={false}
               className={styles.logo}
             />
+          )}
+          {isRamadan && (
+            <div
+              style={{
+                position: "relative",
+                width: "120px",
+                height: "120px",
+                top: "0",
+              }}
+            >
+              <Image
+                src="/lantern.png"
+                alt="lantern"
+                fill
+                draggable={false}
+                className={styles.logo}
+                style={{
+                  objectFit: "cover",
+                  top: "0",
+                  left: "0",
+                }}
+              />
+            </div>
           )}
 
           {!isXmas && !isCollapsed && (

@@ -224,8 +224,45 @@ export default function Home() {
                   onClick={() => handleButtonClick(btn.year)}
                   className={styles.courseButton}
                 >
-                  <strong style={{ fontSize: "2rem" }}>{btn.title}</strong>
-                  {isDef && <Icon style={{ fontSize: "10rem" }} />}
+                  <div
+                    style={{
+                      position: "absolute",
+                      width: "100%",
+                      minHeight: "150px",
+                      top: "0px",
+                    }}
+                  >
+                    {isRamadan && (
+                      <Image
+                        src="/confeti.png"
+                        alt="Christmas"
+                        fill
+                        style={{
+                          objectFit: "cover",
+                        }}
+                      />
+                    )}
+                  </div>
+                  {!isRamadan && (
+                    <strong style={{ fontSize: "2rem", zIndex: 999 }}>
+                      {btn.title}
+                    </strong>
+                  )}
+                  {isRamadan && (
+                    <>
+                      <br />
+                      <br />
+                    </>
+                  )}
+                  {(isRamadan || isDef) && (
+                    <Icon style={{ fontSize: "10rem" }} />
+                  )}
+
+                  {isRamadan && (
+                    <strong style={{ fontSize: "2rem", zIndex: 999 }}>
+                      {btn.title}
+                    </strong>
+                  )}
 
                   {isHalloween && (
                     <span style={{ fontSize: "10rem" }}>
