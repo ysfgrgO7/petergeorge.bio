@@ -30,7 +30,6 @@ interface Lecture extends DocumentData {
   isHidden?: boolean;
   isEnabledCenter?: boolean;
   isEnabledOnline?: boolean;
-  isEnabledSchool?: boolean;
 }
 
 interface Course extends DocumentData {
@@ -372,7 +371,6 @@ export default function AdminDashboard() {
         isHidden: true,
         isEnabledCenter: true,
         isEnabledOnline: true,
-        isEnabledSchool: true,
       });
 
       setLectureTitle("");
@@ -524,24 +522,12 @@ export default function AdminDashboard() {
   const handleToggleLectureEnabledSchool = async (
     courseId: string,
     lectureId: string,
-    currentStatus: boolean
+    newStatus: boolean
   ) => {
     const updateKey = `school_${lectureId}`;
     setUpdatingLecture(updateKey);
 
     try {
-      const lectureRef = doc(
-        db,
-        `years/${activeYearTab}/courses/${courseId}/lectures`,
-        lectureId
-      );
-
-      const newStatus = !currentStatus;
-
-      await updateDoc(lectureRef, {
-        isEnabledSchool: newStatus,
-      });
-
       // Sync student progress to match the new status
       const updatedCount = await syncStudentProgressForLecture(
         activeYearTab,
@@ -893,7 +879,6 @@ export default function AdminDashboard() {
                                       : "Disabled"
                                   }`}
                             </button>
-
                             <button
                               disabled={
                                 updatingLecture === `school_${lecture.id}`
@@ -902,9 +887,7 @@ export default function AdminDashboard() {
                                 backgroundColor:
                                   updatingLecture === `school_${lecture.id}`
                                     ? "grey"
-                                    : lecture.isEnabledSchool !== false
-                                    ? "var(--green)"
-                                    : "var(--red)",
+                                    : "var(--blue)",
                                 color: "white",
                                 cursor:
                                   updatingLecture === `school_${lecture.id}`
@@ -915,17 +898,41 @@ export default function AdminDashboard() {
                                 handleToggleLectureEnabledSchool(
                                   course.id,
                                   lecture.id,
-                                  lecture.isEnabledSchool !== false
+                                  true
                                 )
                               }
                             >
                               {updatingLecture === `school_${lecture.id}`
                                 ? "Updating..."
-                                : `School: ${
-                                    lecture.isEnabledSchool !== false
-                                      ? "Enabled"
-                                      : "Disabled"
-                                  }`}
+                                : "Enable All School"}
+                            </button>
+
+                            <button
+                              disabled={
+                                updatingLecture === `school_${lecture.id}`
+                              }
+                              style={{
+                                backgroundColor:
+                                  updatingLecture === `school_${lecture.id}`
+                                    ? "grey"
+                                    : "var(--orange)",
+                                color: "white",
+                                cursor:
+                                  updatingLecture === `school_${lecture.id}`
+                                    ? "not-allowed"
+                                    : "pointer",
+                              }}
+                              onClick={() =>
+                                handleToggleLectureEnabledSchool(
+                                  course.id,
+                                  lecture.id,
+                                  false
+                                )
+                              }
+                            >
+                              {updatingLecture === `school_${lecture.id}`
+                                ? "Updating..."
+                                : "Disable All School"}
                             </button>
 
                             <button

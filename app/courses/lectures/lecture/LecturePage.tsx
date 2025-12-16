@@ -113,34 +113,8 @@ export default function LecturePage() {
         try {
           let isLectureEnabled = true;
 
-          // STEP 1: Check lecture-level enable/disable first
-          const lectureDocRef = doc(
-            db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}`
-          );
-          const lectureDocSnap = await getDoc(lectureDocRef);
-
-          let lectureLevelEnabled = true;
-
-          if (lectureDocSnap.exists()) {
-            const lectureData = lectureDocSnap.data();
-
-            // Check lecture-level based on student system
-            if (currentStudentData?.system === "center") {
-              lectureLevelEnabled = lectureData.isEnabledCenter !== false;
-            } else if (currentStudentData?.system === "online") {
-              lectureLevelEnabled = lectureData.isEnabledOnline !== false;
-            } else if (currentStudentData?.system === "school") {
-              lectureLevelEnabled = lectureData.isEnabledSchool !== false;
-            }
-          }
-
-          // STEP 2: Apply logic based on lecture-level status
-          if (lectureLevelEnabled) {
-            // If lecture-level is ENABLED, everyone can see it (ignore student progress isEnabled)
-            isLectureEnabled = true;
-          } else {
-            // If lecture-level is DISABLED, check student progress for exceptions
+          // SPECIAL CASE: School students check unlocked and isEnabled in progress
+          if (currentStudentData?.system === "school") {
             const progressDocRef = doc(
               db,
               "students",
@@ -153,17 +127,72 @@ export default function LecturePage() {
             if (progressDocSnap.exists()) {
               const progressData = progressDocSnap.data();
 
-              // Only check student-specific isEnabled if lecture is unlocked
-              if (progressData.unlocked === true) {
-                // Use student-specific isEnabled, default to false if not set
-                isLectureEnabled = progressData.isEnabled === true;
+              // School students need BOTH unlocked=true AND isEnabled=true
+              if (
+                progressData.unlocked === true &&
+                progressData.isEnabled !== false
+              ) {
+                isLectureEnabled = true;
               } else {
-                // Not unlocked, so disabled
                 isLectureEnabled = false;
               }
             } else {
-              // No progress document and lecture-level is disabled, so disabled
+              // No progress document for school student, so disabled
               isLectureEnabled = false;
+            }
+          } else {
+            // For center and online students, apply the normal logic
+
+            // STEP 1: Check lecture-level enable/disable first
+            const lectureDocRef = doc(
+              db,
+              `years/${year}/courses/${courseId}/lectures/${lectureId}`
+            );
+            const lectureDocSnap = await getDoc(lectureDocRef);
+
+            let lectureLevelEnabled = true;
+
+            if (lectureDocSnap.exists()) {
+              const lectureData = lectureDocSnap.data();
+
+              // Check lecture-level based on student system
+              if (currentStudentData?.system === "center") {
+                lectureLevelEnabled = lectureData.isEnabledCenter !== false;
+              } else if (currentStudentData?.system === "online") {
+                lectureLevelEnabled = lectureData.isEnabledOnline !== false;
+              }
+            }
+
+            // STEP 2: Apply logic based on lecture-level status
+            if (lectureLevelEnabled) {
+              // If lecture-level is ENABLED, everyone can see it (ignore student progress isEnabled)
+              isLectureEnabled = true;
+            } else {
+              // If lecture-level is DISABLED, check student progress for exceptions
+              const progressDocRef = doc(
+                db,
+                "students",
+                currentUser.uid,
+                "progress",
+                `${year}_${courseId}_${lectureId}`
+              );
+              const progressDocSnap = await getDoc(progressDocRef);
+
+              if (progressDocSnap.exists()) {
+                const progressData = progressDocSnap.data();
+
+                // Only check student-specific isEnabled if lecture is unlocked
+                if (progressData.unlocked === true) {
+                  // Use student-specific isEnabled, default to false if not set
+                  isLectureEnabled = progressData.isEnabled === true;
+                } else {
+                  // Not unlocked, so disabled
+                  isLectureEnabled = false;
+                }
+              } else {
+                // No progress document and lecture-level is disabled, so disabled
+                isLectureEnabled = false;
+              }
             }
           }
 
