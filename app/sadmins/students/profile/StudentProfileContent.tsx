@@ -10,6 +10,7 @@ import {
   collection,
   getDocs,
   updateDoc,
+  arrayRemove,
   deleteField,
 } from "firebase/firestore";
 import {
@@ -320,6 +321,21 @@ export default function StudentProfileContent() {
     setStudentInfo({ ...studentInfo, devices: undefined });
   };
 
+  const handleDeleteOneDevice = async (deviceToDelete: string) => {
+    if (!studentId || !studentInfo) return;
+    const confirmed = window.confirm("Delete this registered device?");
+    if (!confirmed) return;
+
+    await updateDoc(doc(db, "students", studentId), {
+      devices: arrayRemove(deviceToDelete),
+    });
+
+    setStudentInfo({
+      ...studentInfo,
+      devices: studentInfo.devices?.filter((d) => d !== deviceToDelete),
+    });
+  };
+
   if (loading)
     return (
       <div className={styles.center}>
@@ -430,16 +446,45 @@ export default function StudentProfileContent() {
           {studentInfo.devices && (
             <div className={styles.infoItem}>
               <strong>Devices:</strong>
-              <div className={styles.editContainer}>
-                <span>{studentInfo.devices.length} device(s)</span>
-                <button
-                  style={{ backgroundColor: "var(--red)" }}
-                  onClick={handleDeleteDevices}
-                  title="Delete Devices"
+              <ul>
+                <li
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
                 >
-                  <MdDelete size={14} />
-                </button>
-              </div>
+                  <span>
+                    {studentInfo.devices.length} device(s){" "}
+                    <button
+                      style={{ backgroundColor: "var(--red)" }}
+                      onClick={handleDeleteDevices}
+                      title="Delete Devices"
+                    >
+                      <MdDelete size={14} />
+                    </button>{" "}
+                  </span>
+                </li>
+                {studentInfo.devices.map((device, idx) => (
+                  <li
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span>{device}</span>
+                    <button
+                      style={{ backgroundColor: "var(--red)" }}
+                      onClick={() => handleDeleteOneDevice(device)}
+                      title="Delete Device"
+                    >
+                      <MdDelete size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </div>

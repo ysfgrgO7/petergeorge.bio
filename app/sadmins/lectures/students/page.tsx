@@ -13,12 +13,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import {
-  IoPeople,
-  IoCheckmarkCircle,
-  IoTime,
-  IoLockClosed,
-} from "react-icons/io5";
+import { IoPeople, IoCheckmarkCircle, IoTime } from "react-icons/io5";
 import styles from "./page.module.css";
 import { BiChevronLeft } from "react-icons/bi";
 import { FaChalkboardTeacher } from "react-icons/fa";
@@ -35,7 +30,7 @@ interface StudentProgress {
   lastAttempt?: string;
   studentYear?: string;
   isEnabled?: boolean;
-  system?: "center" | "online";
+  system?: "center" | "online" | "school";
 }
 
 interface LectureInfo {
@@ -55,9 +50,9 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<"unlocked" | "completed">("unlocked");
-  const [systemFilter, setSystemFilter] = useState<"all" | "center" | "online">(
-    "all"
-  );
+  const [systemFilter, setSystemFilter] = useState<
+    "all" | "center" | "online" | "school"
+  >("all");
   const [updatingStudent, setUpdatingStudent] = useState<string | null>(null);
 
   const courseId = searchParams.get("courseId");
@@ -176,7 +171,11 @@ export default function StudentsPage() {
           quizCompleted: false,
           attempts: 0,
           isEnabled: true,
-          system: studentData.system as "center" | "online" | undefined,
+          system: studentData.system as
+            | "center"
+            | "online"
+            | "school"
+            | undefined,
         };
 
         if (progressSnap.exists()) {
@@ -302,6 +301,7 @@ export default function StudentsPage() {
     const completed = students.filter((s) => s.quizCompleted).length;
     const centerStudents = students.filter((s) => s.system === "center").length;
     const onlineStudents = students.filter((s) => s.system === "online").length;
+    const schoolStudents = students.filter((s) => s.system === "school").length;
     const averageScore =
       students
         .filter((s) => s.earnedMarks !== undefined && s.totalPossibleMark)
@@ -316,6 +316,7 @@ export default function StudentsPage() {
       completed,
       centerStudents,
       onlineStudents,
+      schoolStudents,
       averageScore: Math.round(averageScore),
     };
   };
@@ -433,6 +434,7 @@ export default function StudentsPage() {
               { key: "all", label: "All Systems", count: stats.totalEnrolled },
               { key: "center", label: "Center", count: stats.centerStudents },
               { key: "online", label: "Online", count: stats.onlineStudents },
+              { key: "school", label: "School", count: stats.schoolStudents },
             ].map(({ key, label, count }) => (
               <button
                 key={key}
