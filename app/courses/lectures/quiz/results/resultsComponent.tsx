@@ -133,10 +133,7 @@ export default function QuizResults() {
               } else if (currentStudentData.system === "online") {
                 isLectureEnabled = lectureData?.isEnabledOnline !== false;
               }
-            } else {
-              isLectureEnabled = lectureData?.isEnabled ?? true;
             }
-
             if (!isLectureEnabled) {
               setIsExpired(true);
             }

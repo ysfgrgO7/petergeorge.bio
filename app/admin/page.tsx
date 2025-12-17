@@ -30,7 +30,6 @@ interface Lecture extends DocumentData {
   isHidden?: boolean;
   isEnabledCenter?: boolean;
   isEnabledOnline?: boolean;
-  isEnabledSchool?: boolean;
 }
 
 interface Course extends DocumentData {
@@ -138,6 +137,7 @@ export default function AdminDashboard() {
       const studentsSnap = await getDocs(studentsRef);
 
       let updatedCount = 0;
+      let createdCount = 0;
       let skippedCount = 0;
       let totalChecked = 0;
 
@@ -169,11 +169,11 @@ export default function AdminDashboard() {
 
         if (progressSnap.exists()) {
           const progressData = progressSnap.data();
-
           console.log(`Student ${uid} progress:`, progressData);
 
-          // Only update if unlocked is true
-          if (progressData.unlocked === true) {
+          // For school system: update all students regardless of unlocked status
+          // For center/online: only update if unlocked is true
+          if (systemType === "school" || progressData.unlocked === true) {
             console.log(
               `Updating student ${uid} isEnabled to ${newEnabledStatus}`
             );
@@ -185,14 +185,32 @@ export default function AdminDashboard() {
             console.log(`Student ${uid} not unlocked, skipping`);
           }
         } else {
-          console.log(`No progress document for student ${uid}`);
+          // For school system: create progress document for students who don't have one
+          if (systemType === "school") {
+            console.log(
+              `Creating progress document for school student ${uid} with isEnabled: ${newEnabledStatus}`
+            );
+            await setDoc(progressRef, {
+              year: year,
+              courseId: courseId,
+              lectureId: lectureId,
+              unlocked: false, // Not unlocked by default
+              isEnabled: newEnabledStatus,
+              completed: false,
+              quizzesTaken: 0,
+              timestamp: new Date(),
+            });
+            createdCount++;
+          } else {
+            console.log(`No progress document for student ${uid}`);
+          }
         }
       }
 
       console.log(
-        `Sync complete: ${updatedCount} updated, ${skippedCount} skipped (wrong system), ${totalChecked} total checked`
+        `Sync complete: ${updatedCount} updated, ${createdCount} created, ${skippedCount} skipped (wrong system), ${totalChecked} total checked`
       );
-      return updatedCount;
+      return { updated: updatedCount, created: createdCount };
     } catch (error) {
       console.error("Error syncing student progress:", error);
       throw error;
@@ -364,7 +382,8 @@ export default function AdminDashboard() {
           ? Math.max(...existingLectures.map((l) => l.order)) + 1
           : 0;
 
-      await addDoc(lecturesRef, {
+      // Add the lecture
+      const newLectureRef = await addDoc(lecturesRef, {
         title: lectureTitle,
         odyseeName: info.name,
         odyseeId: info.id,
@@ -372,13 +391,50 @@ export default function AdminDashboard() {
         isHidden: true,
         isEnabledCenter: true,
         isEnabledOnline: true,
-        isEnabledSchool: true,
       });
+
+      // Create progress records for all school students
+      const studentsRef = collection(db, "students");
+      const studentsSnap = await getDocs(studentsRef);
+
+      let schoolStudentCount = 0;
+
+      for (const studentDoc of studentsSnap.docs) {
+        const uid = studentDoc.id;
+        const studentData = studentDoc.data();
+
+        // Only create records for school students
+        if (studentData.system === "school") {
+          const progressDocId = `${activeYearTab}_${courseId}_${newLectureRef.id}`;
+          const progressRef = doc(
+            db,
+            "students",
+            uid,
+            "progress",
+            progressDocId
+          );
+
+          await setDoc(progressRef, {
+            year: activeYearTab,
+            courseId: courseId,
+            lectureId: newLectureRef.id,
+            unlocked: false,
+            isEnabled: false, // Disabled by default for school students
+            completed: false,
+            quizzesTaken: 0,
+            timestamp: new Date(),
+          });
+
+          schoolStudentCount++;
+        }
+      }
 
       setLectureTitle("");
       setOdyseeLink("");
       fetchLecturesForCourse(activeYearTab, courseId);
-      setModalMessage("Lecture added successfully!");
+      setModalMessage(
+        `Lecture added successfully! ${schoolStudentCount} school student progress records created (disabled by default).`
+      );
       setShowModal(true);
     } catch (error: unknown) {
       console.error("Error adding lecture:", error);
@@ -520,30 +576,17 @@ export default function AdminDashboard() {
       setUpdatingLecture(null);
     }
   };
-
   const handleToggleLectureEnabledSchool = async (
     courseId: string,
     lectureId: string,
-    currentStatus: boolean
+    newStatus: boolean
   ) => {
     const updateKey = `school_${lectureId}`;
     setUpdatingLecture(updateKey);
 
     try {
-      const lectureRef = doc(
-        db,
-        `years/${activeYearTab}/courses/${courseId}/lectures`,
-        lectureId
-      );
-
-      const newStatus = !currentStatus;
-
-      await updateDoc(lectureRef, {
-        isEnabledSchool: newStatus,
-      });
-
       // Sync student progress to match the new status
-      const updatedCount = await syncStudentProgressForLecture(
+      const result = await syncStudentProgressForLecture(
         activeYearTab,
         courseId,
         lectureId,
@@ -555,7 +598,9 @@ export default function AdminDashboard() {
       setModalMessage(
         `Lecture status for School students updated to ${
           newStatus ? "enabled" : "disabled"
-        }. ${updatedCount} school student progress records synced.`
+        }. ${result.updated} school student progress records updated, ${
+          result.created
+        } new records created.`
       );
       setShowModal(true);
     } catch (error: unknown) {
@@ -893,7 +938,6 @@ export default function AdminDashboard() {
                                       : "Disabled"
                                   }`}
                             </button>
-
                             <button
                               disabled={
                                 updatingLecture === `school_${lecture.id}`
@@ -902,9 +946,7 @@ export default function AdminDashboard() {
                                 backgroundColor:
                                   updatingLecture === `school_${lecture.id}`
                                     ? "grey"
-                                    : lecture.isEnabledSchool !== false
-                                    ? "var(--green)"
-                                    : "var(--red)",
+                                    : "var(--blue)",
                                 color: "white",
                                 cursor:
                                   updatingLecture === `school_${lecture.id}`
@@ -915,17 +957,41 @@ export default function AdminDashboard() {
                                 handleToggleLectureEnabledSchool(
                                   course.id,
                                   lecture.id,
-                                  lecture.isEnabledSchool !== false
+                                  true
                                 )
                               }
                             >
                               {updatingLecture === `school_${lecture.id}`
                                 ? "Updating..."
-                                : `School: ${
-                                    lecture.isEnabledSchool !== false
-                                      ? "Enabled"
-                                      : "Disabled"
-                                  }`}
+                                : "Enable All School"}
+                            </button>
+
+                            <button
+                              disabled={
+                                updatingLecture === `school_${lecture.id}`
+                              }
+                              style={{
+                                backgroundColor:
+                                  updatingLecture === `school_${lecture.id}`
+                                    ? "grey"
+                                    : "var(--orange)",
+                                color: "white",
+                                cursor:
+                                  updatingLecture === `school_${lecture.id}`
+                                    ? "not-allowed"
+                                    : "pointer",
+                              }}
+                              onClick={() =>
+                                handleToggleLectureEnabledSchool(
+                                  course.id,
+                                  lecture.id,
+                                  false
+                                )
+                              }
+                            >
+                              {updatingLecture === `school_${lecture.id}`
+                                ? "Updating..."
+                                : "Disable All School"}
                             </button>
 
                             <button
