@@ -21,16 +21,20 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({
+import { headers } from "next/headers";
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const nonce = (await headers()).get("x-nonce") || "";
+
   return (
     <html lang="en">
       <body className={poppins.className}>
-        <AdminProvider>
-          <ThemeProvider>
+        <AdminProvider nonce={nonce}>
+          <ThemeProvider nonce={nonce}>
             <div id="bg-grid"></div>
             <LayoutWrapper>{children}</LayoutWrapper>
             <PlaceChecker />
