@@ -20,8 +20,10 @@ export const useAdmin = () => useContext(AdminContext);
 
 export default function AdminProvider({
   children,
+  nonce,
 }: {
   children: React.ReactNode;
+  nonce: string;
 }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +52,7 @@ export default function AdminProvider({
 
   return (
     <AdminContext.Provider value={{ isAdmin, isLoading }}>
-      {!isAdmin && <DisableRightClick />}
+      {!isAdmin && <DisableRightClick nonce={nonce} />}
       {children}
     </AdminContext.Provider>
   );

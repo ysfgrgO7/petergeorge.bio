@@ -26,8 +26,10 @@ export const useTheme = () => useContext(ThemeContext);
 
 export default function ThemeProvider({
   children,
+  nonce,
 }: {
   children: React.ReactNode;
+  nonce: string;
 }) {
   const [currentTheme, setCurrentTheme] = useState<string>("default");
   const [isLoading, setIsLoading] = useState(true);
@@ -51,7 +53,7 @@ export default function ThemeProvider({
         console.error("Error fetching theme:", error);
         setCurrentTheme("default");
         setIsLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();

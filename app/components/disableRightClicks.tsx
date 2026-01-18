@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-export default function DisableInteractions() {
+export default function DisableInteractions({ nonce }: { nonce: string }) {
   useEffect(() => {
     // --- Interaction Disabling Logic (Only runs for non-admins) ---
 
@@ -84,6 +84,7 @@ export default function DisableInteractions() {
 
     // Apply CSS to disable text selection and user interactions
     const style = document.createElement("style");
+    style.nonce = nonce; // Set nonce for CSP
     style.textContent = `
       * {
         -webkit-user-select: none !important;
@@ -141,7 +142,7 @@ export default function DisableInteractions() {
         style.parentNode.removeChild(style);
       }
     };
-  }, []);
+  }, [nonce]);
 
   return null;
 }
