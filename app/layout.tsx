@@ -40,10 +40,10 @@ export default async function RootLayout({
             <LayoutWrapper>{children}</LayoutWrapper>
             <PlaceChecker />
             <BackgroundMotion /> {/* 👈 add here */}
+            <SpeedInsights />
           </ThemeProvider>
         </AdminProvider>
       </body>
-      <SpeedInsights />
     </html>
   );
 }
