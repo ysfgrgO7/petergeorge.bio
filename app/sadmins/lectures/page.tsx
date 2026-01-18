@@ -45,7 +45,7 @@ export default function SAdminsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const years = ["year1", "year3 (Biology)", "year3 (Geology)"];
@@ -98,7 +98,7 @@ export default function SAdminsPage() {
             year,
             "courses",
             courseId,
-            "lectures"
+            "lectures",
           );
           const lecturesQuery = query(lecturesRef, orderBy("order", "asc"));
           const lecturesSnap = await getDocs(lecturesQuery);
@@ -119,6 +119,9 @@ export default function SAdminsPage() {
             lectures,
           });
         }
+        // Sort courses alphabetically by name
+        coursesData.sort((a, b) => a.name.localeCompare(b.name));
+
         allYearsData.push({
           year,
           courses: coursesData,
@@ -155,9 +158,9 @@ export default function SAdminsPage() {
         total +
         year.courses.reduce(
           (courseTotal, course) => courseTotal + course.lectures.length,
-          0
+          0,
         ),
-      0
+      0,
     );
   };
 
@@ -210,7 +213,7 @@ export default function SAdminsPage() {
                   <span>
                     {yearData.courses.reduce(
                       (total, course) => total + course.lectures.length,
-                      0
+                      0,
                     )}{" "}
                     lectures
                   </span>
@@ -272,7 +275,7 @@ export default function SAdminsPage() {
                               <Link
                                 key={lecture.id}
                                 href={`/sadmins/lectures/students?year=${encodeURIComponent(
-                                  yearData.year
+                                  yearData.year,
                                 )}&courseId=${course.id}&lectureId=${
                                   lecture.id
                                 }`}

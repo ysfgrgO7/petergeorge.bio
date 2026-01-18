@@ -57,7 +57,7 @@ export default function AdminDashboard() {
   >("year1");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [openLecturePanels, setOpenLecturePanels] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const [lectureTitle, setLectureTitle] = useState("");
@@ -73,7 +73,7 @@ export default function AdminDashboard() {
     Record<string, Lecture[]>
   >({});
   const [loadingLectures, setLoadingLectures] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const [showModal, setShowModal] = useState(false);
@@ -92,12 +92,12 @@ export default function AdminDashboard() {
   const checkQuizzesExist = async (
     year: string,
     courseId: string,
-    lectureId: string
+    lectureId: string,
   ) => {
     try {
       const settingsRef = collection(
         db,
-        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings`
+        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings`,
       );
       const settingsSnap = await getDocs(settingsRef);
 
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
       for (const v of variants) {
         const vRef = collection(
           db,
-          `years/${year}/courses/${courseId}/lectures/${lectureId}/${v}`
+          `years/${year}/courses/${courseId}/lectures/${lectureId}/${v}`,
         );
         const vSnap = await getDocs(vRef);
         if (vSnap.empty) {
@@ -138,7 +138,7 @@ export default function AdminDashboard() {
     courseId: string,
     lectureId: string,
     newEnabledStatus: boolean,
-    systemType: "center" | "online" | "school"
+    systemType: "center" | "online" | "school",
   ) => {
     try {
       const studentsRef = collection(db, "students");
@@ -165,7 +165,7 @@ export default function AdminDashboard() {
         if (studentSystem !== systemType) {
           skippedCount++;
           console.log(
-            `Skipping student ${uid} - wrong system (${studentSystem} !== ${systemType})`
+            `Skipping student ${uid} - wrong system (${studentSystem} !== ${systemType})`,
           );
           continue;
         }
@@ -183,7 +183,7 @@ export default function AdminDashboard() {
           // For center/online: only update if unlocked is true
           if (systemType === "school" || progressData.unlocked === true) {
             console.log(
-              `Updating student ${uid} isEnabled to ${newEnabledStatus}`
+              `Updating student ${uid} isEnabled to ${newEnabledStatus}`,
             );
             await updateDoc(progressRef, {
               isEnabled: newEnabledStatus,
@@ -196,7 +196,7 @@ export default function AdminDashboard() {
           // For school system: create progress document for students who don't have one
           if (systemType === "school") {
             console.log(
-              `Creating progress document for school student ${uid} with isEnabled: ${newEnabledStatus}`
+              `Creating progress document for school student ${uid} with isEnabled: ${newEnabledStatus}`,
             );
             await setDoc(progressRef, {
               year: year,
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
       }
 
       console.log(
-        `Sync complete: ${updatedCount} updated, ${createdCount} created, ${skippedCount} skipped (wrong system), ${totalChecked} total checked`
+        `Sync complete: ${updatedCount} updated, ${createdCount} created, ${skippedCount} skipped (wrong system), ${totalChecked} total checked`,
       );
       return { updated: updatedCount, created: createdCount };
     } catch (error) {
@@ -266,18 +266,18 @@ export default function AdminDashboard() {
 
   const toggleCardsDirection = () => {
     setCardsDirection((prev) =>
-      prev === "column" ? "column-reverse" : "column"
+      prev === "column" ? "column-reverse" : "column",
     );
   };
 
   const fetchCourses = async (
-    yearToFetch: "year1" | "year3 (Biology)" | "year3 (Geology)"
+    yearToFetch: "year1" | "year3 (Biology)" | "year3 (Geology)",
   ) => {
     try {
       await setDoc(
         doc(db, "years", yearToFetch),
         { exists: true },
-        { merge: true }
+        { merge: true },
       );
 
       const coursesRef = collection(db, "years", yearToFetch, "courses");
@@ -286,6 +286,8 @@ export default function AdminDashboard() {
         id: doc.id,
         ...doc.data(),
       })) as Course[];
+      // Sort courses alphabetically by title
+      fetched.sort((a, b) => a.title.localeCompare(b.title));
       setCourses(fetched);
     } catch (error) {
       console.error(`Error fetching courses for ${yearToFetch}:`, error);
@@ -296,13 +298,13 @@ export default function AdminDashboard() {
 
   const fetchLecturesForCourse = async (
     courseYear: "year1" | "year3 (Biology)" | "year3 (Geology)",
-    courseId: string
+    courseId: string,
   ) => {
     setLoadingLectures((prev) => new Set(prev).add(courseId));
     try {
       const lecturesRef = collection(
         db,
-        `years/${courseYear}/courses/${courseId}/lectures`
+        `years/${courseYear}/courses/${courseId}/lectures`,
       );
       const q = query(lecturesRef, orderBy("order"));
       const snapshot = await getDocs(q);
@@ -317,7 +319,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error(
         `Error fetching lectures for course ${courseId} in ${courseYear}:`,
-        error
+        error,
       );
       setModalMessage(`Failed to load lectures for course: ${courseId}.`);
       setShowModal(true);
@@ -355,7 +357,7 @@ export default function AdminDashboard() {
   };
 
   const extractOdyseeInfo = (
-    url: string
+    url: string,
   ): { name: string; id: string } | null => {
     const regex = /odysee\.com\/[^/]+\/([^:]+):([a-zA-Z0-9]+)/;
     const match = url.match(regex);
@@ -390,7 +392,7 @@ export default function AdminDashboard() {
       info = extractOdyseeInfo(odyseeLink);
       if (!info) {
         setModalMessage(
-          "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'."
+          "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'.",
         );
         setShowModal(true);
         return;
@@ -400,7 +402,7 @@ export default function AdminDashboard() {
     try {
       const lecturesRef = collection(
         db,
-        `years/${activeYearTab}/courses/${courseId}/lectures`
+        `years/${activeYearTab}/courses/${courseId}/lectures`,
       );
       const existingLectures = courseLectures[courseId] || [];
       const newOrder =
@@ -443,7 +445,7 @@ export default function AdminDashboard() {
             "students",
             uid,
             "progress",
-            progressDocId
+            progressDocId,
           );
 
           await setDoc(progressRef, {
@@ -466,7 +468,7 @@ export default function AdminDashboard() {
       setExtraLinks([]);
       fetchLecturesForCourse(activeYearTab, courseId);
       setModalMessage(
-        `Lecture added successfully! ${schoolStudentCount} school student progress records created (disabled by default).`
+        `Lecture added successfully! ${schoolStudentCount} school student progress records created (disabled by default).`,
       );
       setShowModal(true);
     } catch (error: unknown) {
@@ -479,13 +481,13 @@ export default function AdminDashboard() {
   const handleToggleLectureVisibility = async (
     courseId: string,
     lectureId: string,
-    currentVisibility: boolean
+    currentVisibility: boolean,
   ) => {
     try {
       const lectureRef = doc(
         db,
         `years/${activeYearTab}/courses/${courseId}/lectures`,
-        lectureId
+        lectureId,
       );
       await updateDoc(lectureRef, {
         isHidden: !currentVisibility,
@@ -494,13 +496,13 @@ export default function AdminDashboard() {
       setModalMessage(
         `Lecture visibility updated successfully! It is now ${
           !currentVisibility ? "hidden" : "visible"
-        }.`
+        }.`,
       );
       setShowModal(true);
     } catch (error: unknown) {
       console.error("Error updating lecture visibility:", error);
       setModalMessage(
-        "Failed to update lecture visibility: " + (error as Error).message
+        "Failed to update lecture visibility: " + (error as Error).message,
       );
       setShowModal(true);
     }
@@ -509,7 +511,7 @@ export default function AdminDashboard() {
   const handleToggleLectureEnabledCenter = async (
     courseId: string,
     lectureId: string,
-    currentStatus: boolean
+    currentStatus: boolean,
   ) => {
     const updateKey = `center_${lectureId}`;
     setUpdatingLecture(updateKey);
@@ -518,7 +520,7 @@ export default function AdminDashboard() {
       const lectureRef = doc(
         db,
         `years/${activeYearTab}/courses/${courseId}/lectures`,
-        lectureId
+        lectureId,
       );
 
       const newStatus = !currentStatus;
@@ -533,24 +535,24 @@ export default function AdminDashboard() {
         courseId,
         lectureId,
         newStatus,
-        "center"
+        "center",
       );
 
       fetchLecturesForCourse(activeYearTab, courseId);
       setModalMessage(
         `Lecture status for center students updated to ${
           newStatus ? "enabled" : "disabled"
-        }. ${updatedCount} center student progress records synced.`
+        }. ${updatedCount} center student progress records synced.`,
       );
       setShowModal(true);
     } catch (error: unknown) {
       console.error(
         "Error updating lecture status for center students:",
-        error
+        error,
       );
       setModalMessage(
         "Failed to update lecture status for center students: " +
-          (error as Error).message
+          (error as Error).message,
       );
       setShowModal(true);
     } finally {
@@ -561,7 +563,7 @@ export default function AdminDashboard() {
   const handleToggleLectureEnabledOnline = async (
     courseId: string,
     lectureId: string,
-    currentStatus: boolean
+    currentStatus: boolean,
   ) => {
     const updateKey = `online_${lectureId}`;
     setUpdatingLecture(updateKey);
@@ -570,7 +572,7 @@ export default function AdminDashboard() {
       const lectureRef = doc(
         db,
         `years/${activeYearTab}/courses/${courseId}/lectures`,
-        lectureId
+        lectureId,
       );
 
       const newStatus = !currentStatus;
@@ -585,24 +587,24 @@ export default function AdminDashboard() {
         courseId,
         lectureId,
         newStatus,
-        "online"
+        "online",
       );
 
       fetchLecturesForCourse(activeYearTab, courseId);
       setModalMessage(
         `Lecture status for online students updated to ${
           newStatus ? "enabled" : "disabled"
-        }. ${updatedCount} online student progress records synced.`
+        }. ${updatedCount} online student progress records synced.`,
       );
       setShowModal(true);
     } catch (error: unknown) {
       console.error(
         "Error updating lecture status for online students:",
-        error
+        error,
       );
       setModalMessage(
         "Failed to update lecture status for online students: " +
-          (error as Error).message
+          (error as Error).message,
       );
       setShowModal(true);
     } finally {
@@ -612,7 +614,7 @@ export default function AdminDashboard() {
   const handleToggleLectureEnabledSchool = async (
     courseId: string,
     lectureId: string,
-    newStatus: boolean
+    newStatus: boolean,
   ) => {
     const updateKey = `school_${lectureId}`;
     setUpdatingLecture(updateKey);
@@ -624,7 +626,7 @@ export default function AdminDashboard() {
         courseId,
         lectureId,
         newStatus,
-        "school"
+        "school",
       );
 
       fetchLecturesForCourse(activeYearTab, courseId);
@@ -633,17 +635,17 @@ export default function AdminDashboard() {
           newStatus ? "enabled" : "disabled"
         }. ${result.updated} school student progress records updated, ${
           result.created
-        } new records created.`
+        } new records created.`,
       );
       setShowModal(true);
     } catch (error: unknown) {
       console.error(
         "Error updating lecture status for school students:",
-        error
+        error,
       );
       setModalMessage(
         "Failed to update lecture status for school students: " +
-          (error as Error).message
+          (error as Error).message,
       );
       setShowModal(true);
     } finally {
@@ -722,7 +724,7 @@ export default function AdminDashboard() {
           value={yearForNewCourse}
           onChange={(e) =>
             setYearForNewCourse(
-              e.target.value as "year1" | "year3 (Biology)" | "year3 (Geology)"
+              e.target.value as "year1" | "year3 (Biology)" | "year3 (Geology)",
             )
           }
         >
@@ -914,7 +916,7 @@ export default function AdminDashboard() {
                             <button
                               onClick={() =>
                                 router.push(
-                                  `/admin/lectures?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}`
+                                  `/admin/lectures?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}`,
                                 )
                               }
                             >
@@ -941,7 +943,7 @@ export default function AdminDashboard() {
                                 handleToggleLectureVisibility(
                                   course.id,
                                   lecture.id,
-                                  !!lecture.isHidden
+                                  !!lecture.isHidden,
                                 );
                               }}
                             >
@@ -959,8 +961,8 @@ export default function AdminDashboard() {
                                   updatingLecture === `center_${lecture.id}`
                                     ? "grey"
                                     : lecture.isEnabledCenter !== false
-                                    ? "var(--green)"
-                                    : "var(--red)",
+                                      ? "var(--green)"
+                                      : "var(--red)",
                                 color: "white",
                                 cursor:
                                   updatingLecture === `center_${lecture.id}`
@@ -971,7 +973,7 @@ export default function AdminDashboard() {
                                 handleToggleLectureEnabledCenter(
                                   course.id,
                                   lecture.id,
-                                  lecture.isEnabledCenter !== false
+                                  lecture.isEnabledCenter !== false,
                                 )
                               }
                             >
@@ -993,8 +995,8 @@ export default function AdminDashboard() {
                                   updatingLecture === `online_${lecture.id}`
                                     ? "grey"
                                     : lecture.isEnabledOnline !== false
-                                    ? "var(--green)"
-                                    : "var(--red)",
+                                      ? "var(--green)"
+                                      : "var(--red)",
                                 color: "white",
                                 cursor:
                                   updatingLecture === `online_${lecture.id}`
@@ -1005,7 +1007,7 @@ export default function AdminDashboard() {
                                 handleToggleLectureEnabledOnline(
                                   course.id,
                                   lecture.id,
-                                  lecture.isEnabledOnline !== false
+                                  lecture.isEnabledOnline !== false,
                                 )
                               }
                             >
@@ -1036,7 +1038,7 @@ export default function AdminDashboard() {
                                 handleToggleLectureEnabledSchool(
                                   course.id,
                                   lecture.id,
-                                  true
+                                  true,
                                 )
                               }
                             >
@@ -1064,7 +1066,7 @@ export default function AdminDashboard() {
                                 handleToggleLectureEnabledSchool(
                                   course.id,
                                   lecture.id,
-                                  false
+                                  false,
                                 )
                               }
                             >
@@ -1076,7 +1078,7 @@ export default function AdminDashboard() {
                             <button
                               onClick={() =>
                                 router.push(
-                                  `/admin/viewLecture?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}&odyseeName=${lecture.odyseeName}&odyseeId=${lecture.odyseeId}`
+                                  `/admin/viewLecture?year=${activeYearTab}&courseId=${course.id}&lectureId=${lecture.id}&lectureTitle=${lecture.title}&odyseeName=${lecture.odyseeName}&odyseeId=${lecture.odyseeId}`,
                                 )
                               }
                             >
