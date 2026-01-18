@@ -96,7 +96,7 @@ export default function SuperAdmins() {
       setThemeMessage(
         `Theme updated to ${
           themes.find((t) => t.value === selectedTheme)?.label
-        } successfully!`
+        } successfully!`,
       );
 
       // Clear success message after 3 seconds
@@ -129,16 +129,16 @@ export default function SuperAdmins() {
             await loadCurrentTheme();
           } else {
             setError("Access denied: Super Admin privileges required");
-            setTimeout(() => router.push("/"), 2000);
+            setTimeout(() => router.push("/"), 200);
           }
         } else {
           setError("Authentication required");
-          setTimeout(() => router.push("/"), 2000);
+          setTimeout(() => router.push("/"), 200);
         }
       } catch (err) {
         console.error("Error checking admin status:", err);
         setError("Error verifying admin status");
-        setTimeout(() => router.push("/"), 2000);
+        setTimeout(() => router.push("/"), 200);
       } finally {
         setLoading(false);
       }
@@ -151,7 +151,7 @@ export default function SuperAdmins() {
     return (
       <div className="wrapper" style={{ textAlign: "center", padding: "2rem" }}>
         <div style={{ fontSize: "1.5rem", color: "var(--dark)" }}>
-          Verifying admin access...
+          Verifying super admin access...
         </div>
       </div>
     );

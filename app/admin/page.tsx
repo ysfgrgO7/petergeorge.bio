@@ -56,6 +56,7 @@ export default function AdminDashboard() {
     "year1" | "year3 (Biology)" | "year3 (Geology)"
   >("year1");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [openLecturePanels, setOpenLecturePanels] = useState<Set<string>>(
     new Set(),
   );
@@ -227,23 +228,28 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        if (user.email) {
-          const adminDocRef = doc(db, "admins", user.email);
+      try {
+        if (user?.email) {
+          const adminDocRef = doc(db, "superAdmins", user.email);
           const adminDocSnap = await getDoc(adminDocRef);
 
           if (adminDocSnap.exists()) {
             setIsAdmin(true);
           } else {
-            router.push("/");
+            setError("Access denied: Admin privileges required");
+            setTimeout(() => router.push("/"), 200);
           }
         } else {
-          router.push("/");
+          setError("Authentication required");
+          setTimeout(() => router.push("/"), 200);
         }
-      } else {
-        router.push("/");
+      } catch (err) {
+        console.error("Error checking admin status:", err);
+        setError("Error verifying admin status");
+        setTimeout(() => router.push("/"), 200);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -696,7 +702,32 @@ export default function AdminDashboard() {
   }, [activeYearTab]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div style={{ textAlign: "center", padding: "2rem" }}>
+        <div style={{ fontSize: "1.5rem", color: "var(--dark)" }}>
+          Verifying admin access...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="wrapper" style={{ textAlign: "center", padding: "2rem" }}>
+        <div
+          style={{
+            fontSize: "1.5rem",
+            color: "var(--red, #dc3545)",
+            marginBottom: "1rem",
+          }}
+        >
+          {error}
+        </div>
+        <div style={{ color: "var(--gray, #6c757d)" }}>
+          Redirecting to home page...
+        </div>
+      </div>
+    );
   }
   if (!isAdmin) {
     return null;
