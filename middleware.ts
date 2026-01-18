@@ -12,12 +12,12 @@ export function middleware(request: NextRequest) {
     default-src 'self';
     script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline';
     style-src 'self' 'unsafe-inline';
-    img-src 'self' blob: data: https://firebasestorage.googleapis.com;
+    img-src 'self' blob: data: https://firebasestorage.googleapis.com https://freeimage.host https://iili.io;
     font-src 'self';
     object-src 'none';
     base-uri 'self';
     form-action 'self';
-    frame-src 'self' https://odysee.com https://*.odysee.com;
+    frame-src 'self' https://odysee.com https://*.odysee.com https://youtube.com https://*.youtube.com;
     connect-src 'self' https://*.googleapis.com https://*.firebaseio.com;
     upgrade-insecure-requests;
   `.replace(/\s{2,}/g, ' ').trim();

@@ -77,7 +77,7 @@ export default function CoursesPage() {
           } else {
             console.error(
               "No student document found for UID:",
-              currentUser.uid
+              currentUser.uid,
             );
             setStudentYear(null);
           }
