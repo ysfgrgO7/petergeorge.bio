@@ -6,6 +6,7 @@ import AdminProvider from "@/app/components/isAdmin";
 import BackgroundMotion from "@/app/components/BackgroundMotion";
 import PlaceChecker from "@/app/components/placeChecker"; // 👈 new client component
 import ThemeProvider from "@/app/components/ThemeProvider";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const poppins = Poppins({
   weight: ["400", "600", "700"],
@@ -42,6 +43,7 @@ export default async function RootLayout({
           </ThemeProvider>
         </AdminProvider>
       </body>
+      <SpeedInsights />
     </html>
   );
 }
