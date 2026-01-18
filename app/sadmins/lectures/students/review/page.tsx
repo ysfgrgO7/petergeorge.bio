@@ -22,6 +22,7 @@ import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 
 import styles from "./page.module.css";
 import { FaRedoAlt } from "react-icons/fa";
+import Loading from "@/app/components/Loading";
 
 interface MCQAnswer {
   question: string;
@@ -299,10 +300,7 @@ export default function QuizReviewPage() {
   if (loading) {
     return (
       <div className="wrapper">
-        <div className={styles.loadingContainer}>
-          <div className={styles.spinner}></div>
-          <p className={styles.loadingText}>Loading quiz review...</p>
-        </div>
+        <Loading text="Loading quiz review..." />
       </div>
     );
   }

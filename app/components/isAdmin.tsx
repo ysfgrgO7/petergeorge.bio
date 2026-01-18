@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import DisableRightClick from "@/app/components/disableRightClicks";
+import Loading from "@/app/components/Loading";
 
 type AdminContextType = {
   isAdmin: boolean;
@@ -43,11 +44,7 @@ export default function AdminProvider({
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    );
+    return <Loading text="Verifying admin access..." />;
   }
 
   return (

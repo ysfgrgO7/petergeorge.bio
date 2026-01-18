@@ -14,8 +14,9 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import styles from "../admin.module.css";
-import MessageModal from "@/app/MessageModal";
+import Modal, { ModalVariant } from "@/app/components/Modal";
 import { onAuthStateChanged } from "firebase/auth";
+import Loading from "@/app/components/Loading";
 
 // Interfaces
 interface ExistingHomework extends DocumentData {
@@ -42,14 +43,14 @@ export default function HomeworkBuilder() {
   const [mcqImageUrl, setMcqImageUrl] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
-    null
+    null,
   );
 
   const [essayQuestion, setEssayQuestion] = useState("");
   const [essayImageUrl, setEssayImageUrl] = useState("");
 
   const [existingHomework, setExistingHomework] = useState<ExistingHomework[]>(
-    []
+    [],
   );
   const [editingHomework, setEditingHomework] = useState<string | null>(null);
   const [editingType, setEditingType] = useState<"mcq" | "essay" | null>(null);
@@ -57,6 +58,7 @@ export default function HomeworkBuilder() {
   // --- UI state ---
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [modalVariant, setModalVariant] = useState<ModalVariant>("success");
 
   // --- Fetch homework questions ---
   const fetchHomework = async () => {
@@ -77,6 +79,7 @@ export default function HomeworkBuilder() {
     } catch (error) {
       console.error("Error fetching homework:", error);
       setModalMessage("Failed to fetch existing homework questions.");
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -157,12 +160,13 @@ export default function HomeworkBuilder() {
   const handleDelete = async (id: string) => {
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
 
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this homework question?"
+      "Are you sure you want to delete this homework question?",
     );
     if (!confirmDelete) return;
 
@@ -172,11 +176,13 @@ export default function HomeworkBuilder() {
     try {
       await deleteDoc(docRef);
       setModalMessage("Homework question deleted successfully! 🗑️");
+      setModalVariant("success");
       setShowModal(true);
       fetchHomework();
     } catch (error) {
       console.error("Error deleting homework:", error);
       setModalMessage("Failed to delete homework question.");
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -203,6 +209,7 @@ export default function HomeworkBuilder() {
   const handleSubmit = async (questionType: "mcq" | "essay") => {
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -217,8 +224,9 @@ export default function HomeworkBuilder() {
           correctAnswerIndex === null
         ) {
           setModalMessage(
-            "Please complete all MCQ fields and select a correct answer."
+            "Please complete all MCQ fields and select a correct answer.",
           );
+          setModalVariant("warning");
           setShowModal(true);
           return;
         }
@@ -235,15 +243,18 @@ export default function HomeworkBuilder() {
         if (editingHomework && editingType === "mcq") {
           await updateDoc(doc(db, collectionPath, editingHomework), data);
           setModalMessage("MCQ homework updated successfully! ✅");
+          setModalVariant("success");
         } else {
           await addDoc(collection(db, collectionPath), data);
           setModalMessage("MCQ homework saved successfully! ✅");
+          setModalVariant("success");
         }
 
         resetMcqForm();
       } else if (questionType === "essay") {
         if (!essayQuestion.trim()) {
           setModalMessage("Please enter an essay question.");
+          setModalVariant("warning");
           setShowModal(true);
           return;
         }
@@ -258,9 +269,11 @@ export default function HomeworkBuilder() {
         if (editingHomework && editingType === "essay") {
           await updateDoc(doc(db, collectionPath, editingHomework), data);
           setModalMessage("Essay homework updated successfully! ✅");
+          setModalVariant("success");
         } else {
           await addDoc(collection(db, collectionPath), data);
           setModalMessage("Essay homework saved successfully! ✅");
+          setModalVariant("success");
         }
 
         resetEssayForm();
@@ -272,16 +285,17 @@ export default function HomeworkBuilder() {
     } catch (error: unknown) {
       console.error(`Error adding/updating ${questionType}:`, error);
       setModalMessage(
-        `Failed to save ${questionType}: ` + (error as Error).message
+        `Failed to save ${questionType}: ` + (error as Error).message,
       );
+      setModalVariant("error");
       setShowModal(true);
     }
   };
 
   if (loading) {
     return (
-      <div className={styles.wrapper}>
-        <p>Loading...</p>
+      <div className="wrapper">
+        <Loading text="Verifying access..." />
       </div>
     );
   }
@@ -521,7 +535,10 @@ export default function HomeworkBuilder() {
       )}
 
       {showModal && (
-        <MessageModal
+        <Modal
+          isOpen={showModal}
+          type="toast"
+          variant={modalVariant}
           message={modalMessage}
           onClose={() => setShowModal(false)}
         />

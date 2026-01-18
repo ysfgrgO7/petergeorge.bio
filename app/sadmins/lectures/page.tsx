@@ -17,6 +17,7 @@ import { IoPeople } from "react-icons/io5";
 import { FaChevronCircleRight, FaChevronCircleDown } from "react-icons/fa";
 import { RiAdminFill } from "react-icons/ri";
 import styles from "./page.module.css";
+import Loading from "@/app/components/Loading";
 
 interface Lecture {
   id: string;
@@ -167,7 +168,7 @@ export default function SAdminsPage() {
   if (loading) {
     return (
       <div className="wrapper">
-        <p>Loading lectures...</p>
+        <Loading text="Loading lectures..." />
       </div>
     );
   }

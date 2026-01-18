@@ -14,10 +14,11 @@
   box-shadow: var(--box-shadow);
   background-color: var(--darkgrey);
   color: var(--fg);
-  padding: 1rem;
+  padding: var(--spacing-lg);
   border-radius: var(--border-radius);
-  margin-bottom: 1rem;
-  backdrop-filter: blur(2px);
+  margin-bottom: var(--spacing-md);
+  backdrop-filter: blur(4px);
+  transition: var(--transition);
 }
 
 .courseCard:hover {
@@ -66,7 +67,9 @@
   background-color: var(--bg); /* Light background */
   filter: brightness(0.95);
   border-radius: var(--border-radius);
-  transition: background-color 0.2s ease, color 0.2s ease,
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
     border-color 0.2s ease;
   cursor: pointer;
 }
@@ -138,22 +141,23 @@
 }
 
 .Title {
-  background-color: var(--fg);
-  color: var(--bg);
-  padding: 1rem;
+  background-color: var(--blue);
+  color: var(--white);
+  padding: var(--spacing-md) var(--spacing-lg);
   border-radius: var(--border-radius);
-  margin-right: 50px;
-  margin-bottom: 30px;
+  margin-bottom: var(--spacing-xl);
+  display: inline-block;
+  box-shadow: var(--box-shadow);
 }
 .questionCard {
   border: 1px solid var(--dark);
   box-shadow: var(--box-shadow);
-  background-color: var(--bg);
-  filter: brightness(0.95);
+  background-color: var(--darkgrey);
+  backdrop-filter: blur(4px);
   color: var(--fg);
-  padding: 1rem;
+  padding: var(--spacing-lg);
   border-radius: var(--border-radius);
-  margin: 1rem 50px 2rem 2rem;
+  margin: var(--spacing-lg) 0;
 }
 
 @media (max-width: 768px) {

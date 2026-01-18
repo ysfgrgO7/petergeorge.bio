@@ -29,25 +29,37 @@
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
   cursor: pointer;
-  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+  transition:
+    transform 0.3s ease-in-out,
+    box-shadow 0.3s ease-in-out;
   width: 45%;
   max-width: 300px;
-  height: max-content;
+  /* height: max-content; */
+  max-height: 500px;
   text-align: center;
   gap: 1rem;
 }
 
 .courseButton {
-  border: none;
-  border-radius: 1rem;
+  border: 1px solid var(--dark);
+  background: var(--darkgrey);
+  word-wrap: break-word; /* Ensure titles don't overflow */
+  backdrop-filter: blur(4px);
   color: var(--white);
-  font-size: 1.2rem;
+  font-size: 1.25rem;
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
   cursor: pointer;
-  transition: transform 0.2s ease, background 0.3s ease;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
 }
 
 .courseButton:hover {
-  transform: scale(1.05);
+  transform: translateY(-8px);
+  border-color: var(--blue);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
 }
 
 .buttonContainer button:hover {

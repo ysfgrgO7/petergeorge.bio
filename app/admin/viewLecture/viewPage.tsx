@@ -13,6 +13,7 @@ import { db, auth } from "@/lib/firebase";
 import { getAllQuizVariants } from "@/lib/quizUtils";
 import styles from "../admin.module.css";
 import { onAuthStateChanged } from "firebase/auth";
+import Loading from "@/app/components/Loading";
 
 // Interfaces
 interface ExistingQuiz extends DocumentData {
@@ -93,7 +94,7 @@ export default function LecturePage() {
         for (const variant of variants) {
           const variantRef = collection(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/${variant}`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/${variant}`,
           );
           const variantSnapshot = await getDocs(variantRef);
           const variantQuizzes = variantSnapshot.docs.map((doc) => ({
@@ -108,7 +109,7 @@ export default function LecturePage() {
         // Fetch Essays
         const essayRef = collection(
           db,
-          `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`
+          `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`,
         );
         const essaySnapshot = await getDocs(essayRef);
         const essayData = essaySnapshot.docs.map((doc) => ({
@@ -120,7 +121,7 @@ export default function LecturePage() {
         // Fetch Homework Videos
         const homeworkRef = collection(
           db,
-          `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkVideos`
+          `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkVideos`,
         );
         const homeworkSnapshot = await getDocs(homeworkRef);
         const homeworkData = homeworkSnapshot.docs.map((doc) => ({
@@ -218,7 +219,7 @@ export default function LecturePage() {
       ))}
 
       {loading ? (
-        <p>Loading quiz questions...</p>
+        <Loading text="Loading quiz questions..." />
       ) : (
         <>
           <h2>Quiz Variants</h2>

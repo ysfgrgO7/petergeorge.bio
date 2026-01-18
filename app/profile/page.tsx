@@ -13,7 +13,6 @@ import {
 import { useRouter } from "next/navigation";
 import styles from "./progress.module.css";
 import { useTheme } from "@/app/components/ThemeProvider";
-import Image from "next/image";
 
 interface QuizData {
   earnedMarks: number;
@@ -85,7 +84,7 @@ export default function ProgressPage() {
 
         // 🔹 Fetch all progress docs
         const progressSnap = await getDocs(
-          collection(db, "students", studentId, "progress")
+          collection(db, "students", studentId, "progress"),
         );
 
         if (progressSnap.empty) {
@@ -110,7 +109,9 @@ export default function ProgressPage() {
 
         // 🔹 Fetch all courses in bulk
         const courseDocs = await Promise.all(
-          uniqueYears.map((y) => getDocs(collection(db, "years", y, "courses")))
+          uniqueYears.map((y) =>
+            getDocs(collection(db, "years", y, "courses")),
+          ),
         );
 
         const courseMap: Record<string, { year: string; title: string }> = {};
@@ -136,10 +137,10 @@ export default function ProgressPage() {
                 "courses",
                 p.courseId,
                 "lectures",
-                p.lectureId
-              )
-            )
-          )
+                p.lectureId,
+              ),
+            ),
+          ),
         );
 
         const lectureMap: Record<
@@ -256,7 +257,7 @@ export default function ProgressPage() {
                   </div>
                   <span>{item.value}</span>
                 </div>
-              ) : null
+              ) : null,
             )}
           </div>
         </div>

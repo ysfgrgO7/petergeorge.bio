@@ -8,6 +8,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { RiAdminFill } from "react-icons/ri";
 import { VscAccount } from "react-icons/vsc";
 import { MdColorLens } from "react-icons/md";
+import Loading from "@/app/components/Loading";
 
 interface NavigationButtonProps {
   onClick: () => void;
@@ -150,9 +151,7 @@ export default function SuperAdmins() {
   if (loading) {
     return (
       <div className="wrapper" style={{ textAlign: "center", padding: "2rem" }}>
-        <div style={{ fontSize: "1.5rem", color: "var(--dark)" }}>
-          Verifying super admin access...
-        </div>
+        <Loading text="Verifying super admin access..." />
       </div>
     );
   }

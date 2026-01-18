@@ -22,6 +22,7 @@ import {
   MdDelete,
 } from "react-icons/md";
 import styles from "./student-profile.module.css";
+import Loading from "@/app/components/Loading";
 
 interface StudentInfo {
   firstName: string;
@@ -256,7 +257,7 @@ export default function StudentProfileContent() {
       setStudentInfo(studentData);
 
       const progressSnapshot = await getDocs(
-        collection(db, "students", studentId, "progress")
+        collection(db, "students", studentId, "progress"),
       );
 
       const items: ProgressItem[] = await Promise.all(
@@ -267,7 +268,7 @@ export default function StudentProfileContent() {
           let courseTitle = courseId;
           try {
             const courseDoc = await getDoc(
-              doc(db, "years", year, "courses", courseId)
+              doc(db, "years", year, "courses", courseId),
             );
             if (courseDoc.exists()) {
               courseTitle = courseDoc.data().title || courseId;
@@ -278,7 +279,15 @@ export default function StudentProfileContent() {
           let isHidden = false;
           try {
             const lectureDoc = await getDoc(
-              doc(db, "years", year, "courses", courseId, "lectures", lectureId)
+              doc(
+                db,
+                "years",
+                year,
+                "courses",
+                courseId,
+                "lectures",
+                lectureId,
+              ),
             );
             if (lectureDoc.exists()) {
               const data = lectureDoc.data();
@@ -294,7 +303,7 @@ export default function StudentProfileContent() {
             lectureTitle,
             isHidden,
           };
-        })
+        }),
       );
 
       setProgressData(items.filter((i) => !i.isHidden));
@@ -336,12 +345,7 @@ export default function StudentProfileContent() {
     });
   };
 
-  if (loading)
-    return (
-      <div className={styles.center}>
-        <p>Loading student profile...</p>
-      </div>
-    );
+  if (loading) return <Loading text="Loading student profile..." />;
 
   if (error)
     return (
@@ -393,7 +397,7 @@ export default function StudentProfileContent() {
               value={
                 Array.isArray(studentInfo[key as keyof StudentInfo])
                   ? (studentInfo[key as keyof StudentInfo] as string[]).join(
-                      ", "
+                      ", ",
                     )
                   : (studentInfo[key as keyof StudentInfo] as string) || ""
               }
@@ -506,7 +510,7 @@ export default function StudentProfileContent() {
             <tbody>
               {progressData.map((item) => {
                 const pct = Math.round(
-                  (item.quiz.earnedMarks / item.quiz.totalPossibleMarks) * 100
+                  (item.quiz.earnedMarks / item.quiz.totalPossibleMarks) * 100,
                 );
                 return (
                   <tr key={item.id}>
@@ -521,8 +525,8 @@ export default function StudentProfileContent() {
                           pct >= 70
                             ? styles.good
                             : pct >= 50
-                            ? styles.average
-                            : styles.poor
+                              ? styles.average
+                              : styles.poor
                         }`}
                       >
                         {pct}%

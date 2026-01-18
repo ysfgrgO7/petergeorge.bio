@@ -13,6 +13,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import styles from "./students.module.css";
+import Loading from "@/app/components/Loading";
 
 interface StudentData {
   uid: string;
@@ -86,14 +87,14 @@ export default function StudentsPage() {
               year: data.year || "Unknown",
               gender: data.gender || "N/A",
             };
-          }
+          },
         );
 
         // sort by year then by name
         loadedStudents.sort((a, b) => {
           if (a.year === b.year) {
             return `${a.firstName} ${a.secondName}`.localeCompare(
-              `${b.firstName} ${b.secondName}`
+              `${b.firstName} ${b.secondName}`,
             );
           }
           return a.year.localeCompare(b.year);
@@ -121,8 +122,8 @@ export default function StudentsPage() {
       // Update local state
       setStudents((prevStudents) =>
         prevStudents.map((student) =>
-          student.uid === uid ? { ...student, system: newSystem } : student
-        )
+          student.uid === uid ? { ...student, system: newSystem } : student,
+        ),
       );
     } catch (err) {
       console.error("Error updating system:", err);
@@ -155,6 +156,10 @@ export default function StudentsPage() {
       );
     });
   });
+
+  if (loading) {
+    return <Loading text="Verifying admin access..." />;
+  }
 
   return (
     <div className="wrapper">
@@ -246,7 +251,7 @@ export default function StudentsPage() {
                 </tbody>
               </table>
             </div>
-          ) : null
+          ) : null,
         )
       ) : (
         <p>No students found.</p>

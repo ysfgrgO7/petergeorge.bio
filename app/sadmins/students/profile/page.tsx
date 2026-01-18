@@ -3,6 +3,7 @@
 import React, { Suspense } from "react";
 import StudentProfileContent from "./StudentProfileContent";
 import styles from "./student-profile.module.css";
+import Loading from "@/app/components/Loading";
 
 function LoadingFallback() {
   return (
@@ -14,7 +15,7 @@ function LoadingFallback() {
 
 export default function StudentProfilePage() {
   return (
-    <Suspense fallback={<LoadingFallback />}>
+    <Suspense fallback={<Loading text="Loading student profile..." />}>
       <StudentProfileContent />
     </Suspense>
   );

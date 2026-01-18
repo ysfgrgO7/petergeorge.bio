@@ -13,10 +13,10 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import PopupModal from "@/app/popupModal";
+import Modal, { ModalVariant } from "@/app/components/Modal";
 import styles from "../../../courses.module.css";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import MessageModal from "@/app/MessageModal";
+import Loading from "@/app/components/Loading";
 
 interface HomeworkQuestion extends DocumentData {
   id: string;
@@ -57,6 +57,7 @@ export default function HomeworkClient() {
   const [user, setUser] = useState<User | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [modalVariant, setModalVariant] = useState<ModalVariant>("error");
   const [loading, setLoading] = useState(true);
   const [homeworkSubmitted, setHomeworkSubmitted] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -69,7 +70,7 @@ export default function HomeworkClient() {
     // Only save if there are actual answers
     const hasMcqAnswers = mcqAnswers.some((answer) => answer !== -1);
     const hasEssayAnswers = Object.values(essayAnswers).some(
-      (answer) => answer.trim() !== ""
+      (answer) => answer.trim() !== "",
     );
 
     if (!hasMcqAnswers && !hasEssayAnswers) return;
@@ -81,7 +82,7 @@ export default function HomeworkClient() {
         "students",
         user.uid,
         "homeworkDrafts",
-        `${year}_${courseId}_${lectureId}`
+        `${year}_${courseId}_${lectureId}`,
       );
 
       await setDoc(draftRef, {
@@ -110,7 +111,7 @@ export default function HomeworkClient() {
           "students",
           user.uid,
           "homeworkDrafts",
-          `${year}_${courseId}_${lectureId}`
+          `${year}_${courseId}_${lectureId}`,
         );
         const draftSnap = await getDoc(draftRef);
 
@@ -135,7 +136,7 @@ export default function HomeworkClient() {
         console.error("Error loading saved progress:", error);
       }
     },
-    [user, year, courseId, lectureId]
+    [user, year, courseId, lectureId],
   );
 
   // Auto-save when answers change (debounced)
@@ -153,6 +154,7 @@ export default function HomeworkClient() {
 
     if (!user || !year || !courseId || !lectureId) {
       setModalMessage("Missing user or homework details. Please log in.");
+      setModalVariant("error");
       setShowModal(true);
       setHomeworkSubmitted(false);
       return;
@@ -185,7 +187,7 @@ export default function HomeworkClient() {
           type: "mcq",
           selectedIndex,
           selectedText:
-            selectedIndex !== -1 ? q.options?.[selectedIndex] ?? null : null,
+            selectedIndex !== -1 ? (q.options?.[selectedIndex] ?? null) : null,
           correctAnswer: q.options?.[correctIndex ?? -1] ?? "",
           isCorrect,
         });
@@ -207,7 +209,7 @@ export default function HomeworkClient() {
         "students",
         user.uid,
         "homeworkProgress",
-        `${year}_${courseId}_${lectureId}`
+        `${year}_${courseId}_${lectureId}`,
       );
 
       await setDoc(submissionRef, {
@@ -231,7 +233,7 @@ export default function HomeworkClient() {
           "students",
           user.uid,
           "homeworkDrafts",
-          `${year}_${courseId}_${lectureId}`
+          `${year}_${courseId}_${lectureId}`,
         );
         await deleteDoc(draftRef);
       } catch (error) {
@@ -241,11 +243,12 @@ export default function HomeworkClient() {
 
       // Navigate to results
       router.push(
-        `/courses/lectures/lecture/hw/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+        `/courses/lectures/lecture/hw/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`,
       );
     } catch (error) {
       console.error("Error submitting homework:", error);
       setModalMessage("Failed to submit homework. Please try again.");
+      setModalVariant("error");
       setShowModal(true);
       setHomeworkSubmitted(false);
     }
@@ -269,22 +272,24 @@ export default function HomeworkClient() {
     // Check if all essay questions are answered
     const essayQuestions = questions.filter((q) => q.type === "essay");
     const answeredEssays = essayQuestions.filter(
-      (q) => essayAnswers[q.id] && essayAnswers[q.id].trim() !== ""
+      (q) => essayAnswers[q.id] && essayAnswers[q.id].trim() !== "",
     ).length;
 
     // Validation
     if (answeredMCQs < mcqQuestions.length) {
       setModalMessage(
-        `Please answer all ${mcqQuestions.length} multiple choice questions. You have answered ${answeredMCQs} out of ${mcqQuestions.length}.`
+        `Please answer all ${mcqQuestions.length} multiple choice questions. You have answered ${answeredMCQs} out of ${mcqQuestions.length}.`,
       );
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
 
     if (answeredEssays < essayQuestions.length) {
       setModalMessage(
-        `Please answer all ${essayQuestions.length} essay questions. You have answered ${answeredEssays} out of ${essayQuestions.length}.`
+        `Please answer all ${essayQuestions.length} essay questions. You have answered ${answeredEssays} out of ${essayQuestions.length}.`,
       );
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -320,11 +325,12 @@ export default function HomeworkClient() {
 
       if (!year || !courseId || !lectureId) {
         console.error(
-          "Missing year, courseId, or lectureId in URL parameters."
+          "Missing year, courseId, or lectureId in URL parameters.",
         );
         setModalMessage(
-          "Missing homework details. Please navigate from the courses page."
+          "Missing homework details. Please navigate from the courses page.",
         );
+        setModalVariant("warning");
         setShowModal(true);
         setLoading(false);
         return;
@@ -337,7 +343,7 @@ export default function HomeworkClient() {
           "students",
           currentUser.uid,
           "homeworkProgress",
-          `${year}_${courseId}_${lectureId}`
+          `${year}_${courseId}_${lectureId}`,
         );
         const homeworkProgressSnap = await getDoc(homeworkProgressRef);
 
@@ -346,6 +352,7 @@ export default function HomeworkClient() {
           homeworkProgressSnap.data().homeworkCompleted
         ) {
           setModalMessage("You have already submitted this homework.");
+          setModalVariant("info");
           setShowModal(true);
           setLoading(false);
           return;
@@ -354,7 +361,7 @@ export default function HomeworkClient() {
         // Fetch homework questions
         const homeworkRef = collection(
           db,
-          `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`
+          `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`,
         );
         const homeworkSnapshot = await getDocs(homeworkRef);
 
@@ -368,7 +375,7 @@ export default function HomeworkClient() {
 
         // Count MCQ questions to initialize answers array
         const mcqCount = homeworkQuestions.filter(
-          (q) => q.type === "mcq"
+          (q) => q.type === "mcq",
         ).length;
         setMcqAnswers(new Array(mcqCount).fill(-1));
         setEssayAnswers({});
@@ -380,6 +387,7 @@ export default function HomeworkClient() {
       } catch (error) {
         console.error("Error fetching homework data:", error);
         setModalMessage("Failed to load homework. Please try again later.");
+        setModalVariant("error");
         setShowModal(true);
         setLoading(false);
       }
@@ -406,7 +414,7 @@ export default function HomeworkClient() {
   const essayQuestions = questions.filter((q) => q.type === "essay");
   const answeredMCQs = mcqAnswers.filter((ans) => ans !== -1).length;
   const answeredEssays = essayQuestions.filter(
-    (q) => essayAnswers[q.id] && essayAnswers[q.id].trim() !== ""
+    (q) => essayAnswers[q.id] && essayAnswers[q.id].trim() !== "",
   ).length;
 
   const totalQuestions = questions.length;
@@ -419,11 +427,7 @@ export default function HomeworkClient() {
     answeredEssays === essayQuestions.length;
 
   if (loading) {
-    return (
-      <div className={styles.wrapper}>
-        <p>Loading homework...</p>
-      </div>
-    );
+    return <Loading text="Loading homework..." />;
   }
 
   if (questions.length === 0) {
@@ -605,17 +609,23 @@ export default function HomeworkClient() {
       <hr className={styles.summaryHr} />
 
       {showModal && (
-        <MessageModal
+        <Modal
+          isOpen={showModal}
+          type="toast"
+          variant={modalVariant}
           message={modalMessage}
           onClose={() => setShowModal(false)}
         />
       )}
       {showConfirm && (
-        <PopupModal
+        <Modal
           isOpen={showConfirm}
-          message={"Are you sure you want to submit this homework?"}
-          confirmText="Submit"
-          cancelText="Cancel"
+          type="popup"
+          variant="warning"
+          title="Finish Homework?"
+          message="Are you sure you want to submit your homework? You cannot change your answers after submitting."
+          confirmText="Yes, Submit"
+          cancelText="No, Keep Solving"
           onConfirm={confirmSubmit}
           onCancel={() => setShowConfirm(false)}
         />

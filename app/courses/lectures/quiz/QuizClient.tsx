@@ -20,10 +20,10 @@ import {
   getQuizAttemptInfo,
 } from "@/lib/studentProgress";
 import { getUnusedQuizVariant, getRandomQuizVariant } from "@/lib/quizUtils";
-import PopupModal from "@/app/popupModal";
+import Modal, { ModalVariant } from "@/app/components/Modal";
 import styles from "../../courses.module.css";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import MessageModal from "@/app/MessageModal";
+import Loading from "@/app/components/Loading";
 
 interface QuizQuestion extends DocumentData {
   id: string;
@@ -77,6 +77,7 @@ export default function QuizClient() {
   const [user, setUser] = useState<User | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [modalVariant, setModalVariant] = useState<ModalVariant>("error");
   const [popupModal, setPopupModal] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -91,6 +92,7 @@ export default function QuizClient() {
 
     if (!user || !year || !courseId || !lectureId) {
       setModalMessage("Missing user or quiz details. Please log in.");
+      setModalVariant("error");
       setShowModal(true);
       setQuizSubmitted(false);
       return;
@@ -130,7 +132,7 @@ export default function QuizClient() {
           type: "mcq",
           selectedIndex,
           selectedText:
-            selectedIndex !== -1 ? q.options?.[selectedIndex] ?? null : null,
+            selectedIndex !== -1 ? (q.options?.[selectedIndex] ?? null) : null,
           correctAnswer: q.options?.[correctIndex ?? -1] ?? "",
           isCorrect,
           marks: questionMarks,
@@ -155,7 +157,7 @@ export default function QuizClient() {
       "students",
       user.uid,
       "progress",
-      `${year}_${courseId}_${lectureId}`
+      `${year}_${courseId}_${lectureId}`,
     );
 
     await setDoc(
@@ -176,7 +178,7 @@ export default function QuizClient() {
         },
         completedAt: serverTimestamp(),
       },
-      { merge: true }
+      { merge: true },
     );
 
     const quizStateDocRef = doc(
@@ -184,7 +186,7 @@ export default function QuizClient() {
       "students",
       user.uid,
       "quizAttempts",
-      lectureId
+      lectureId,
     );
 
     const requiredScore = Math.floor(totalMCQQuestions / 2) + 1;
@@ -200,7 +202,7 @@ export default function QuizClient() {
           courseId,
           lectureId,
           earnedMarks,
-          totalPossibleMarks
+          totalPossibleMarks,
         );
         await unlockLecture(user.uid, year, courseId, lectureId);
       } catch (error: unknown) {
@@ -224,7 +226,7 @@ export default function QuizClient() {
     });
 
     router.push(
-      `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+      `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`,
     );
   }, [
     quizSubmitted,
@@ -290,11 +292,12 @@ export default function QuizClient() {
 
       if (!year || !courseId || !lectureId) {
         console.error(
-          "Missing year, courseId, or lectureId in URL parameters."
+          "Missing year, courseId, or lectureId in URL parameters.",
         );
         setModalMessage(
-          "Missing quiz details. Please navigate from the courses page."
+          "Missing quiz details. Please navigate from the courses page.",
         );
+        setModalVariant("warning");
         setShowModal(true);
         setLoading(false);
         return;
@@ -306,13 +309,14 @@ export default function QuizClient() {
             currentUser.uid,
             year,
             courseId,
-            lectureId
+            lectureId,
           );
 
           if (attemptInfo.maxAttemptsReached) {
             setModalMessage(
-              "You have reached the maximum number of attempts (3) for this quiz."
+              "You have reached the maximum number of attempts (3) for this quiz.",
             );
+            setModalVariant("warning");
             setShowModal(true);
             setLoading(false);
             return;
@@ -320,7 +324,7 @@ export default function QuizClient() {
 
           const settingsDocRef = doc(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`,
           );
           const docSnap = await getDoc(settingsDocRef);
           let durationMinutes = 10;
@@ -334,7 +338,7 @@ export default function QuizClient() {
             "students",
             currentUser.uid,
             "quizAttempts",
-            lectureId
+            lectureId,
           );
           const quizStateDocSnap = await getDoc(quizStateDocRef);
 
@@ -342,15 +346,16 @@ export default function QuizClient() {
             const data = quizStateDocSnap.data();
             const startTime = data.startTime.toDate();
             const elapsedTime = Math.floor(
-              (Date.now() - startTime.getTime()) / 1000
+              (Date.now() - startTime.getTime()) / 1000,
             );
             const remainingTime = durationSeconds - elapsedTime;
 
             if (remainingTime <= 0) {
               await deleteDoc(quizStateDocRef);
               setModalMessage(
-                "Your previous quiz session expired. Starting a new quiz now."
+                "Your previous quiz session expired. Starting a new quiz now.",
               );
+              setModalVariant("info");
               setShowModal(true);
               setTimeLeft(durationSeconds);
             } else {
@@ -365,23 +370,23 @@ export default function QuizClient() {
           }
 
           const selectedVariant = getUnusedQuizVariant(
-            attemptInfo.usedVariants
+            attemptInfo.usedVariants,
           );
           await incrementQuizAttempt(
             currentUser.uid,
             year,
             courseId,
             lectureId,
-            selectedVariant
+            selectedVariant,
           );
 
           const quizRef = collection(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/${selectedVariant}`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/${selectedVariant}`,
           );
           const essayRef = collection(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/essayQuestions`,
           );
 
           const quizSnapshot = await getDocs(quizRef);
@@ -413,6 +418,7 @@ export default function QuizClient() {
         } catch (error) {
           console.error("Error fetching quiz data:", error);
           setModalMessage("Failed to load quiz. Please try again later.");
+          setModalVariant("error");
           setShowModal(true);
           setLoading(false);
         }
@@ -432,6 +438,7 @@ export default function QuizClient() {
           clearInterval(timer);
           handleSubmit();
           setModalMessage("Time's up! Your quiz has been submitted.");
+          setModalVariant("info");
           setShowModal(true);
           return 0;
         }
@@ -469,7 +476,7 @@ export default function QuizClient() {
   const totalMCQQuestions = questions.filter((q) => q.type === "mcq").length;
   const answeredMCQs = mcqAnswers.filter((ans) => ans !== -1).length;
   const answeredEssays = Object.keys(essayAnswers).filter(
-    (key) => essayAnswers[key].trim() !== ""
+    (key) => essayAnswers[key].trim() !== "",
   ).length;
 
   const totalQuestions = questions.length;
@@ -477,11 +484,7 @@ export default function QuizClient() {
   const unsolvedQuestions = totalQuestions - solvedQuestions;
 
   if (loading) {
-    return (
-      <div className={styles.wrapper}>
-        <p>Loading quiz...</p>
-      </div>
-    );
+    return <Loading text="Loading quiz..." />;
   }
 
   if (questions.length === 0) {
@@ -604,7 +607,7 @@ export default function QuizClient() {
                       dangerouslySetInnerHTML={{
                         __html: q.question.replace(
                           /<u>(.*?)<\/u>/g,
-                          "<u>$1</u>"
+                          "<u>$1</u>",
                         ),
                       }}
                     />
@@ -693,17 +696,23 @@ export default function QuizClient() {
       <hr className={styles.summaryHr} />
 
       {showModal && (
-        <MessageModal
+        <Modal
+          isOpen={showModal}
+          type="toast"
+          variant={modalVariant}
           message={modalMessage}
           onClose={() => setShowModal(false)}
         />
       )}
       {showConfirm && (
-        <PopupModal
+        <Modal
           isOpen={showConfirm}
-          message={"Are you sure you want to submit this quiz?"}
-          confirmText="Submit"
-          cancelText="Cancel"
+          type="popup"
+          variant="warning"
+          title="Finish Quiz?"
+          message="Are you sure you want to submit this quiz? You cannot change your answers after submitting."
+          confirmText="Yes, Submit"
+          cancelText="No, Keep Solving"
           onConfirm={confirmSubmit}
           onCancel={() => setShowConfirm(false)}
         />

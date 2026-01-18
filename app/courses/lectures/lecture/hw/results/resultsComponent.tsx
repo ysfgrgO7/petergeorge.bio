@@ -6,6 +6,7 @@ import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import styles from "../../../../courses.module.css";
+import Loading from "@/app/components/Loading";
 
 export default function HomeworkResults() {
   const router = useRouter();
@@ -53,7 +54,7 @@ export default function HomeworkResults() {
           "students",
           currentUser.uid,
           "homeworkProgress",
-          `${year}_${courseId}_${lectureId}`
+          `${year}_${courseId}_${lectureId}`,
         );
         const resultSnap = await getDoc(resultRef);
         if (resultSnap.exists()) {
@@ -76,11 +77,7 @@ export default function HomeworkResults() {
   }, [year, courseId, lectureId, router]);
 
   if (loading) {
-    return (
-      <div className={styles.wrapper}>
-        <p>Loading results...</p>
-      </div>
-    );
+    return <Loading text="Loading results..." />;
   }
 
   if (score === null || total === null) {

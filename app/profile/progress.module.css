@@ -38,7 +38,7 @@
 
 .infoItem {
   display: flex;
-  flex-direction:column;
+  flex-direction: column;
   gap: 6px;
   padding: 0.75rem;
   background: var(--light);

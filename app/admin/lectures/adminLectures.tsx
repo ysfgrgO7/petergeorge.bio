@@ -13,9 +13,10 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import styles from "../admin.module.css";
-import MessageModal from "@/app/MessageModal";
+import Modal, { ModalVariant } from "@/app/components/Modal";
 import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
+import Loading from "@/app/components/Loading";
 
 import { IoChevronBackCircleSharp } from "react-icons/io5";
 
@@ -68,6 +69,7 @@ export default function LectureManagerPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [modalVariant, setModalVariant] = useState<ModalVariant>("success");
 
   const lectureRef =
     year && courseId && lectureId
@@ -90,7 +92,7 @@ export default function LectureManagerPage() {
       const linksRef = collection(lectureRef, "links");
       const linksSnapshot = await getDocs(linksRef);
       const fetchedLinks: LinkItem[] = linksSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as LinkItem)
+        (doc) => ({ id: doc.id, ...doc.data() }) as LinkItem,
       );
       setLinks(fetchedLinks);
 
@@ -99,7 +101,7 @@ export default function LectureManagerPage() {
       const homeworkVideosSnapshot = await getDocs(homeworkVideosRef);
       const fetchedHomeworkVideos: HomeworkVideo[] =
         homeworkVideosSnapshot.docs.map(
-          (doc) => ({ id: doc.id, ...doc.data() } as HomeworkVideo)
+          (doc) => ({ id: doc.id, ...doc.data() }) as HomeworkVideo,
         );
       setHomeworkVideos(fetchedHomeworkVideos);
 
@@ -107,7 +109,7 @@ export default function LectureManagerPage() {
       const extraVideosRef = collection(lectureRef, "extraVideos");
       const extraVideosSnapshot = await getDocs(extraVideosRef);
       const fetchedExtraVideos: ExtraVideo[] = extraVideosSnapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as ExtraVideo)
+        (doc) => ({ id: doc.id, ...doc.data() }) as ExtraVideo,
       );
       setExtraVideos(fetchedExtraVideos);
 
@@ -118,6 +120,7 @@ export default function LectureManagerPage() {
         message = error.message;
       }
       setModalMessage(message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -146,6 +149,10 @@ export default function LectureManagerPage() {
     return () => unsubscribe(); // Cleanup the listener on component unmount
   }, [router]);
 
+  if (loading) {
+    return <Loading text="Verifying admin access..." />;
+  }
+
   useEffect(() => {
     if (lectureRef) {
       fetchData();
@@ -153,7 +160,7 @@ export default function LectureManagerPage() {
   }, [lectureRef]);
 
   const extractOdyseeInfo = (
-    url: string
+    url: string,
   ): { name: string; id: string } | null => {
     const regex = /odysee\.com\/[^/]+\/([^:]+):([a-zA-Z0-9]+)/;
     const match = url.match(regex);
@@ -164,6 +171,7 @@ export default function LectureManagerPage() {
   const handleUpdateOdyseeLink = async () => {
     if (!newOdyseeLink.trim()) {
       setModalMessage("Odysee link cannot be empty.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -171,8 +179,9 @@ export default function LectureManagerPage() {
     const info = extractOdyseeInfo(newOdyseeLink);
     if (!info) {
       setModalMessage(
-        "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'."
+        "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'.",
       );
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -187,6 +196,7 @@ export default function LectureManagerPage() {
       setNewOdyseeLink("");
       fetchData();
       setModalMessage("Odysee link updated successfully!");
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       let message = "Failed to update Odysee link.";
@@ -194,6 +204,7 @@ export default function LectureManagerPage() {
         message += ": " + error.message;
       }
       setModalMessage(message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -201,6 +212,7 @@ export default function LectureManagerPage() {
   const handleAddHomeworkVideo = async () => {
     if (!newHomeworkLink.trim()) {
       setModalMessage("Homework video link cannot be empty.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -208,8 +220,9 @@ export default function LectureManagerPage() {
     const info = extractOdyseeInfo(newHomeworkLink);
     if (!info) {
       setModalMessage(
-        "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'."
+        "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'.",
       );
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -225,6 +238,7 @@ export default function LectureManagerPage() {
       setNewHomeworkLink("");
       fetchData();
       setModalMessage("Homework video added successfully!");
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       let message = "Failed to add homework video.";
@@ -232,6 +246,7 @@ export default function LectureManagerPage() {
         message += ": " + error.message;
       }
       setModalMessage(message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -246,6 +261,7 @@ export default function LectureManagerPage() {
       await deleteDoc(doc(lectureRef, "homeworkVideos", videoId));
       fetchData();
       setModalMessage("Homework video deleted successfully!");
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       let message = "Failed to delete homework video.";
@@ -253,6 +269,7 @@ export default function LectureManagerPage() {
         message += ": " + error.message;
       }
       setModalMessage(message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -260,6 +277,7 @@ export default function LectureManagerPage() {
   const handleAddExtraVideo = async () => {
     if (!newExtraVideoLink.trim()) {
       setModalMessage("Extra video link cannot be empty.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -267,8 +285,9 @@ export default function LectureManagerPage() {
     const info = extractOdyseeInfo(newExtraVideoLink);
     if (!info) {
       setModalMessage(
-        "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'."
+        "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'.",
       );
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -284,6 +303,7 @@ export default function LectureManagerPage() {
       setNewExtraVideoLink("");
       fetchData();
       setModalMessage("Extra video added successfully!");
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       let message = "Failed to add extra video.";
@@ -291,6 +311,7 @@ export default function LectureManagerPage() {
         message += ": " + error.message;
       }
       setModalMessage(message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -305,6 +326,7 @@ export default function LectureManagerPage() {
       await deleteDoc(doc(lectureRef, "extraVideos", videoId));
       fetchData();
       setModalMessage("Extra video deleted successfully!");
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       let message = "Failed to delete extra video.";
@@ -312,6 +334,7 @@ export default function LectureManagerPage() {
         message += ": " + error.message;
       }
       setModalMessage(message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -319,6 +342,7 @@ export default function LectureManagerPage() {
   const handleAddLink = async () => {
     if (!linkText.trim() || !linkUrl.trim()) {
       setModalMessage("Link text and URL cannot be empty.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -332,6 +356,7 @@ export default function LectureManagerPage() {
       setLinkUrl("");
       fetchData();
       setModalMessage("Link added successfully!");
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       let message = "Failed to add link.";
@@ -339,6 +364,7 @@ export default function LectureManagerPage() {
         message += ": " + error.message;
       }
       setModalMessage(message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -347,7 +373,7 @@ export default function LectureManagerPage() {
     if (
       !lectureRef ||
       !confirm(
-        `Are you sure you want to delete the lecture "${lectureTitle}"? This cannot be undone.`
+        `Are you sure you want to delete the lecture "${lectureTitle}"? This cannot be undone.`,
       )
     ) {
       return;
@@ -355,6 +381,7 @@ export default function LectureManagerPage() {
     try {
       await deleteDoc(lectureRef);
       setModalMessage("Lecture deleted successfully!");
+      setModalVariant("success");
       setShowModal(true);
       setTimeout(() => {
         router.push("/admin");
@@ -365,6 +392,7 @@ export default function LectureManagerPage() {
         message += ": " + error.message;
       }
       setModalMessage(message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -376,6 +404,7 @@ export default function LectureManagerPage() {
       await deleteDoc(doc(lectureRef, "links", linkId));
       fetchData();
       setModalMessage("Link deleted successfully!");
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       let message = "Failed to delete link.";
@@ -383,19 +412,20 @@ export default function LectureManagerPage() {
         message += ": " + error.message;
       }
       setModalMessage(message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
 
   const handleManageQuizzes = () => {
     router.push(
-      `/admin/quiz?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+      `/admin/quiz?year=${year}&courseId=${courseId}&lectureId=${lectureId}`,
     );
   };
 
   const handleManageHw = () => {
     router.push(
-      `/admin/hw?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+      `/admin/hw?year=${year}&courseId=${courseId}&lectureId=${lectureId}`,
     );
   };
 
@@ -428,10 +458,7 @@ export default function LectureManagerPage() {
           >
             Manage Lecture Quiz
           </button>
-          <button
-            onClick={handleManageHw}
-            className={styles.fullWidthButton}
-          >
+          <button onClick={handleManageHw} className={styles.fullWidthButton}>
             Manage Lecture H.W.
           </button>
           <button onClick={handleDeleteLecture} className={styles.deleteButton}>
@@ -586,7 +613,10 @@ export default function LectureManagerPage() {
       </section>
 
       {showModal && (
-        <MessageModal
+        <Modal
+          isOpen={showModal}
+          type="toast"
+          variant={modalVariant}
           message={modalMessage}
           onClose={() => setShowModal(false)}
         />

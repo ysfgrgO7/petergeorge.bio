@@ -714,6 +714,7 @@ import { IoPeople, IoCheckmarkCircle, IoTime } from "react-icons/io5";
 import styles from "./page.module.css";
 import { BiChevronLeft } from "react-icons/bi";
 import { FaChalkboardTeacher } from "react-icons/fa";
+import Loading from "@/app/components/Loading";
 
 interface StudentProgress {
   studentId: string;
@@ -805,7 +806,7 @@ export default function StudentsPage() {
           "courses",
           courseId!,
           "lectures",
-          lectureId!
+          lectureId!,
         );
         const lectureSnap = await getDoc(lectureRef);
         if (lectureSnap.exists()) {
@@ -852,7 +853,7 @@ export default function StudentsPage() {
           "students",
           studentId,
           "progress",
-          progressDocId
+          progressDocId,
         );
         const progressSnap = await getDoc(progressRef);
 
@@ -905,10 +906,10 @@ export default function StudentsPage() {
       }
 
       studentsWithProgress.sort((a, b) =>
-        (a.studentName || "").localeCompare(b.studentName || "")
+        (a.studentName || "").localeCompare(b.studentName || ""),
       );
       allYearStudentsArray.sort((a, b) =>
-        (a.studentName || "").localeCompare(b.studentName || "")
+        (a.studentName || "").localeCompare(b.studentName || ""),
       );
 
       setStudents(studentsWithProgress);
@@ -923,7 +924,7 @@ export default function StudentsPage() {
   const handleToggleEnabled = async (
     studentId: string,
     currentStatus: boolean,
-    event: React.MouseEvent
+    event: React.MouseEvent,
   ) => {
     event.stopPropagation();
 
@@ -938,7 +939,7 @@ export default function StudentsPage() {
         "students",
         studentId,
         "progress",
-        progressDocId
+        progressDocId,
       );
 
       const progressSnap = await getDoc(progressRef);
@@ -951,13 +952,13 @@ export default function StudentsPage() {
         // Update local state
         setStudents((prev) =>
           prev.map((s) =>
-            s.studentId === studentId ? { ...s, isEnabled: !currentStatus } : s
-          )
+            s.studentId === studentId ? { ...s, isEnabled: !currentStatus } : s,
+          ),
         );
         setAllYearStudents((prev) =>
           prev.map((s) =>
-            s.studentId === studentId ? { ...s, isEnabled: !currentStatus } : s
-          )
+            s.studentId === studentId ? { ...s, isEnabled: !currentStatus } : s,
+          ),
         );
       } else {
         alert("Cannot toggle: Lecture is not unlocked for this student.");
@@ -1003,10 +1004,10 @@ export default function StudentsPage() {
     const totalInYear = allYearStudents.length;
     const completed = students.filter((s) => s.quizCompleted).length;
     const centerStudents = students.filter(
-      (s) => s.system === "center" && s.unlocked
+      (s) => s.system === "center" && s.unlocked,
     ).length;
     const onlineStudents = students.filter(
-      (s) => s.system === "online" && s.unlocked
+      (s) => s.system === "online" && s.unlocked,
     ).length;
     const schoolStudents = students.filter((s) => s.system === "school").length;
     const averageScore =
@@ -1014,7 +1015,7 @@ export default function StudentsPage() {
         .filter((s) => s.earnedMarks !== undefined && s.totalPossibleMark)
         .reduce(
           (sum, s) => sum + getPercentage(s.earnedMarks!, s.totalPossibleMark!),
-          0
+          0,
         ) / (completed || 1);
 
     return {
@@ -1029,11 +1030,7 @@ export default function StudentsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="wrapper">
-        <p>Loading lectures...</p>
-      </div>
-    );
+    return <Loading text="Loading students..." />;
   }
 
   if (error) {
@@ -1142,7 +1139,7 @@ export default function StudentsPage() {
                 key: "all",
                 label: "All Systems",
                 count: students.filter(
-                  (s) => s.unlocked || s.system === "school"
+                  (s) => s.unlocked || s.system === "school",
                 ).length,
               },
               { key: "center", label: "Center", count: stats.centerStudents },
@@ -1187,8 +1184,8 @@ export default function StudentsPage() {
                     }&courseId=${courseId}&lectureId=${lectureId}&year=${
                       lectureInfo?.year ?? ""
                     }&studentName=${encodeURIComponent(
-                      student.studentName || "Unknown"
-                    )}`
+                      student.studentName || "Unknown",
+                    )}`,
                   )
                 }
               >
@@ -1218,14 +1215,14 @@ export default function StudentsPage() {
                         student.system === "center"
                           ? "rgba(59, 130, 246, 0.2)"
                           : student.system === "online"
-                          ? "rgba(168, 85, 247, 0.2)"
-                          : "rgba(107, 114, 128, 0.2)",
+                            ? "rgba(168, 85, 247, 0.2)"
+                            : "rgba(107, 114, 128, 0.2)",
                       color:
                         student.system === "center"
                           ? "rgb(59, 130, 246)"
                           : student.system === "online"
-                          ? "rgb(168, 85, 247)"
-                          : "rgb(107, 114, 128)",
+                            ? "rgb(168, 85, 247)"
+                            : "rgb(107, 114, 128)",
                     }}
                   >
                     {student.system || "N/A"}
@@ -1239,7 +1236,7 @@ export default function StudentsPage() {
                       handleToggleEnabled(
                         student.studentId,
                         student.isEnabled ?? true,
-                        e
+                        e,
                       )
                     }
                     disabled={updatingStudent === student.studentId}
@@ -1264,8 +1261,8 @@ export default function StudentsPage() {
                     {updatingStudent === student.studentId
                       ? "Updating..."
                       : student.isEnabled !== false
-                      ? "Enabled"
-                      : "Disabled"}
+                        ? "Enabled"
+                        : "Disabled"}
                   </button>
                 </td>
 
@@ -1286,20 +1283,20 @@ export default function StudentsPage() {
                           className={`${styles.scorePercentage} ${
                             getPercentage(
                               student.earnedMarks,
-                              student.totalPossibleMark
+                              student.totalPossibleMark,
                             ) >= 70
                               ? styles.high
                               : getPercentage(
-                                  student.earnedMarks,
-                                  student.totalPossibleMark
-                                ) >= 50
-                              ? styles.medium
-                              : styles.low
+                                    student.earnedMarks,
+                                    student.totalPossibleMark,
+                                  ) >= 50
+                                ? styles.medium
+                                : styles.low
                           }`}
                         >
                           {getPercentage(
                             student.earnedMarks,
-                            student.totalPossibleMark
+                            student.totalPossibleMark,
                           )}
                           %
                         </div>

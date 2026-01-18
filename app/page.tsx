@@ -61,7 +61,7 @@ export default function Home() {
   const tryQuery = async (
     coll: string,
     field: "uid" | "email",
-    value: string
+    value: string,
   ) => {
     try {
       const q = query(collection(db, coll), where(field, "==", value));

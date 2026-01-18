@@ -26,6 +26,7 @@ import {
 import { MdQuiz } from "react-icons/md";
 import { FaPlay } from "react-icons/fa";
 import { useTheme } from "@/app/components/ThemeProvider";
+import Loading from "@/app/components/Loading";
 
 interface Lecture extends DocumentData {
   id: string;
@@ -71,7 +72,7 @@ function LecturesContent() {
   const [user, setUser] = useState<User | null>(null);
   const [studentSystem, setStudentSystem] = useState<string>("");
   const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>(
-    {}
+    {},
   );
   const [homeworkProgressMap, setHomeworkProgressMap] = useState<
     Record<string, HomeworkProgressData>
@@ -85,7 +86,7 @@ function LecturesContent() {
   // Helper functions
   const getProgressKey = useCallback(
     (lectureId: string) => `${year}_${courseId}_${lectureId}`,
-    [year, courseId]
+    [year, courseId],
   );
 
   const resetCodeInput = useCallback(() => {
@@ -100,19 +101,19 @@ function LecturesContent() {
       try {
         const homeworkQuestionsRef = collection(
           db,
-          `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`
+          `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`,
         );
         const homeworkSnapshot = await getDocs(homeworkQuestionsRef);
         return !homeworkSnapshot.empty;
       } catch (error) {
         console.warn(
           `Failed to check homework for lecture ${lectureId}:`,
-          error
+          error,
         );
         return false;
       }
     },
-    [year, courseId]
+    [year, courseId],
   );
 
   // Get homework progress for a lecture
@@ -123,7 +124,7 @@ function LecturesContent() {
       try {
         const homeworkProgressRef = doc(
           db,
-          `students/${user.uid}/homeworkProgress/${year}_${courseId}_${lectureId}`
+          `students/${user.uid}/homeworkProgress/${year}_${courseId}_${lectureId}`,
         );
         const homeworkProgressSnap = await getDoc(homeworkProgressRef);
         return homeworkProgressSnap.exists()
@@ -132,21 +133,21 @@ function LecturesContent() {
       } catch (error) {
         console.warn(
           `Failed to get homework progress for lecture ${lectureId}:`,
-          error
+          error,
         );
         return {};
       }
     },
-    [user, year, courseId]
+    [user, year, courseId],
   );
 
   // Memoized calculations
   const { quizzesCompleted, totalQuizzes, progressPercentage } = useMemo(() => {
     const lecturesWithQuiz = courseLectures.filter(
-      (lecture) => lecture.hasQuiz
+      (lecture) => lecture.hasQuiz,
     );
     const completed = lecturesWithQuiz.filter(
-      (lecture) => progressMap[getProgressKey(lecture.id)]?.quizCompleted
+      (lecture) => progressMap[getProgressKey(lecture.id)]?.quizCompleted,
     ).length;
 
     return {
@@ -268,7 +269,7 @@ function LecturesContent() {
       homeworkProgressMap,
       getProgressKey,
       studentSystem,
-    ]
+    ],
   );
 
   // Get lecture URL based on state
@@ -285,10 +286,10 @@ function LecturesContent() {
       return `/courses/lectures/lecture?${baseParams}&odyseeName=${
         lecture.odyseeName
       }&odyseeId=${lecture.odyseeId}&title=${encodeURIComponent(
-        lecture.title
+        lecture.title,
       )}`;
     },
-    [year, courseId]
+    [year, courseId],
   );
 
   // Auth effect - Fetch student system
@@ -328,12 +329,12 @@ function LecturesContent() {
       try {
         const lecturesRef = collection(
           db,
-          `years/${year}/courses/${courseId}/lectures`
+          `years/${year}/courses/${courseId}/lectures`,
         );
         const q = query(
           lecturesRef,
           where("isHidden", "==", false),
-          orderBy("order")
+          orderBy("order"),
         );
         const snapshot = await getDocs(q);
 
@@ -346,7 +347,7 @@ function LecturesContent() {
             const randomVariant = getRandomQuizVariant();
             const quizRef = collection(
               db,
-              `years/${year}/courses/${courseId}/lectures/${lectureData.id}/${randomVariant}`
+              `years/${year}/courses/${courseId}/lectures/${lectureData.id}/${randomVariant}`,
             );
             const quizSnapshot = await getDocs(quizRef);
             lectureData.hasQuiz = !quizSnapshot.empty;
@@ -357,7 +358,7 @@ function LecturesContent() {
           } catch (error) {
             console.warn(
               `Failed to check quiz/homework for lecture ${lectureData.id}:`,
-              error
+              error,
             );
             lectureData.hasQuiz = false;
             lectureData.hasHomework = false;
@@ -391,12 +392,12 @@ function LecturesContent() {
       try {
         // Load lecture progress
         const progressPromises = courseLectures.map((lecture) =>
-          getLectureProgress(user.uid, year, courseId, lecture.id)
+          getLectureProgress(user.uid, year, courseId, lecture.id),
         );
 
         // Load homework progress
         const homeworkProgressPromises = courseLectures.map((lecture) =>
-          getHomeworkProgress(lecture.id)
+          getHomeworkProgress(lecture.id),
         );
 
         const [allProgress, allHomeworkProgress] = await Promise.all([
@@ -498,7 +499,7 @@ function LecturesContent() {
         setUnlocking(false);
       }
     },
-    [user, accessCode, courseId, year, getProgressKey, resetCodeInput]
+    [user, accessCode, courseId, year, getProgressKey, resetCodeInput],
   );
 
   // Render quiz score information
@@ -539,7 +540,7 @@ function LecturesContent() {
         </div>
       );
     },
-    []
+    [],
   );
 
   // Render homework info
@@ -566,7 +567,7 @@ function LecturesContent() {
         </div>
       );
     },
-    [homeworkProgressMap, getProgressKey]
+    [homeworkProgressMap, getProgressKey],
   );
 
   // Render unlock interface
@@ -625,7 +626,7 @@ function LecturesContent() {
       errorMessage,
       handleCodeSubmit,
       resetCodeInput,
-    ]
+    ],
   );
 
   // Render lecture action button
@@ -662,13 +663,13 @@ function LecturesContent() {
         </button>
       );
     },
-    [router]
+    [router],
   );
 
   if (loadingLectures) {
     return (
       <div className="wrapper">
-        <p>Loading lectures...</p>
+        <Loading text="Loading lectures..." />
       </div>
     );
   }
@@ -763,13 +764,7 @@ function LecturesContent() {
 
 export default function LecturesPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="wrapper">
-          <p>Loading...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<Loading text="Loading lectures..." />}>
       <LecturesContent />
     </Suspense>
   );

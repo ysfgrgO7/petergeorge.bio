@@ -16,7 +16,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import styles from "../admin.module.css";
-import MessageModal from "@/app/MessageModal";
+import Modal, { ModalVariant } from "@/app/components/Modal";
 import { onAuthStateChanged } from "firebase/auth";
 import {
   IoCloseCircleSharp,
@@ -26,6 +26,7 @@ import {
   IoSaveSharp,
   IoCloseSharp,
 } from "react-icons/io5";
+import Loading from "@/app/components/Loading";
 import {
   MdFormatUnderlined,
   MdFormatBold,
@@ -244,7 +245,7 @@ const QuestionCard = ({
   const [editQuestion, setEditQuestion] = useState(question.question);
   const [editImageUrl, setEditImageUrl] = useState(question.imageUrl || "");
   const [editMarks, setEditMarks] = useState<1 | 2>(
-    question.marks === 1 || question.marks === 2 ? question.marks : 1
+    question.marks === 1 || question.marks === 2 ? question.marks : 1,
   );
   const [editOptions, setEditOptions] = useState(question.options || ["", ""]);
   const [editCorrectAnswerIndex, setEditCorrectAnswerIndex] = useState<
@@ -257,7 +258,7 @@ const QuestionCard = ({
     setEditQuestion(question.question);
     setEditImageUrl(question.imageUrl || "");
     setEditMarks(
-      question.marks === 1 || question.marks === 2 ? question.marks : 1
+      question.marks === 1 || question.marks === 2 ? question.marks : 1,
     );
     setEditOptions(question.options || ["", ""]);
     setEditCorrectAnswerIndex(question.correctAnswerIndex ?? null);
@@ -269,7 +270,7 @@ const QuestionCard = ({
     setEditQuestion(question.question);
     setEditImageUrl(question.imageUrl || "");
     setEditMarks(
-      question.marks === 1 || question.marks === 2 ? question.marks : 1
+      question.marks === 1 || question.marks === 2 ? question.marks : 1,
     );
     setEditOptions(question.options || ["", ""]);
     setEditCorrectAnswerIndex(question.correctAnswerIndex ?? null);
@@ -315,7 +316,7 @@ const QuestionCard = ({
   const removeOption = (optIndex: number) => {
     if (editOptions.length > 2) {
       setEditOptions(
-        editOptions.filter((_: string, i: number) => i !== optIndex)
+        editOptions.filter((_: string, i: number) => i !== optIndex),
       );
       if (editCorrectAnswerIndex === optIndex) {
         setEditCorrectAnswerIndex(null);
@@ -484,7 +485,7 @@ const QuestionCard = ({
               dangerouslySetInnerHTML={{
                 __html: question.question.replace(
                   /<u>(.*?)<\/u>/g,
-                  "<u>$1</u>"
+                  "<u>$1</u>",
                 ),
               }}
             />
@@ -561,7 +562,7 @@ const AddQuestionCard = ({
   const [marks, setMarks] = useState<1 | 2>(1);
   const [options, setOptions] = useState(["", ""]);
   const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(
-    null
+    null,
   );
 
   const addOption = () => {
@@ -734,13 +735,14 @@ export default function QuizBuilder() {
   // Duration state
   const [quizDurationInput, setQuizDurationInput] = useState<number | "">("");
   const [currentQuizDuration, setCurrentQuizDuration] = useState<number | null>(
-    null
+    null,
   );
   const [isDurationLoading, setIsDurationLoading] = useState(true);
 
   // UI state
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [modalVariant, setModalVariant] = useState<ModalVariant>("success");
   const [activeTab, setActiveTab] = useState<
     "variant1" | "variant2" | "variant3"
   >("variant1");
@@ -756,7 +758,7 @@ export default function QuizBuilder() {
     try {
       const settingsDocRef = doc(
         db,
-        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
+        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`,
       );
       const docSnap = await getDoc(settingsDocRef);
       if (docSnap.exists()) {
@@ -767,6 +769,7 @@ export default function QuizBuilder() {
     } catch (error) {
       console.error("Error fetching quiz duration:", error);
       setModalMessage("Failed to load quiz duration.");
+      setModalVariant("error");
       setShowModal(true);
       setCurrentQuizDuration(null);
     } finally {
@@ -782,33 +785,37 @@ export default function QuizBuilder() {
       durationValue <= 0
     ) {
       setModalMessage(
-        "Please enter a valid positive number for quiz duration."
+        "Please enter a valid positive number for quiz duration.",
       );
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
     if (!year || !courseId || !lectureId) {
       setModalMessage(
-        "Missing course, lecture, or year information to save duration."
+        "Missing course, lecture, or year information to save duration.",
       );
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
     try {
       const settingsDocRef = doc(
         db,
-        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`
+        `years/${year}/courses/${courseId}/lectures/${lectureId}/quizSettings/duration`,
       );
       await setDoc(settingsDocRef, { duration: durationValue });
       setCurrentQuizDuration(durationValue);
       setQuizDurationInput("");
       setModalMessage("Quiz duration saved successfully! 🎉");
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       console.error("Error saving quiz duration:", error);
       setModalMessage(
-        "Failed to save quiz duration: " + (error as Error).message
+        "Failed to save quiz duration: " + (error as Error).message,
       );
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -854,15 +861,17 @@ export default function QuizBuilder() {
       } catch (error) {
         console.error("Error fetching quizzes:", error);
         setModalMessage("Failed to fetch existing quizzes.");
+        setModalVariant("error");
         setShowModal(true);
       }
     },
-    [year, courseId, lectureId]
+    [year, courseId, lectureId],
   );
 
   const copyToAllVariants = async () => {
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -871,9 +880,10 @@ export default function QuizBuilder() {
       setModalMessage(
         `No MCQ questions found in ${activeTab.replace(
           "variant",
-          "Variant "
-        )} to copy.`
+          "Variant ",
+        )} to copy.`,
       );
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -883,8 +893,8 @@ export default function QuizBuilder() {
         existingQuizzes.length
       } MCQ questions from ${activeTab.replace(
         "variant",
-        "Variant "
-      )} to all other variants? This will replace existing questions in the other variants.`
+        "Variant ",
+      )} to all other variants? This will replace existing questions in the other variants.`,
     );
 
     if (!confirmCopy) return;
@@ -928,15 +938,17 @@ export default function QuizBuilder() {
           existingQuizzes.length
         } MCQ questions from ${activeTab.replace(
           "variant",
-          "Variant "
-        )} to all other variants! 🎉`
+          "Variant ",
+        )} to all other variants! 🎉`,
       );
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       console.error("Error copying to all variants:", error);
       setModalMessage(
-        "Failed to copy questions to all variants: " + (error as Error).message
+        "Failed to copy questions to all variants: " + (error as Error).message,
       );
+      setModalVariant("error");
       setShowModal(true);
     } finally {
       setIsCopying(false);
@@ -947,6 +959,7 @@ export default function QuizBuilder() {
   const handleDelete = async (quizType: "mcq" | "essay", id: string) => {
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -964,11 +977,13 @@ export default function QuizBuilder() {
     try {
       await deleteDoc(docRef);
       setModalMessage(`${quizType.toUpperCase()} deleted successfully! 🗑️`);
+      setModalVariant("success");
       setShowModal(true);
       fetchQuizzes(activeTab);
     } catch (error) {
       console.error(`Error deleting ${quizType}:`, error);
       setModalMessage(`Failed to delete ${quizType}.`);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -976,12 +991,14 @@ export default function QuizBuilder() {
   const handleSave = async (id: string, data: QuizData) => {
     if (currentQuizDuration === null) {
       setModalMessage("Please set the overall quiz duration first.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
 
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -994,13 +1011,15 @@ export default function QuizBuilder() {
 
       await updateDoc(doc(db, collectionPath, id), { ...data });
       setModalMessage(`${data.type.toUpperCase()} updated successfully! ✅`);
+      setModalVariant("success");
       setShowModal(true);
       fetchQuizzes(activeTab);
     } catch (error: unknown) {
       console.error(`Error updating ${data.type}:`, error);
       setModalMessage(
-        `Failed to save ${data.type}: ` + (error as Error).message
+        `Failed to save ${data.type}: ` + (error as Error).message,
       );
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -1008,12 +1027,14 @@ export default function QuizBuilder() {
   const handleSubmit = async (quizType: "mcq" | "essay", data: QuizData) => {
     if (currentQuizDuration === null) {
       setModalMessage("Please set the overall quiz duration first.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
 
     if (!year || !courseId || !lectureId) {
       setModalMessage("Missing course, lecture, or year information.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -1031,13 +1052,15 @@ export default function QuizBuilder() {
       } else {
         setShowAddEssay(false);
       }
+      setModalVariant("success");
       setShowModal(true);
       fetchQuizzes(activeTab);
     } catch (error: unknown) {
       console.error(`Error adding ${quizType}:`, error);
       setModalMessage(
-        `Failed to save ${quizType}: ` + (error as Error).message
+        `Failed to save ${quizType}: ` + (error as Error).message,
       );
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -1088,7 +1111,7 @@ export default function QuizBuilder() {
   if (loading) {
     return (
       <div className="wrapper">
-        <p>Loading...</p>
+        <Loading text="Loading..." />
       </div>
     );
   }
@@ -1106,7 +1129,7 @@ export default function QuizBuilder() {
       <div className={styles.durationCard}>
         <h2 style={{ fontWeight: "400" }}>Quiz Duration</h2>
         {isDurationLoading ? (
-          <p>Loading...</p>
+          <Loading text="Loading..." />
         ) : currentQuizDuration === null ? (
           <div className={styles.durationControls}>
             <input
@@ -1115,7 +1138,7 @@ export default function QuizBuilder() {
               value={quizDurationInput}
               onChange={(e) =>
                 setQuizDurationInput(
-                  e.target.value === "" ? "" : Number(e.target.value)
+                  e.target.value === "" ? "" : Number(e.target.value),
                 )
               }
               min="1"
@@ -1139,7 +1162,7 @@ export default function QuizBuilder() {
               value={quizDurationInput}
               onChange={(e) =>
                 setQuizDurationInput(
-                  e.target.value === "" ? "" : Number(e.target.value)
+                  e.target.value === "" ? "" : Number(e.target.value),
                 )
               }
               min="1"
@@ -1289,7 +1312,10 @@ export default function QuizBuilder() {
       </div>
 
       {showModal && (
-        <MessageModal
+        <Modal
+          isOpen={showModal}
+          type="toast"
+          variant={modalVariant}
           message={modalMessage}
           onClose={() => setShowModal(false)}
         />

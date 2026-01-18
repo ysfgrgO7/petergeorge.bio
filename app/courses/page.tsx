@@ -13,6 +13,7 @@ import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import styles from "./courses.module.css";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/app/components/ThemeProvider";
+import Loading from "@/app/components/Loading";
 
 interface Course extends DocumentData {
   id: string;
@@ -147,7 +148,7 @@ export default function CoursesPage() {
     <div className="wrapper">
       <h1>Available Courses</h1>
       {loadingCourses ? (
-        <p>Loading courses...</p>
+        <Loading text="Loading courses..." />
       ) : (
         <div className={styles.courseList}>
           {Object.keys(groupedCourses).length === 0 ? (

@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import QuizResults from "./resultsComponent";
+import Loading from "@/app/components/Loading";
 
 export default function QuizPageWrapper() {
   return (
-    <Suspense fallback={<div>Loading quiz...</div>}>
+    <Suspense fallback={<Loading text="Loading quiz..." />}>
       <QuizResults />
     </Suspense>
   );

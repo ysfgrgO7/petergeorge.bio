@@ -16,6 +16,7 @@ import styles from "../../courses.module.css";
 import { useTheme } from "@/app/components/ThemeProvider";
 import { IoChevronBackCircleSharp } from "react-icons/io5";
 import { MdEditDocument } from "react-icons/md";
+import Loading from "@/app/components/Loading";
 
 interface ProgressData {
   quizCompleted?: boolean;
@@ -120,7 +121,7 @@ export default function LecturePage() {
               "students",
               currentUser.uid,
               "progress",
-              `${year}_${courseId}_${lectureId}`
+              `${year}_${courseId}_${lectureId}`,
             );
             const progressDocSnap = await getDoc(progressDocRef);
 
@@ -143,7 +144,7 @@ export default function LecturePage() {
             // STEP 1: Check lecture-level enable/disable first
             const lectureDocRef = doc(
               db,
-              `years/${year}/courses/${courseId}/lectures/${lectureId}`
+              `years/${year}/courses/${courseId}/lectures/${lectureId}`,
             );
             const lectureDocSnap = await getDoc(lectureDocRef);
 
@@ -171,7 +172,7 @@ export default function LecturePage() {
                 "students",
                 currentUser.uid,
                 "progress",
-                `${year}_${courseId}_${lectureId}`
+                `${year}_${courseId}_${lectureId}`,
               );
               const progressDocSnap = await getDoc(progressDocRef);
 
@@ -208,34 +209,34 @@ export default function LecturePage() {
           // Extra links
           const linksRef = collection(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/links`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/links`,
           );
           const linksSnapshot = await getDocs(linksRef);
           const fetchedLinks: LinkItem[] = linksSnapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() } as LinkItem)
+            (doc) => ({ id: doc.id, ...doc.data() }) as LinkItem,
           );
           setLinks(fetchedLinks);
 
           // Homework videos
           const homeworkVideosRef = collection(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkVideos`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkVideos`,
           );
           const homeworkVideosSnapshot = await getDocs(homeworkVideosRef);
           const fetchedHomeworkVideos: HomeworkVideo[] =
             homeworkVideosSnapshot.docs.map(
-              (doc) => ({ id: doc.id, ...doc.data() } as HomeworkVideo)
+              (doc) => ({ id: doc.id, ...doc.data() }) as HomeworkVideo,
             );
           setHomeworkVideos(fetchedHomeworkVideos);
 
           // Extra videos
           const extraVideosRef = collection(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/extraVideos`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/extraVideos`,
           );
           const extraVideosSnapshot = await getDocs(extraVideosRef);
           const fetchedExtraVideos: ExtraVideo[] = extraVideosSnapshot.docs.map(
-            (doc) => ({ id: doc.id, ...doc.data() } as ExtraVideo)
+            (doc) => ({ id: doc.id, ...doc.data() }) as ExtraVideo,
           );
           setExtraVideos(fetchedExtraVideos);
 
@@ -244,7 +245,7 @@ export default function LecturePage() {
             currentUser.uid,
             year,
             courseId,
-            lectureId
+            lectureId,
           );
           setProgress(lectureProgress);
 
@@ -254,7 +255,7 @@ export default function LecturePage() {
             "students",
             currentUser.uid,
             "homeworkProgress",
-            `${year}_${courseId}_${lectureId}`
+            `${year}_${courseId}_${lectureId}`,
           );
           const hwSnap = await getDoc(hwRef);
           if (hwSnap.exists()) {
@@ -265,7 +266,7 @@ export default function LecturePage() {
           // Check for homework existence
           const homeworkQuestionsRef = collection(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}/homeworkQuestions`,
           );
           const homeworkQuestionsSnapshot = await getDocs(homeworkQuestionsRef);
           setHasHomework(!homeworkQuestionsSnapshot.empty);
@@ -364,7 +365,7 @@ export default function LecturePage() {
         <IoChevronBackCircleSharp /> Back to Lectures
       </button>
       {loading ? (
-        <p>Loading details...</p>
+        <Loading text="Loading details..." />
       ) : (
         <>
           <div style={{ display: "flex" }}>
@@ -621,7 +622,7 @@ export default function LecturePage() {
                 <button
                   onClick={() =>
                     router.push(
-                      `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+                      `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`,
                     )
                   }
                 >
@@ -633,7 +634,7 @@ export default function LecturePage() {
                 <button
                   onClick={() =>
                     router.push(
-                      `/courses/lectures/lecture/hw?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+                      `/courses/lectures/lecture/hw?year=${year}&courseId=${courseId}&lectureId=${lectureId}`,
                     )
                   }
                 >
@@ -645,7 +646,7 @@ export default function LecturePage() {
                 <button
                   onClick={() =>
                     router.push(
-                      `/courses/lectures/lecture/hw/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`
+                      `/courses/lectures/lecture/hw/results?year=${year}&courseId=${courseId}&lectureId=${lectureId}`,
                     )
                   }
                 >

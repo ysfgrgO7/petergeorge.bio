@@ -19,7 +19,8 @@ import {
 import { db, auth } from "@/lib/firebase";
 import styles from "./admin.module.css";
 import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
-import MessageModal from "@/app/MessageModal";
+import Modal, { ModalVariant } from "@/app/components/Modal";
+import Loading from "@/app/components/Loading";
 
 interface Lecture extends DocumentData {
   id: string;
@@ -79,6 +80,7 @@ export default function AdminDashboard() {
 
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [modalVariant, setModalVariant] = useState<ModalVariant>("info");
 
   const [cardsDirection, setCardsDirection] =
     useState<React.CSSProperties["flexDirection"]>("column-reverse");
@@ -298,6 +300,7 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error(`Error fetching courses for ${yearToFetch}:`, error);
       setModalMessage(`Failed to load courses for ${yearToFetch}.`);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -328,6 +331,7 @@ export default function AdminDashboard() {
         error,
       );
       setModalMessage(`Failed to load lectures for course: ${courseId}.`);
+      setModalVariant("error");
       setShowModal(true);
     } finally {
       setLoadingLectures((prev) => {
@@ -341,6 +345,7 @@ export default function AdminDashboard() {
   const handleCreate = async () => {
     if (!title.trim()) {
       setModalMessage("Course title cannot be empty.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -354,10 +359,12 @@ export default function AdminDashboard() {
       setThumbnailUrl("");
       fetchCourses(activeYearTab);
       setModalMessage("Course created successfully!");
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       console.error("Error creating course:", error);
       setModalMessage("Failed to create course: " + (error as Error).message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -374,6 +381,7 @@ export default function AdminDashboard() {
   const handleAddExtraLinkToList = () => {
     if (!linkText.trim() || !linkUrl.trim()) {
       setModalMessage("Link text and URL cannot be empty.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -389,6 +397,7 @@ export default function AdminDashboard() {
   const handleAddLecture = async (courseId: string) => {
     if (!lectureTitle.trim()) {
       setModalMessage("Lecture title cannot be empty.");
+      setModalVariant("warning");
       setShowModal(true);
       return;
     }
@@ -400,6 +409,7 @@ export default function AdminDashboard() {
         setModalMessage(
           "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'.",
         );
+        setModalVariant("warning");
         setShowModal(true);
         return;
       }
@@ -476,10 +486,12 @@ export default function AdminDashboard() {
       setModalMessage(
         `Lecture added successfully! ${schoolStudentCount} school student progress records created (disabled by default).`,
       );
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       console.error("Error adding lecture:", error);
       setModalMessage("Failed to add lecture: " + (error as Error).message);
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -504,12 +516,14 @@ export default function AdminDashboard() {
           !currentVisibility ? "hidden" : "visible"
         }.`,
       );
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       console.error("Error updating lecture visibility:", error);
       setModalMessage(
         "Failed to update lecture visibility: " + (error as Error).message,
       );
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -550,6 +564,7 @@ export default function AdminDashboard() {
           newStatus ? "enabled" : "disabled"
         }. ${updatedCount} center student progress records synced.`,
       );
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       console.error(
@@ -560,6 +575,7 @@ export default function AdminDashboard() {
         "Failed to update lecture status for center students: " +
           (error as Error).message,
       );
+      setModalVariant("error");
       setShowModal(true);
     } finally {
       setUpdatingLecture(null);
@@ -602,6 +618,7 @@ export default function AdminDashboard() {
           newStatus ? "enabled" : "disabled"
         }. ${updatedCount} online student progress records synced.`,
       );
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       console.error(
@@ -612,6 +629,7 @@ export default function AdminDashboard() {
         "Failed to update lecture status for online students: " +
           (error as Error).message,
       );
+      setModalVariant("error");
       setShowModal(true);
     } finally {
       setUpdatingLecture(null);
@@ -643,6 +661,7 @@ export default function AdminDashboard() {
           result.created
         } new records created.`,
       );
+      setModalVariant("success");
       setShowModal(true);
     } catch (error: unknown) {
       console.error(
@@ -653,6 +672,7 @@ export default function AdminDashboard() {
         "Failed to update lecture status for school students: " +
           (error as Error).message,
       );
+      setModalVariant("error");
       setShowModal(true);
     } finally {
       setUpdatingLecture(null);
@@ -683,10 +703,12 @@ export default function AdminDashboard() {
 
       setGeneratedCode(newCode);
       setModalMessage(`Universal one-time use code generated: ${newCode}`);
+      setModalVariant("success");
       setShowModal(true);
     } catch (error) {
       console.error("Error generating universal access code:", error);
       setModalMessage("Failed to generate universal code.");
+      setModalVariant("error");
       setShowModal(true);
     }
   };
@@ -704,9 +726,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: "2rem" }}>
-        <div style={{ fontSize: "1.5rem", color: "var(--dark)" }}>
-          Verifying admin access...
-        </div>
+        <Loading text="Verifying admin access..." />
       </div>
     );
   }
@@ -790,6 +810,7 @@ export default function AdminDashboard() {
               }
 
               setModalMessage(`Code copied to clipboard!`);
+              setModalVariant("info");
               setShowModal(true);
             }}
           >
@@ -920,7 +941,7 @@ export default function AdminDashboard() {
 
                 <h3 style={{ marginTop: "1.5rem" }}>Existing Lectures</h3>
                 {loadingLectures.has(course.id) ? (
-                  <p>Loading lectures...</p>
+                  <Loading text="Loading lectures..." />
                 ) : courseLectures[course.id] &&
                   courseLectures[course.id].length > 0 ? (
                   <ul className={styles.lectureList}>
@@ -1131,7 +1152,10 @@ export default function AdminDashboard() {
       </div>
 
       {showModal && (
-        <MessageModal
+        <Modal
+          isOpen={showModal}
+          type="toast"
+          variant={modalVariant}
           message={modalMessage}
           onClose={() => setShowModal(false)}
         />

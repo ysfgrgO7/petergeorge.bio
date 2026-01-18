@@ -13,17 +13,18 @@
 }
 
 .card {
-  padding: 0.5rem;
+  padding: var(--spacing-lg);
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
   background-color: var(--darkgrey);
-  backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
   color: var(--fg);
   display: flex;
   justify-content: center;
   align-items: flex-start;
   flex-direction: column;
+  transition: var(--transition);
+  border: 1px solid var(--dark);
 }
 
 .lecturePanel {
@@ -82,11 +83,12 @@
 
 .durationCard {
   background: var(--darkgrey);
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
   border-radius: var(--border-radius);
-  padding: 24px;
-  margin-bottom: 30px;
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
   box-shadow: var(--box-shadow);
+  border: 1px solid var(--dark);
 }
 
 .durationControls {
@@ -149,12 +151,13 @@
 /* Question Cards */
 .questionCard {
   background: var(--darkgrey);
-  backdrop-filter: blur(2px);
-  border-radius: 8px;
-  padding: 24px;
-  margin-bottom: 16px;
+  backdrop-filter: blur(4px);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
   box-shadow: var(--box-shadow);
-  transition: box-shadow 0.3s ease;
+  transition: var(--transition);
+  border: 1px solid var(--dark);
 }
 
 .questionCard:hover {

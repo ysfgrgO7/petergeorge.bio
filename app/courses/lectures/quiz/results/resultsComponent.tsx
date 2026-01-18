@@ -7,6 +7,7 @@ import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import styles from "../../../courses.module.css";
+import Loading from "@/app/components/Loading";
 
 interface StudentData {
   studentCode?: string;
@@ -56,7 +57,7 @@ export default function QuizResults() {
   const [loading, setLoading] = useState(true);
   const [earnedMarks, setEarnedMarks] = useState<number | null>(null);
   const [totalPossibleMarks, setTotalPossibleMarks] = useState<number | null>(
-    null
+    null,
   );
   const [quizAnswers, setQuizAnswers] = useState<QuizAnswers | null>(null);
   const [lectureData, setLectureData] = useState<LectureData | null>(null);
@@ -110,7 +111,7 @@ export default function QuizResults() {
           // Fetch the lecture document
           const lectureDocRef = doc(
             db,
-            `years/${year}/courses/${courseId}/lectures/${lectureId}`
+            `years/${year}/courses/${courseId}/lectures/${lectureId}`,
           );
           const lectureDocSnap = await getDoc(lectureDocRef);
 
@@ -151,7 +152,7 @@ export default function QuizResults() {
             "students",
             currentUser.uid,
             "progress",
-            `${year}_${courseId}_${lectureId}`
+            `${year}_${courseId}_${lectureId}`,
           );
           const resultSnap = await getDoc(resultRef);
           if (resultSnap.exists()) {
@@ -316,11 +317,7 @@ export default function QuizResults() {
   };
 
   if (loading) {
-    return (
-      <div className={styles.wrapper}>
-        <p>Loading results...</p>
-      </div>
-    );
+    return <Loading text="Loading results..." />;
   }
 
   if (earnedMarks === null || totalPossibleMarks === null) {
