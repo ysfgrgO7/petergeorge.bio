@@ -42,8 +42,8 @@ export default async function RootLayout({
             <BackgroundMotion /> {/* 👈 add here */}
           </ThemeProvider>
         </AdminProvider>
+        <SpeedInsights />
       </body>
-      <SpeedInsights />
     </html>
   );
 }
