@@ -39,6 +39,11 @@ interface Course extends DocumentData {
   thumbnailUrl?: string;
 }
 
+interface ExtraLink {
+  text: string;
+  url: string;
+}
+
 export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -57,6 +62,9 @@ export default function AdminDashboard() {
 
   const [lectureTitle, setLectureTitle] = useState("");
   const [odyseeLink, setOdyseeLink] = useState("");
+  const [linkText, setLinkText] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [extraLinks, setExtraLinks] = useState<ExtraLink[]>([]);
   const [activeYearTab, setActiveYearTab] = useState<
     "year1" | "year3 (Biology)" | "year3 (Geology)"
   >("year1");
@@ -355,20 +363,38 @@ export default function AdminDashboard() {
     return { name: match[1], id: match[2] };
   };
 
+  const handleAddExtraLinkToList = () => {
+    if (!linkText.trim() || !linkUrl.trim()) {
+      setModalMessage("Link text and URL cannot be empty.");
+      setShowModal(true);
+      return;
+    }
+    setExtraLinks([...extraLinks, { text: linkText, url: linkUrl }]);
+    setLinkText("");
+    setLinkUrl("");
+  };
+
+  const handleRemoveExtraLinkFromList = (index: number) => {
+    setExtraLinks(extraLinks.filter((_, i) => i !== index));
+  };
+
   const handleAddLecture = async (courseId: string) => {
-    if (!lectureTitle.trim() || !odyseeLink.trim()) {
-      setModalMessage("Lecture title and Odysee link cannot be empty.");
+    if (!lectureTitle.trim()) {
+      setModalMessage("Lecture title cannot be empty.");
       setShowModal(true);
       return;
     }
 
-    const info = extractOdyseeInfo(odyseeLink);
-    if (!info) {
-      setModalMessage(
-        "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'."
-      );
-      setShowModal(true);
-      return;
+    let info = null;
+    if (odyseeLink.trim()) {
+      info = extractOdyseeInfo(odyseeLink);
+      if (!info) {
+        setModalMessage(
+          "Invalid Odysee link format. Please use a link like 'https://odysee.com/@channel/video-name:id'."
+        );
+        setShowModal(true);
+        return;
+      }
     }
 
     try {
@@ -385,13 +411,19 @@ export default function AdminDashboard() {
       // Add the lecture
       const newLectureRef = await addDoc(lecturesRef, {
         title: lectureTitle,
-        odyseeName: info.name,
-        odyseeId: info.id,
+        odyseeName: info ? info.name : "",
+        odyseeId: info ? info.id : "",
         order: newOrder,
         isHidden: true,
         isEnabledCenter: true,
         isEnabledOnline: true,
       });
+
+      // Add the extra links
+      const linksRef = collection(newLectureRef, "links");
+      for (const link of extraLinks) {
+        await addDoc(linksRef, link);
+      }
 
       // Create progress records for all school students
       const studentsRef = collection(db, "students");
@@ -431,6 +463,7 @@ export default function AdminDashboard() {
 
       setLectureTitle("");
       setOdyseeLink("");
+      setExtraLinks([]);
       fetchLecturesForCourse(activeYearTab, courseId);
       setModalMessage(
         `Lecture added successfully! ${schoolStudentCount} school student progress records created (disabled by default).`
@@ -797,11 +830,57 @@ export default function AdminDashboard() {
                 />
                 <input
                   type="text"
-                  placeholder="Odysee link"
+                  placeholder="Odysee link (optional)"
                   value={odyseeLink}
                   onChange={(e) => setOdyseeLink(e.target.value)}
                   style={{ marginBottom: "10px" }}
                 />
+
+                <div
+                  style={{
+                    border: "1px solid #ccc",
+                    padding: "10px",
+                    marginBottom: "10px",
+                  }}
+                >
+                  <h4>Extra Links</h4>
+                  <input
+                    type="text"
+                    placeholder="Link Text"
+                    value={linkText}
+                    onChange={(e) => setLinkText(e.target.value)}
+                    style={{ marginBottom: "10px" }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Link URL"
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    style={{ marginBottom: "10px" }}
+                  />
+                  <button
+                    onClick={handleAddExtraLinkToList}
+                    style={{ marginBottom: "10px" }}
+                  >
+                    Add Extra Link
+                  </button>
+                  {extraLinks.length > 0 && (
+                    <ul className={styles.subList}>
+                      {extraLinks.map((link, index) => (
+                        <li key={index}>
+                          <span>{link.text}</span>
+                          <button
+                            onClick={() => handleRemoveExtraLinkFromList(index)}
+                            style={{ marginLeft: "10px" }}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
                 <button onClick={() => handleAddLecture(course.id)}>
                   Add Lecture
                 </button>
