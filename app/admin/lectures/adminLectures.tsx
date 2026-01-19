@@ -40,13 +40,14 @@ interface ExtraVideo {
 
 export default function LectureManagerPage() {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const year = searchParams.get("year");
   const courseId = searchParams.get("courseId");
   const lectureId = searchParams.get("lectureId");
   const lectureTitle = searchParams.get("lectureTitle");
+
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // State for Odysee link and quizzes
   const [odyseeName, setOdyseeName] = useState("");
@@ -148,10 +149,6 @@ export default function LectureManagerPage() {
 
     return () => unsubscribe(); // Cleanup the listener on component unmount
   }, [router]);
-
-  if (loading) {
-    return <Loading text="Verifying admin access..." />;
-  }
 
   useEffect(() => {
     if (lectureRef) {
@@ -428,6 +425,10 @@ export default function LectureManagerPage() {
       `/admin/hw?year=${year}&courseId=${courseId}&lectureId=${lectureId}`,
     );
   };
+
+  if (loading) {
+    return <Loading text="Verifying admin access..." />;
+  }
 
   if (!lectureId || !courseId || !year) {
     return (
