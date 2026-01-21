@@ -1,0 +1,277 @@
+.infoCard,
+.card {
+  border: 1px solid var(--dark);
+  box-shadow: var(--box-shadow);
+  background-color: var(--darkgrey);
+  backdrop-filter: blur(4px);
+  color: var(--fg);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  animation: slideInUp 0.4s ease-out forwards;
+  width: 100%;
+}
+
+.infoCard:hover,
+.card:hover {
+  border-color: var(--blue);
+}
+
+.infoCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.titleWithIcon {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.qrWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: white;
+  padding: 8px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--darkgrey);
+  box-shadow: var(--box-shadow);
+}
+
+.qrWrapper small {
+  margin-top: 4px;
+  font-family: monospace;
+  color: #333;
+  font-weight: 600;
+}
+
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.infoEntry {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) 0;
+  border-bottom: 1px solid var(--darkgrey);
+}
+
+.infoEntry strong {
+  color: var(--light);
+  font-size: 0.9rem;
+  min-width: 100px;
+}
+
+.infoEntry span {
+  font-weight: 500;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-md);
+}
+
+.badge {
+  background: var(--blue);
+  color: var(--white);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+}
+
+.chartContainer {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--border-radius);
+  width: 90%;
+}
+
+.barChartContainer {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+.tableSection {
+  margin-top: var(--spacing-xl);
+  animation: slideInUp 0.6s ease-out forwards;
+}
+
+.heading {
+  margin-bottom: var(--spacing-md);
+  font-size: 1.5rem;
+  color: var(--fg);
+}
+
+.courseGroup {
+  margin-bottom: var(--spacing-xl);
+  background: var(--darkgrey);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  border: 1px solid var(--dark);
+}
+
+.courseTitle {
+  background: var(--blue);
+  color: var(--white);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.tableResponsive {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+
+  backdrop-filter: blur(4px);
+}
+
+.table th {
+  text-align: left;
+  padding: var(--spacing-md);
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: 600;
+  border-bottom: 1px solid var(--dark);
+}
+
+.table td {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--darkgrey);
+}
+
+.row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.score {
+  font-family: monospace;
+  font-weight: 600;
+}
+
+.passTag,
+.failTag {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.passTag {
+  color: var(--green);
+  background: rgba(116, 159, 110, 0.1);
+  border: 1px solid var(--green);
+}
+
+.failTag {
+  color: var(--red);
+  background: rgba(151, 96, 97, 0.1);
+  border: 1px solid var(--red);
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  font-size: 1.2rem;
+  color: var(--light);
+}
+
+.empty,
+.emptyChart {
+  padding: var(--spacing-xl);
+  text-align: center;
+  color: var(--light);
+  font-style: italic;
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.circularProgress {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.circularProgress svg {
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.circleBg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 8;
+}
+
+.circleFg {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progressText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--fg);
+}
+
+.progressLabel {
+  font-size: 0.9rem;
+  color: var(--light);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 900px) {
+  .infoCard {
+    flex-direction: column-reverse;
+  }
+  .qrWrapper {
+    width: 100%;
+    margin: var(--spacing-md);
+  }
+  .infoEntry {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+  .chartContainer {
+    width: 100%;
+  }
+  .barChartContainer {
+    flex-direction: column;
+    gap: 20px;
+  }
+}

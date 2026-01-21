@@ -44,6 +44,12 @@ interface ExtraVideo {
   odyseeId: string;
 }
 
+interface Course extends DocumentData {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+}
+
 interface StudentData {
   studentCode?: string;
   firstName?: string;
@@ -68,6 +74,7 @@ export default function LecturePage() {
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [courseTitle, setCourseTitle] = useState<string | null>(null);
   const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [course, setCourse] = useState<Course | null>(null);
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [homeworkVideos, setHomeworkVideos] = useState<HomeworkVideo[]>([]);
   const [extraVideos, setExtraVideos] = useState<ExtraVideo[]>([]);
@@ -282,6 +289,28 @@ export default function LecturePage() {
 
     return () => unsubscribe();
   }, [router, year, courseId, lectureId]);
+
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!courseId || !year) return;
+
+      try {
+        const courseDocRef = doc(db, "years", year, "courses", courseId);
+        const courseDocSnap = await getDoc(courseDocRef);
+
+        if (courseDocSnap.exists()) {
+          setCourse({
+            id: courseDocSnap.id,
+            ...courseDocSnap.data(),
+          } as Course);
+        }
+      } catch (error) {
+        console.error("Error fetching course details:", error);
+      }
+    };
+
+    fetchCourse();
+  }, [courseId, year]);
 
   const handleBack = () => {
     router.push(`/courses/lectures?year=${year}&courseId=${courseId}`);
@@ -547,21 +576,35 @@ export default function LecturePage() {
 
           {/* Sidebar info */}
           <div className={styles.quizSummaryFloating}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                fontSize: "1.7rem",
-              }}
-            >
-              {isHalloween && <h1>🎃</h1>}
-              {isXmas && <h1>🎄</h1>}
-              {isRamadan && <h1>🌙</h1>}
-            </div>
+            {!isDef && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  fontSize: "1.7rem",
+                  marginBottom: "10px",
+                }}
+              >
+                {isHalloween && <h1>🎃</h1>}
+                {isXmas && <h1>🎄</h1>}
+                {isRamadan && <h1>🌙</h1>}
+              </div>
+            )}
             <div>
-              <p>
-                <strong>Course:</strong> {courseTitle || "N/A"}
-              </p>
+              <h3 style={{ textAlign: "center" }}>{courseTitle || "N/A"}</h3>
+              {course?.thumbnailUrl && (
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <img
+                    src={course.thumbnailUrl}
+                    alt={course.title}
+                    style={{
+                      width: "120px",
+                      height: "auto",
+                      borderRadius: "8px",
+                    }}
+                  />
+                </div>
+              )}
               <hr />
               {progress?.quizCompleted && (
                 <>

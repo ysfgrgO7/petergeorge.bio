@@ -15,10 +15,18 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "@/app/components/ThemeProvider";
 import Loading from "@/app/components/Loading";
 
+interface Lecture extends DocumentData {
+  id: string;
+  title: string;
+  videoUrl: string;
+  pdfUrl: string;
+}
+
 interface Course extends DocumentData {
   id: string;
   title: string;
   thumbnailUrl: string;
+  lectures: Lecture[];
   year: "year1" | "year3 (Biology)" | "year3 (Geology)";
 }
 
@@ -118,13 +126,37 @@ export default function CoursesPage() {
         for (const year of yearsToFetch) {
           const coursesRef = collection(db, "years", year, "courses");
           const snapshot = await getDocs(coursesRef);
-          snapshot.docs.forEach((docSnap) => {
-            fetchedCourses.push({
+
+          const coursePromises = snapshot.docs.map(async (docSnap) => {
+            const courseData = docSnap.data();
+            const lecturesRef = collection(
+              db,
+              "years",
+              year,
+              "courses",
+              docSnap.id,
+              "lectures",
+            );
+            const lecturesSnapshot = await getDocs(lecturesRef);
+
+            const lectures = lecturesSnapshot.docs.map(
+              (lDoc) =>
+                ({
+                  id: lDoc.id,
+                  ...lDoc.data(),
+                }) as Lecture,
+            );
+
+            return {
               id: docSnap.id,
-              ...docSnap.data(),
+              ...courseData,
               year: year as "year1" | "year3 (Biology)" | "year3 (Geology)",
-            } as Course);
+              lectures: lectures,
+            } as Course;
           });
+
+          const coursesWithLectures = await Promise.all(coursePromises);
+          fetchedCourses.push(...coursesWithLectures);
         }
         setCourses(fetchedCourses);
       } catch (error) {
@@ -199,9 +231,14 @@ export default function CoursesPage() {
                       <div>
                         <div className={styles.courseDetails}>
                           <h3>{course.title}</h3>
-                          <p>
-                            <strong>Stage:</strong> {course.year}
-                          </p>
+                          <h4
+                            style={{
+                              fontWeight: "normal",
+                              marginBottom: "10px",
+                            }}
+                          >
+                            {course.lectures?.length || 0} Lectures
+                          </h4>
                         </div>
                         <button onClick={() => handleCourseClick(course)}>
                           View Lectures

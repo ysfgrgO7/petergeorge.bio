@@ -106,7 +106,7 @@ export default function Navbar({
   const tryQuery = async (
     coll: string,
     field: "uid" | "email",
-    value: string
+    value: string,
   ) => {
     try {
       const q = query(collection(db, coll), where(field, "==", value));
@@ -400,10 +400,10 @@ export default function Navbar({
                 </Link>
               </li>
 
-              <li className={pathname === "/profile" ? styles.active : ""}>
-                <Link href="/profile" onClick={toggleSidebar}>
+              <li className={pathname === "/dashboard" ? styles.active : ""}>
+                <Link href="/dashboard" onClick={toggleSidebar}>
                   <VscAccount className={styles.icon} />
-                  {!isCollapsed && <span>My Profile</span>}
+                  {!isCollapsed && <span>Dashboard</span>}
                 </Link>
               </li>
 

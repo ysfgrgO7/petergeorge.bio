@@ -23,7 +23,8 @@ import {
   IoLockOpen,
   IoChevronBackCircleSharp,
 } from "react-icons/io5";
-import { MdQuiz } from "react-icons/md";
+import { IoIosDocument } from "react-icons/io";
+import { MdQuiz, MdEditDocument } from "react-icons/md";
 import { FaPlay } from "react-icons/fa";
 import { useTheme } from "@/app/components/ThemeProvider";
 import Loading from "@/app/components/Loading";
@@ -38,6 +39,19 @@ interface Lecture extends DocumentData {
   hasQuiz?: boolean;
   hasHomework?: boolean;
   isHidden?: boolean;
+  links?: LinkItem[];
+}
+
+interface LinkItem extends DocumentData {
+  id: string;
+  text: string;
+  url: string;
+}
+
+interface Course extends DocumentData {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
 }
 
 interface ProgressData {
@@ -69,6 +83,7 @@ function LecturesContent() {
   // State
   const { isDef, isHalloween, isXmas, isRamadan } = useTheme();
   const [courseLectures, setCourseLectures] = useState<Lecture[]>([]);
+  const [course, setCourse] = useState<Course | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [studentSystem, setStudentSystem] = useState<string>("");
   const [progressMap, setProgressMap] = useState<Record<string, ProgressData>>(
@@ -82,6 +97,7 @@ function LecturesContent() {
   const [showCodeInput, setShowCodeInput] = useState<string | null>(null);
   const [unlocking, setUnlocking] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showLinksFor, setShowLinksFor] = useState<string | null>(null);
 
   // Helper functions
   const getProgressKey = useCallback(
@@ -317,6 +333,29 @@ function LecturesContent() {
     return () => unsubscribe();
   }, [router]);
 
+  // Fetch course details effect
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!courseId || !year) return;
+
+      try {
+        const courseDocRef = doc(db, "years", year, "courses", courseId);
+        const courseDocSnap = await getDoc(courseDocRef);
+
+        if (courseDocSnap.exists()) {
+          setCourse({
+            id: courseDocSnap.id,
+            ...courseDocSnap.data(),
+          } as Course);
+        }
+      } catch (error) {
+        console.error("Error fetching course details:", error);
+      }
+    };
+
+    fetchCourse();
+  }, [courseId, year]);
+
   // Fetch lectures effect
   useEffect(() => {
     const fetchLectures = async () => {
@@ -355,6 +394,20 @@ function LecturesContent() {
             // Check for homework
             const hasHomework = await checkLectureHasHomework(lectureData.id);
             lectureData.hasHomework = hasHomework;
+
+            // Fetch extra links
+            const linksRef = collection(
+              db,
+              `years/${year}/courses/${courseId}/lectures/${lectureData.id}/links`,
+            );
+            const linksSnapshot = await getDocs(linksRef);
+            lectureData.links = linksSnapshot.docs.map(
+              (doc) =>
+                ({
+                  id: doc.id,
+                  ...doc.data(),
+                }) as LinkItem,
+            );
           } catch (error) {
             console.warn(
               `Failed to check quiz/homework for lecture ${lectureData.id}:`,
@@ -691,14 +744,61 @@ function LecturesContent() {
         <IoChevronBackCircleSharp /> Back to Courses
       </button>
 
-      <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
-        {isHalloween && <h1>🎃</h1>}
-        {isXmas && <h1>🎄</h1>}
-        {isRamadan && <h1>🌙</h1>}
-        <h1>Lectures</h1>
-        {isHalloween && <h1>🎃</h1>}
-        {isXmas && <h1>🎄</h1>}
-        {isRamadan && <h1>🌙</h1>}
+      <div
+        style={{
+          display: "flex",
+          gap: "20px",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+          }}
+        >
+          {!isDef && (
+            <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+              {isHalloween && <h1>🎃</h1>}
+              {isXmas && <h1>🎄</h1>}
+              {isRamadan && <h1>🌙</h1>}
+            </div>
+          )}
+
+          <h1 style={{ margin: 0 }}>Lectures</h1>
+
+          {!isDef && (
+            <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+              {isHalloween && <h1>🎃</h1>}
+              {isXmas && <h1>🎄</h1>}
+              {isRamadan && <h1>🌙</h1>}
+            </div>
+          )}
+
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px",
+              alignItems: "center",
+            }}
+          >
+            <h3 style={{ margin: 0, opacity: 0.8 }}>
+              {course?.title || "Loading..."}
+            </h3>
+            {course?.thumbnailUrl && (
+              <img
+                src={course.thumbnailUrl}
+                alt={course.title}
+                style={{ width: "120px", height: "auto", borderRadius: "8px" }}
+              />
+            )}
+          </div>
+        </div>
       </div>
 
       {totalQuizzes > 0 && (
@@ -732,27 +832,122 @@ function LecturesContent() {
                 className={`${styles.lectureCard} ${
                   isLocked ? styles.lockedCard : ""
                 }`}
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  position: "relative",
+                  zIndex: showLinksFor === lecture.id ? 100 : 1,
+                }}
               >
-                <h3>
-                  {isLocked ? (
-                    <IoLockClosed style={{ color: "var(--red)" }} />
-                  ) : (
-                    <IoLockOpen style={{ color: "var(--green)" }} />
-                  )}{" "}
-                  {lecture.title}
-                </h3>
+                <div
+                  onClick={() => router.push(lectureUrl)}
+                  style={{ width: "100%" }}
+                >
+                  <h3>
+                    {isLocked ? (
+                      <IoLockClosed style={{ color: "var(--red)" }} />
+                    ) : (
+                      <IoLockOpen style={{ color: "var(--green)" }} />
+                    )}{" "}
+                    {lecture.title}
+                  </h3>
 
-                {isLocked ? (
-                  renderUnlockInterface(lecture, lockReason!, canUnlockWithCode)
-                ) : (
-                  <>
-                    {renderQuizInfo(lecture, progress)}
-                    {renderHomeworkInfo(lecture)}
-                    <div className={styles.buttonGroup}>
-                      {renderActionButton(lecture, progress, lectureUrl)}
-                    </div>
-                  </>
-                )}
+                  {isLocked ? (
+                    renderUnlockInterface(
+                      lecture,
+                      lockReason!,
+                      canUnlockWithCode,
+                    )
+                  ) : (
+                    <>
+                      {renderQuizInfo(lecture, progress)}
+                      {renderHomeworkInfo(lecture)}
+                      <div className={styles.buttonGroup}>
+                        {renderActionButton(lecture, progress, lectureUrl)}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    flexDirection: "column",
+                  }}
+                >
+                  <div style={{ position: "relative" }}>
+                    <button
+                      onClick={() =>
+                        setShowLinksFor(
+                          showLinksFor === lecture.id ? null : lecture.id,
+                        )
+                      }
+                    >
+                      <IoIosDocument /> PDFs
+                    </button>
+                    {showLinksFor === lecture.id &&
+                      lecture.links &&
+                      lecture.links.length > 0 && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "100%",
+                            right: 0,
+                            backgroundColor: "var(--darkgrey)",
+                            border: "1px solid var(--dark)",
+                            borderRadius: "8px",
+                            padding: "10px",
+                            zIndex: 10,
+                            minWidth: "150px",
+                            boxShadow: "var(--box-shadow)",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "8px",
+                          }}
+                        >
+                          {lecture.links.map((link) => (
+                            <a
+                              key={link.id}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: "var(--fg)",
+                                textDecoration: "none",
+                                fontSize: "0.9rem",
+                                padding: "5px",
+                                borderRadius: "4px",
+                                transition: "background 0.2s",
+                              }}
+                              onMouseOver={(e) =>
+                                (e.currentTarget.style.background =
+                                  "rgba(255,255,255,0.1)")
+                              }
+                              onMouseOut={(e) =>
+                                (e.currentTarget.style.background =
+                                  "transparent")
+                              }
+                            >
+                              {link.text}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                  </div>
+                  {progress?.quizCompleted && (
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/courses/lectures/quiz/results?year=${year}&courseId=${courseId}&lectureId=${lecture.id}`,
+                        )
+                      }
+                    >
+                      <MdEditDocument /> Quiz Result
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}

@@ -21,6 +21,7 @@
   transition: var(--transition);
 }
 
+.lectureCard:hover,
 .courseCard:hover {
   transform: scale(1.02);
   backdrop-filter: blur(0px);
