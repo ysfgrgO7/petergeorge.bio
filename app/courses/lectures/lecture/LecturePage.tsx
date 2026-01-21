@@ -643,8 +643,6 @@ export default function LecturePage() {
                           >
                             {link.text}
                           </a>
-
-                          <hr style={{ width: "40%", margin: "0.4rem" }} />
                         </li>
                       ))
                     ) : (

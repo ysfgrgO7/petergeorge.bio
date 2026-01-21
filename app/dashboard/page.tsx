@@ -17,6 +17,7 @@ import {
   FaEnvelope,
   FaPhone,
   FaGraduationCap,
+  FaSchool,
   FaClipboardList,
 } from "react-icons/fa";
 import styles from "./dashboard.module.css";
@@ -39,6 +40,7 @@ interface UserProfile {
   fatherPhone: string;
   motherPhone: string;
   year: string;
+  system: string;
   gender: string;
   school: string;
   studentCode: string;
@@ -260,7 +262,7 @@ export default function StudentDashboard() {
                   <FaUser color="var(--light)" size={14} />
                   <strong>Full Name:</strong>
                 </div>
-                <span>{`${studentInfo.firstName} ${studentInfo.secondName} ${studentInfo.forthName}`}</span>
+                <span>{`${studentInfo.firstName} ${studentInfo.secondName} ${studentInfo.thirdName} ${studentInfo.forthName}`}</span>
               </div>
               <div className={styles.infoEntry}>
                 <div
@@ -288,6 +290,15 @@ export default function StudentDashboard() {
                   <strong>Phone:</strong>
                 </div>
                 <span>{studentInfo.studentPhone}</span>
+              </div>
+              <div className={styles.infoEntry}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "4px" }}
+                >
+                  <FaSchool color="var(--light)" size={14} />
+                  <strong>System:</strong>
+                </div>
+                <span>{studentInfo.system}</span>
               </div>
             </div>
           )}
