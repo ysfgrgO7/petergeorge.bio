@@ -71,41 +71,6 @@
   font-weight: 500;
 }
 
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-md);
-}
-
-.badge {
-  background: var(--blue);
-  color: var(--white);
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: bold;
-}
-
-.chartContainer {
-  margin-top: var(--spacing-md);
-  padding: var(--spacing-sm);
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: var(--border-radius);
-  width: 90%;
-}
-
-.barChartContainer {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
-}
-
-.tableSection {
-  margin-top: var(--spacing-xl);
-  animation: slideInUp 0.6s ease-out forwards;
-}
-
 .heading {
   margin-bottom: var(--spacing-md);
   font-size: 1.5rem;
@@ -126,6 +91,11 @@
   padding: var(--spacing-sm) var(--spacing-md);
   margin: 0;
   font-size: 1.1rem;
+}
+
+.tableSection {
+  margin-top: var(--spacing-xl);
+  animation: slideInUp 0.6s ease-out forwards;
 }
 
 .tableResponsive {
@@ -156,47 +126,23 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-.score {
-  font-family: monospace;
-  font-weight: 600;
-}
-
-.passTag,
-.failTag {
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-.passTag {
-  color: var(--green);
-  background: rgba(116, 159, 110, 0.1);
-  border: 1px solid var(--green);
-}
-
-.failTag {
-  color: var(--red);
-  background: rgba(151, 96, 97, 0.1);
-  border: 1px solid var(--red);
-}
-
-.center {
+.barChartContainer {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 50vh;
-  font-size: 1.2rem;
-  color: var(--light);
+  flex-direction: row;
+  gap: 20px;
 }
 
-.empty,
-.emptyChart {
-  padding: var(--spacing-xl);
-  text-align: center;
-  color: var(--light);
-  font-style: italic;
+.circularProgressContainer {
+  width: 25%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chartContainer,
+.circularProgressContainer {
+  padding: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--border-radius);
 }
 
 @keyframes slideInUp {
@@ -208,6 +154,13 @@
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+.circularProgressWrapper {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .circularProgress {
@@ -246,12 +199,12 @@
   color: var(--fg);
 }
 
-.progressLabel {
-  font-size: 0.9rem;
+.empty,
+.emptyChart {
+  padding: var(--spacing-xl);
+  text-align: center;
   color: var(--light);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-style: italic;
 }
 
 @media (max-width: 900px) {
@@ -266,6 +219,9 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-sm);
+  }
+  .circularProgressContainer {
+    width: 100%;
   }
   .chartContainer {
     width: 100%;

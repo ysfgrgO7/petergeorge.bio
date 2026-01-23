@@ -23,6 +23,7 @@ import {
 import styles from "./dashboard.module.css";
 import { useTheme } from "@/app/components/ThemeProvider";
 import { DashboardCharts } from "./charts";
+import Loading from "@/app/components/Loading";
 
 // --- Interfaces ---
 interface QuizData {
@@ -224,12 +225,7 @@ export default function StudentDashboard() {
     return () => unsubscribe();
   }, [auth, router]);
 
-  if (loading)
-    return (
-      <div className={styles.center}>
-        <p>Loading your dashboard...</p>
-      </div>
-    );
+  if (loading) return <Loading text="Loading your dashboard..." />;
 
   return (
     <div className="wrapper">
@@ -249,9 +245,15 @@ export default function StudentDashboard() {
       {/* Student Info */}
       <div className={styles.infoCard}>
         <div>
-          <div className={styles.titleWithIcon}>
+          <div
+            style={{
+              marginBottom: "var(--spacing-lg)",
+              borderBottom: "2px solid var(--blue)",
+            }}
+            className={styles.titleWithIcon}
+          >
             <FaUser color="var(--blue)" />
-            <h3>Student Profile</h3>
+            <h2>Student Profile</h2>
           </div>
           {studentInfo && (
             <div className={styles.infoList}>
@@ -312,14 +314,18 @@ export default function StudentDashboard() {
       </div>
 
       <DashboardCharts progressGroups={progressGroups} />
-
+      <br />
       {/* Detailed Progress Table */}
-      <div className={styles.tableSection}>
-        <div className={styles.titleWithIcon} style={{ marginBottom: "20px" }}>
+      <div className={styles.card}>
+        <div
+          style={{
+            marginBottom: "var(--spacing-lg)",
+            borderBottom: "2px solid var(--blue)",
+          }}
+          className={styles.titleWithIcon}
+        >
           <FaClipboardList color="var(--blue)" />
-          <h2 className={styles.heading} style={{ margin: 0 }}>
-            Detailed Quiz Logs
-          </h2>
+          <h2>Detailed Quiz Logs</h2>
         </div>
         {error ? (
           <p className={styles.error}>{error}</p>
@@ -340,7 +346,7 @@ export default function StudentDashboard() {
                       return (
                         <tr key={item.id} className={styles.row}>
                           <td>{item.lectureTitle}</td>
-                          <td className={styles.score}>
+                          <td>
                             {item.quiz
                               ? `${item.quiz.earnedMarks} / ${item.quiz.totalPossibleMarks}`
                               : "—"}

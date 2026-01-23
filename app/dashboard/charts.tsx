@@ -13,7 +13,9 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { FaChartLine } from "react-icons/fa";
+import { FaChartLine, FaChartBar } from "react-icons/fa";
+import { RiProgress5Line } from "react-icons/ri";
+import { GiProgression } from "react-icons/gi";
 import styles from "./dashboard.module.css";
 
 // --- Interfaces ---
@@ -60,7 +62,8 @@ export const CircularProgress = ({ score }: { score: number }) => {
 };
 
 export const DashboardCharts = ({ progressGroups }: DashboardChartsProps) => {
-  const { chartData, trendData, averageScore } = useMemo(() => {
+  const isMobile = window.innerWidth <= 768;
+  const { chartData, averageScore } = useMemo(() => {
     // Flatten and filter quizzes
     const allQuizzes = Object.values(progressGroups)
       .flat()
@@ -76,12 +79,12 @@ export const DashboardCharts = ({ progressGroups }: DashboardChartsProps) => {
         (item.quiz!.earnedMarks / item.quiz!.totalPossibleMarks) * 100,
       ),
       fullTitle: item.lectureTitle,
-      id: item.id, // Unique key for Recharts mapping
+      id: item.id,
+      // Unique key for Recharts mapping
     }));
 
     // Reverse ONLY for the line chart so time flows Past -> Present (Left -> Right)
     const trend = [...data].reverse();
-
     const avg =
       data.length > 0
         ? Math.round(
@@ -89,7 +92,7 @@ export const DashboardCharts = ({ progressGroups }: DashboardChartsProps) => {
           )
         : 0;
 
-    return { chartData: data, trendData: trend, averageScore: avg };
+    return { chartData: data, averageScore: avg };
   }, [progressGroups]);
 
   return (
@@ -97,24 +100,40 @@ export const DashboardCharts = ({ progressGroups }: DashboardChartsProps) => {
       <br />
       {/* Recent Performance Bar Chart */}
       <div className={styles.card}>
-        <div className={styles.titleWithIcon}>
-          <FaChartLine color="var(--blue)" />
-          <h3>Recent Quiz Performance</h3>
+        <div
+          style={{
+            marginBottom: "var(--spacing-lg)",
+            borderBottom: "2px solid var(--blue)",
+          }}
+          className={styles.titleWithIcon}
+        >
+          <GiProgression color="var(--blue)" />
+          <h2>Your Performance</h2>
         </div>
-
         <div className={styles.barChartContainer}>
-          <div className={styles.chartContainer}>
+          <div
+            className={styles.chartContainer}
+            style={{ width: isMobile ? "100%" : "75%" }}
+          >
+            <div className={styles.titleWithIcon}>
+              <FaChartBar color="var(--blue)" />
+              <h3>Recent Quiz Performance</h3>
+            </div>
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer width="100%" height={500}>
                 <BarChart
                   data={chartData.slice(-5)}
                   margin={{ top: 10, bottom: 10 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
-                    dataKey="name"
-                    fontSize={11}
+                    dataKey="fullTitle"
+                    fontSize={9}
                     tick={{ fill: "var(--fg)" }}
+                    angle={-45}
+                    textAnchor="end"
+                    interval={0}
+                    height={150}
                   />
                   <YAxis
                     domain={[0, 100]}
@@ -124,17 +143,18 @@ export const DashboardCharts = ({ progressGroups }: DashboardChartsProps) => {
                   <Tooltip
                     cursor={{ fill: "rgba(255,255,255,0.05)" }}
                     contentStyle={{
-                      backgroundColor: "var(--dark)",
+                      backgroundColor: "var(--bg)",
                       border: "1px solid var(--blue)",
                       borderRadius: "8px",
                       color: "var(--fg)",
                     }}
                   />
-                  <Bar dataKey="score" radius={[4, 4, 0, 0]}>
+
+                  <Bar dataKey="score" radius={[4, 4, 0, 0]} fill="var(--blue)">
                     {chartData.slice(-5).map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={entry.score >= 50 ? "var(--green)" : "var(--red)"}
+                        fill={entry.score >= 50 ? "var(--blue)" : "var(--red)"}
                       />
                     ))}
                   </Bar>
@@ -147,54 +167,36 @@ export const DashboardCharts = ({ progressGroups }: DashboardChartsProps) => {
             )}
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            className={styles.chartContainer}
-          >
-            <CircularProgress score={averageScore} />
-            <span>Average Score</span>
+          <div className={styles.circularProgressContainer}>
+            <div className={styles.titleWithIcon}>
+              <RiProgress5Line color="var(--green)" />
+              <h3>Average Score</h3>
+            </div>
+            <div className={styles.circularProgressWrapper}>
+              <CircularProgress score={averageScore} />
+            </div>
           </div>
         </div>
-      </div>
 
-      <br />
-      {/* Historical Performance Line Chart */}
-      {/* <div className={styles.card}>
-        <div className={styles.cardHeader}>
+        <br style={{ height: "20px" }} />
+        <div className={styles.chartContainer}>
           <div className={styles.titleWithIcon}>
             <FaChartLine color="var(--magenta)" />
             <h3>Performance Curve (Historical Trend)</h3>
           </div>
-        </div>
-        <div
-          className={styles.chartContainer}
-          style={{ background: "none", padding: "0 10px" }}
-        >
-          {trendData.length > 0 ? (
+          {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart
-                data={trendData}
+                data={chartData}
                 margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  vertical={false}
+                  vertical={true}
                   stroke="rgba(255,255,255,0.1)"
                 />
-                <XAxis dataKey="name" hide />
-                <YAxis domain={[0, 105]} hide />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--dark)",
-                    border: "1px solid var(--magenta)",
-                    borderRadius: "8px",
-                  }}
-                />
+                <XAxis dataKey="name" />
+                <YAxis domain={[0, 100]} />
                 <Line
                   type="monotone"
                   dataKey="score"
@@ -216,7 +218,7 @@ export const DashboardCharts = ({ progressGroups }: DashboardChartsProps) => {
             <div className={styles.emptyChart}>No trend data yet.</div>
           )}
         </div>
-      </div> */}
+      </div>
     </>
   );
 };
