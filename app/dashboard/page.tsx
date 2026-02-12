@@ -227,6 +227,34 @@ export default function StudentDashboard() {
 
   if (loading) return <Loading text="Loading your dashboard..." />;
 
+  const info = [
+    {
+      item: "Full Name",
+      value: `${studentInfo?.firstName} ${studentInfo?.secondName} ${studentInfo?.thirdName} ${studentInfo?.forthName}`,
+      icon: FaUser,
+    },
+    {
+      item: "Year",
+      value: studentInfo?.year,
+      icon: FaGraduationCap,
+    },
+    {
+      item: "Email",
+      value: studentInfo?.email,
+      icon: FaEnvelope,
+    },
+    {
+      item: "Phone",
+      value: studentInfo?.studentPhone,
+      icon: FaPhone,
+    },
+    {
+      item: "System",
+      value: studentInfo?.system,
+      icon: FaSchool,
+    },
+  ];
+
   return (
     <div className="wrapper">
       <div
@@ -257,51 +285,24 @@ export default function StudentDashboard() {
           </div>
           {studentInfo && (
             <div className={styles.infoList}>
-              <div className={styles.infoEntry}>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "4px" }}
-                >
-                  <FaUser color="var(--light)" size={14} />
-                  <strong>Full Name:</strong>
-                </div>
-                <span>{`${studentInfo.firstName} ${studentInfo.secondName} ${studentInfo.thirdName} ${studentInfo.forthName}`}</span>
-              </div>
-              <div className={styles.infoEntry}>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "4px" }}
-                >
-                  <FaGraduationCap color="var(--light)" size={14} />
-                  <strong>Year:</strong>
-                </div>
-                <span>{studentInfo.year.toUpperCase()}</span>
-              </div>
-              <div className={styles.infoEntry}>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "4px" }}
-                >
-                  <FaEnvelope color="var(--light)" size={14} />
-                  <strong>Email:</strong>
-                </div>
-                <span>{studentInfo.email}</span>
-              </div>
-              <div className={styles.infoEntry}>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "4px" }}
-                >
-                  <FaPhone color="var(--light)" size={14} />
-                  <strong>Phone:</strong>
-                </div>
-                <span>{studentInfo.studentPhone}</span>
-              </div>
-              <div className={styles.infoEntry}>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "4px" }}
-                >
-                  <FaSchool color="var(--light)" size={14} />
-                  <strong>System:</strong>
-                </div>
-                <span>{studentInfo.system}</span>
-              </div>
+              {info.map((detail, index) => {
+                const Icon = detail.icon;
+                return (
+                  <div key={index} className={styles.infoEntry}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                      }}
+                    >
+                      <Icon color="var(--light)" />
+                      <strong>{detail.item}:</strong>
+                    </div>
+                    <span>{detail.value}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
