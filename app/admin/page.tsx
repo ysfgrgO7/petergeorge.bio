@@ -756,22 +756,6 @@ export default function AdminDashboard() {
   return (
     <div className="wrapper">
       <h1>Admin Dashboard</h1>
-      <div style={{ marginBottom: "1rem" }}>
-        <button
-          onClick={() => router.push("/admin/attendance")}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.75rem 1.5rem",
-            fontSize: "1rem",
-            backgroundColor: "var(--blue)",
-            color: "var(--white)",
-          }}
-        >
-          📋 Take Attendance
-        </button>
-      </div>
       <hr />
       <h1>Create Course</h1>
       <div className={styles.form}>
