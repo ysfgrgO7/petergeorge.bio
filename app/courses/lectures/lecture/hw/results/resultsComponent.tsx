@@ -125,9 +125,10 @@ export default function HomeworkResults() {
       {mcqQuestions.length > 0 ? (
         mcqQuestions.map((q, index) => (
           <div key={index} style={{ marginBottom: "20px" }}>
-            <p>
-              <strong>Question {index + 1}:</strong> {q.question}
-            </p>
+            <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1rem" }}>
+              <strong>Question {index + 1}:</strong>
+              <div dangerouslySetInnerHTML={{ __html: q.question }} />
+            </div>
             <p>
               <strong>Your Answer:</strong> {q.selectedText}
             </p>
@@ -143,9 +144,10 @@ export default function HomeworkResults() {
       {essayQuestions.length > 0 ? (
         essayQuestions.map((q, index) => (
           <div key={index} style={{ marginBottom: "20px" }}>
-            <p>
-              <strong>Question {index + 1}:</strong> {q.question}
-            </p>
+            <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1rem" }}>
+              <strong>Question {index + 1}:</strong>
+              <div dangerouslySetInnerHTML={{ __html: q.question }} />
+            </div>
             <p>
               <strong>Your Answer:</strong> {q.answerText}
             </p>

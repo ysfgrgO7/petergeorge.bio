@@ -6,6 +6,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { getDeviceId } from "@/lib/device";
 import { useRouter } from "next/navigation";
 import styles from "../styles.module.css";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
@@ -30,14 +31,7 @@ export default function LoginPage() {
     return () => unsubscribe();
   }, [auth, router, loading]);
 
-  const getDeviceId = () => {
-    let deviceId = localStorage.getItem("deviceId");
-    if (!deviceId) {
-      deviceId = crypto.randomUUID();
-      localStorage.setItem("deviceId", deviceId);
-    }
-    return deviceId;
-  };
+
 
   // Function to convert Firebase errors to user-friendly messages
   const getFirebaseErrorMessage = (error: FirebaseError): string => {
@@ -74,7 +68,7 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
       const userId = userCredential.user.uid;
       const userEmail = userCredential.user.email || "";
@@ -82,7 +76,7 @@ export default function LoginPage() {
       // 1️⃣ Check if the user is an admin
       const adminRef = doc(db, "admins", userEmail);
       const adminSnap = await getDoc(adminRef);
-      const maxDevices = adminSnap.exists() ? 6 : 2;
+      const maxDevices = adminSnap.exists() ? 10 : 2;
 
       // 2️⃣ Fetch student data
       const studentRef = doc(db, "students", userId);
@@ -90,7 +84,7 @@ export default function LoginPage() {
       if (!studentSnap.exists()) {
         await signOut(auth);
         throw new Error(
-          "Your account is not properly set up. Please contact support to complete your registration."
+          "Your account is not properly set up. Please contact support to complete your registration.",
         );
       }
 
@@ -103,9 +97,9 @@ export default function LoginPage() {
         if (devices.length >= maxDevices) {
           await signOut(auth);
           const deviceType = adminSnap.exists() ? "admin" : "student";
-          const maxDeviceText = adminSnap.exists() ? "6 devices" : "2 devices";
+          const maxDeviceText = adminSnap.exists() ? "10 devices" : "2 devices";
           throw new Error(
-            `Device limit reached! As a ${deviceType}, you can only use this account on ${maxDeviceText}. Please contact support to manage your devices.`
+            `Device limit reached! As a ${deviceType}, you can only use this account on ${maxDeviceText}. Please contact support to manage your devices.`,
           );
         }
 

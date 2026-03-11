@@ -417,7 +417,10 @@ export default function QuizReviewPage() {
                     return (
                       <tr key={index}>
                         <td>
-                          Q{index + 1}. {answer.question}
+                          <div style={{ display: "flex", gap: "0.25rem" }}>
+                            <span>Q{index + 1}.</span>
+                            <div dangerouslySetInnerHTML={{ __html: answer.question }} />
+                          </div>
                         </td>
                         <td>{answer.answerText || "No answer provided"}</td>
                         <td>{questionMarks}</td>
@@ -557,7 +560,10 @@ export default function QuizReviewPage() {
                 {quizData.answers.mcq.map((answer, index) => (
                   <tr key={index}>
                     <td>
-                      Q{index + 1}. {answer.question}
+                      <div style={{ display: "flex", gap: "0.25rem" }}>
+                        <span>Q{index + 1}.</span>
+                        <div dangerouslySetInnerHTML={{ __html: answer.question }} />
+                      </div>
                     </td>
                     <td
                       className={

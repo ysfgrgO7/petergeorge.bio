@@ -265,11 +265,10 @@ export default function LecturePage() {
                     <br />
                     {quizVariants[activeTab].map((q, i) => (
                       <li key={q.id} className={styles.quizItem}>
-                        <p className={styles.questionText}>
-                          <strong>
-                            {i + 1}. {q.question}
-                          </strong>
-                        </p>
+                        <div className={styles.questionText} style={{ display: "flex", gap: "0.25rem", fontWeight: "bold", marginBottom: "1rem" }}>
+                          <span>{i + 1}.</span>
+                          <div dangerouslySetInnerHTML={{ __html: q.question }} />
+                        </div>
                         {q.imageUrl && (
                           <div className={styles.questionImage}>
                             <img
@@ -319,11 +318,10 @@ export default function LecturePage() {
             <ul className={styles.essayList}>
               {existingEssays.map((q, i) => (
                 <li key={q.id} className={styles.essayItem}>
-                  <p>
-                    <strong>
-                      {i + 1}. {q.question}
-                    </strong>
-                  </p>
+                  <div style={{ display: "flex", gap: "0.25rem", fontWeight: "bold", marginBottom: "1rem" }}>
+                    <span>{i + 1}.</span>
+                    <div dangerouslySetInnerHTML={{ __html: q.question }} />
+                  </div>
                   {q.imageUrl && (
                     <div className={styles.questionImage}>
                       <img
