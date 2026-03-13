@@ -82,6 +82,7 @@ export default function QuizReviewPage() {
   const [savingMarks, setSavingMarks] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const [updatingPass, setUpdatingPass] = useState(false);
 
   const studentId = searchParams.get("studentId");
   const courseId = searchParams.get("courseId");
@@ -229,6 +230,39 @@ export default function QuizReviewPage() {
     });
   };
 
+  const handleTogglePass = async () => {
+    if (!quizData || !studentId || !courseId || !lectureId || !year) return;
+
+    setUpdatingPass(true);
+
+    try {
+      const progressDocId = `${year}_${courseId}_${lectureId}`;
+      const progressRef = doc(
+        db,
+        "students",
+        studentId,
+        "progress",
+        progressDocId
+      );
+
+      const newStatus = !quizData.quizCompleted;
+
+      await updateDoc(progressRef, {
+        quizCompleted: newStatus,
+      });
+
+      setQuizData({
+        ...quizData,
+        quizCompleted: newStatus,
+      });
+    } catch (error) {
+      console.error("Error updating pass status:", error);
+      alert("Failed to update status. Please try again.");
+    } finally {
+      setUpdatingPass(false);
+    }
+  };
+
   const saveMarkToFirestore = async (
     questionIndex: string,
     newMark: number
@@ -334,11 +368,36 @@ export default function QuizReviewPage() {
 
   return (
     <div className="wrapper">
-      {/* Navigation */}
-      <button style={{ marginBottom: "1rem" }} onClick={() => router.back()}>
-        <BiChevronLeft />
-        Back to Students
-      </button>
+      {/* Navigation and Actions */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+        <button onClick={() => router.back()}>
+          <BiChevronLeft />
+          Back to Students
+        </button>
+        
+        {quizData && (
+          <button
+            onClick={handleTogglePass}
+            disabled={updatingPass}
+            style={{
+              background: quizData.quizCompleted ? "var(--red)" : "var(--green)",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              padding: "0.5rem 1rem",
+              cursor: updatingPass ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              fontWeight: "bold",
+              opacity: updatingPass ? 0.7 : 1,
+            }}
+          >
+            {quizData.quizCompleted ? <FaTimes /> : <FaCheck />}
+            {updatingPass ? "Updating..." : quizData.quizCompleted ? "Revoke Pass" : "Set Pass"}
+          </button>
+        )}
+      </div>
 
       {/* Header */}
       <div className={styles.header}>
@@ -417,7 +476,10 @@ export default function QuizReviewPage() {
                     return (
                       <tr key={index}>
                         <td>
-                          Q{index + 1}. {answer.question}
+                          <div style={{ display: "flex", gap: "0.25rem" }}>
+                            <span>Q{index + 1}.</span>
+                            <div dangerouslySetInnerHTML={{ __html: answer.question }} />
+                          </div>
                         </td>
                         <td>{answer.answerText || "No answer provided"}</td>
                         <td>{questionMarks}</td>
@@ -557,7 +619,10 @@ export default function QuizReviewPage() {
                 {quizData.answers.mcq.map((answer, index) => (
                   <tr key={index}>
                     <td>
-                      Q{index + 1}. {answer.question}
+                      <div style={{ display: "flex", gap: "0.25rem" }}>
+                        <span>Q{index + 1}.</span>
+                        <div dangerouslySetInnerHTML={{ __html: answer.question }} />
+                      </div>
                     </td>
                     <td
                       className={

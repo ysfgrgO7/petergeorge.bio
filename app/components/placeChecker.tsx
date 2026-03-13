@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getDeviceId } from "@/lib/device";
 import { useRouter, usePathname } from "next/navigation";
 
 export default function PlaceChecker() {
@@ -11,14 +12,7 @@ export default function PlaceChecker() {
   const pathname = usePathname();
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
-  const getDeviceId = () => {
-    let deviceId = localStorage.getItem("deviceId");
-    if (!deviceId) {
-      deviceId = crypto.randomUUID();
-      localStorage.setItem("deviceId", deviceId);
-    }
-    return deviceId;
-  };
+
 
   useEffect(() => {
     let unsubscribeSnapshot: (() => void) | null = null;

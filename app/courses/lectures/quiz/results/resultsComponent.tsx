@@ -196,9 +196,7 @@ export default function QuizResults() {
             >
               Question {index + 1}
             </h4>
-            <h2 style={{ marginBottom: "15px", lineHeight: "1.6" }}>
-              {answer.question}
-            </h2>
+            <h2 style={{ marginBottom: "15px", lineHeight: "1.6" }} dangerouslySetInnerHTML={{ __html: answer.question }} />
             <div style={{ marginBottom: "10px" }}>
               <strong>Your Answer: </strong>
               <span
@@ -274,9 +272,7 @@ export default function QuizResults() {
             >
               Essay Question {index + 1}
             </h4>
-            <h2 style={{ marginBottom: "15px", lineHeight: "1.6" }}>
-              {answer.question}
-            </h2>
+            <h2 style={{ marginBottom: "15px", lineHeight: "1.6" }} dangerouslySetInnerHTML={{ __html: answer.question }} />
 
             <div style={{ marginBottom: "10px" }}>
               <strong>Your Answer:</strong>

@@ -22,28 +22,9 @@ import { MdArrowUpward, MdArrowDownward } from "react-icons/md";
 import Modal, { ModalVariant } from "@/app/components/Modal";
 import Loading from "@/app/components/Loading";
 
-interface Lecture extends DocumentData {
-  id: string;
-  title: string;
-  odyseeName: string;
-  odyseeId: string;
-  order: number;
-  isHidden?: boolean;
-  isEnabledCenter?: boolean;
-  isEnabledOnline?: boolean;
-}
-
-interface Course extends DocumentData {
-  id: string;
-  title: string;
-  description: string;
-  thumbnailUrl?: string;
-}
-
-interface ExtraLink {
-  text: string;
-  url: string;
-}
+import { Lecture, Course, ExtraLink } from "@/lib/types";
+import CourseCreationForm from "./components/CourseCreationForm";
+import CodeGenerationSection from "./components/CodeGenerationSection";
 
 export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -757,67 +738,25 @@ export default function AdminDashboard() {
     <div className="wrapper">
       <h1>Admin Dashboard</h1>
       <hr />
-      <h1>Create Course</h1>
-      <div className={styles.form}>
-        <input
-          type="text"
-          placeholder="Course title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <input
-          type="url"
-          placeholder="Thumbnail URL (optional)"
-          value={thumbnailUrl}
-          onChange={(e) => setThumbnailUrl(e.target.value)}
-        />
-        <select
-          value={yearForNewCourse}
-          onChange={(e) =>
-            setYearForNewCourse(
-              e.target.value as "year1" | "year3 (Biology)" | "year3 (Geology)",
-            )
-          }
-        >
-          <option value="year1">Year 1</option>
-          <option value="year3 (Biology)">Year 3 (Biology)</option>
-          <option value="year3 (Geology)">Year 3 (Geology)</option>
-        </select>
-        <button onClick={handleCreate}>Create Course</button>
-      </div>
+      <CourseCreationForm
+        title={title}
+        setTitle={setTitle}
+        thumbnailUrl={thumbnailUrl}
+        setThumbnailUrl={setThumbnailUrl}
+        yearForNewCourse={yearForNewCourse}
+        setYearForNewCourse={setYearForNewCourse}
+        handleCreate={handleCreate}
+      />
 
       <hr />
 
-      <section>
-        <h2>Generate Code</h2>
-        <p>This code will unlock a single, locked lecture for one user.</p>
-        <div
-          className={styles.form}
-          style={{ flexDirection: "row", gap: "1rem", alignItems: "center" }}
-        >
-          <button onClick={handleGenerateUniversalCode}>Generate Code</button>
-          <input
-            type="text"
-            readOnly
-            value={generatedCode}
-            placeholder="Generated code will appear here"
-            className={styles.generatedCodeInput}
-          />
-          <button
-            onClick={() => {
-              if (generatedCode) {
-                navigator.clipboard.writeText(generatedCode);
-              }
-
-              setModalMessage(`Code copied to clipboard!`);
-              setModalVariant("info");
-              setShowModal(true);
-            }}
-          >
-            Copy
-          </button>
-        </div>
-      </section>
+      <CodeGenerationSection
+        handleGenerateUniversalCode={handleGenerateUniversalCode}
+        generatedCode={generatedCode}
+        setModalMessage={setModalMessage}
+        setModalVariant={setModalVariant}
+        setShowModal={setShowModal}
+      />
 
       <hr />
 

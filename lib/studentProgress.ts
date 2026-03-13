@@ -88,7 +88,6 @@ export async function incrementQuizAttempt(
       lastVariantUsed: variantUsed,
     });
   } else {
-    // Document doesn't exist, create it with attempts: 1
     await setDoc(docRef, {
       quizCompleted: false,
       earnedMarks: null,
@@ -97,6 +96,9 @@ export async function incrementQuizAttempt(
       attempts: 1,
       usedVariants: [variantUsed],
       lastVariantUsed: variantUsed,
+      year,
+      courseId,
+      lectureId,
     });
   }
 }
@@ -173,6 +175,9 @@ export async function markQuizComplete(
       quizCompleted: true,
       earnedMarks: earnedMarks,
       total: totalPossibleMarks, // Corrected from totalQuestions to total
+      year,
+      courseId,
+      lectureId,
     },
     { merge: true }
   );
@@ -198,6 +203,9 @@ export async function unlockLecture(
     docRef,
     {
       unlocked: true,
+      year,
+      courseId,
+      lectureId,
     },
     { merge: true }
   );
